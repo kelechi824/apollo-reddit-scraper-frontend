@@ -1,70 +1,194 @@
-# Getting Started with Create React App
+# Apollo Reddit Scraper - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Modern React frontend for Apollo Reddit Scraper, featuring a clean UI for analyzing Reddit content and identifying audience insights and content opportunities.
 
-## Available Scripts
+## 🚀 Features
 
-In the project directory, you can run:
+- **Modern UI**: Clean Apollo-branded interface with Tailwind CSS
+- **Real-time Status**: Backend connection monitoring
+- **Responsive Design**: Mobile-friendly layout
+- **Interactive Forms**: Keyword input and subreddit selection
+- **Results Display**: Analyzed posts with sorting and filtering
+- **Search History**: localStorage-based search persistence
 
-### `npm start`
+## 🛠️ Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Framework**: React 18+
+- **Styling**: Tailwind CSS 3.x
+- **HTTP Client**: Axios 1.10.0
+- **State Management**: React Hooks (useState, useEffect)
+- **Storage**: localStorage for search history
+- **Build Tool**: Create React App
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 📋 Setup Instructions
 
-### `npm test`
+### Prerequisites
+- Node.js 18+
+- Backend API running on localhost:3003
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Installation
 
-### `npm run build`
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/kelechi824/apollo-reddit-scraper-frontend.git
+   cd apollo-reddit-scraper-frontend
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env if needed (defaults should work)
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+4. Start the development server:
+   ```bash
+   npm start
+   ```
 
-### `npm run eject`
+Frontend runs on http://localhost:3002
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 🔑 Environment Variables
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```env
+# Backend API Configuration
+REACT_APP_API_URL=http://localhost:3003
+REACT_APP_APP_NAME=Apollo Reddit Scraper
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+# Development Server Port
+PORT=3002
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 🎨 UI Components
 
-## Learn More
+### Header
+- Apollo logo and branding
+- Real-time backend connection status
+- Responsive navigation
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Main Content
+- Clean card-based layout
+- Connection status indicators
+- Search form (coming soon)
+- Results display (coming soon)
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Status Indicators
+- 🟢 Green: Backend connected
+- 🔴 Red: Backend disconnected  
+- 🟡 Yellow: Connecting...
 
-### Code Splitting
+## 🚦 Scripts
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- `npm start` - Start development server (localhost:3002)
+- `npm run build` - Build for production
+- `npm test` - Run tests
+- `npm run eject` - Eject from Create React App
 
-### Analyzing the Bundle Size
+## 📱 Responsive Design
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- **Desktop**: Full-width layout with sidebar
+- **Tablet**: Stacked layout with collapsible elements
+- **Mobile**: Single-column mobile-first design
 
-### Making a Progressive Web App
+## 🎯 Development Status
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Completed ✅
+- [x] React app setup with Create React App
+- [x] Tailwind CSS integration
+- [x] Apollo branding and logo
+- [x] Backend connection monitoring
+- [x] Responsive header and layout
+- [x] Environment configuration
 
-### Advanced Configuration
+### In Progress 🚧
+- [ ] Search form component
+- [ ] Subreddit dropdown
+- [ ] Results display
+- [ ] localStorage integration
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### Todo 📝
+- [ ] Form validation
+- [ ] Loading states
+- [ ] Error handling
+- [ ] Search history
+- [ ] Export functionality
 
-### Deployment
+## 🔧 Development
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Project Structure
+```
+├── public/             # Static assets
+├── src/
+│   ├── App.js         # Main application component
+│   ├── App.css        # Component styles
+│   ├── index.js       # React entry point
+│   ├── index.css      # Global styles with Tailwind
+│   └── components/    # React components (coming soon)
+├── tailwind.config.js # Tailwind configuration
+├── package.json       # Dependencies and scripts
+└── README.md         # This file
+```
 
-### `npm run build` fails to minify
+### Tailwind Configuration
+Custom Apollo colors defined:
+- `apollo-yellow`: #F7DF1E (brand color)
+- `apollo-black`: #000000 (text)
+- `apollo-gray`: #f3f4f6 (background)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Adding New Components
+1. Create component in `src/components/`
+2. Import and use in `App.js`
+3. Add Tailwind classes for styling
+4. Test responsiveness
+
+## 🔌 API Integration
+
+### Backend Connection
+- Automatic health check on app load
+- Real-time status updates
+- Error handling for connection failures
+
+### Axios Configuration
+```javascript
+const api = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3003',
+  timeout: 10000,
+});
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/new-component`
+3. Commit changes: `git commit -m 'Add new component'`
+4. Push to branch: `git push origin feature/new-component`
+5. Submit a Pull Request
+
+## 📄 License
+
+ISC
+
+## 🔗 Related
+
+- [Backend Repository](https://github.com/kelechi824/apollo-reddit-scraper-backend)
+- [Apollo.io](https://apollo.io)
+
+## 🎨 Design System
+
+### Colors
+- Primary: Apollo Yellow (#F7DF1E)
+- Secondary: Black (#000000)
+- Background: Light Gray (#f3f4f6)
+- Success: Green (#10B981)
+- Error: Red (#EF4444)
+- Warning: Yellow (#F59E0B)
+
+### Typography
+- Font Family: -apple-system, BlinkMacSystemFont, 'Segoe UI'
+- Headers: Font weight 600-700
+- Body: Font weight 400
+- Code: Monospace font family
