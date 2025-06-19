@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Play, AlertCircle, CheckCircle, Clock, TrendingUp } from 'lucide-react';
+import { Search, Play, AlertCircle, CheckCircle, Clock, X } from 'lucide-react';
 import { WorkflowRequest, WorkflowResponse, AnalyzedPost } from '../types';
 
 interface AnalysisInterfaceProps {
@@ -8,7 +8,8 @@ interface AnalysisInterfaceProps {
 
 const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl }) => {
   const [keywords, setKeywords] = useState<string>('');
-  const [selectedSubreddits, setSelectedSubreddits] = useState<string[]>(['sales']);
+  const [isKeywordSelected, setIsKeywordSelected] = useState<boolean>(false);
+  const [selectedSubreddit, setSelectedSubreddit] = useState<string>('sales');
   const [limit, setLimit] = useState<number>(5);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [results, setResults] = useState<WorkflowResponse | null>(null);
@@ -17,18 +18,53 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl }) => {
   const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting'];
 
   /**
+   * Handle keyword selection when user blurs from input or presses Enter
+   * Why this matters: Converts typed keyword into a selected "chip" for better UX
+   */
+  const handleKeywordBlur = () => {
+    if (keywords.trim() && !isKeywordSelected) {
+      setIsKeywordSelected(true);
+    }
+  };
+
+  /**
+   * Handle Enter key press to select keyword
+   * Why this matters: Provides intuitive keyboard navigation expected by users
+   */
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && keywords.trim() && !isKeywordSelected) {
+      e.preventDefault();
+      setIsKeywordSelected(true);
+    }
+  };
+
+
+
+  /**
+   * Handle keyword editing
+   * Why this matters: Allows users to click back into editing mode from selected state
+   */
+  const handleKeywordEdit = () => {
+    setIsKeywordSelected(false);
+  };
+
+
+
+
+
+  /**
    * Handle form submission and run the complete analysis workflow
    * Why this matters: This triggers the entire Reddit → OpenAI → Sheets pipeline
    * from a single button click, providing immediate business insights.
    */
   const handleAnalysis = async () => {
     if (!keywords.trim()) {
-      setError('Please enter at least one keyword');
+      setError('Please enter a keyword');
       return;
     }
 
-    if (selectedSubreddits.length === 0) {
-      setError('Please select at least one subreddit');
+    if (!selectedSubreddit.trim()) {
+      setError('Please select a subreddit');
       return;
     }
 
@@ -37,11 +73,12 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl }) => {
     setResults(null);
 
     try {
-      const keywordList = keywords.split(',').map(k => k.trim()).filter(k => k.length > 0);
+      // Single keyword only - no comma splitting needed
+      const keywordList = [keywords.trim()];
       
       const request: WorkflowRequest = {
         keywords: keywordList,
-        subreddits: selectedSubreddits,
+        subreddits: [selectedSubreddit],
         limit: limit
       };
 
@@ -69,7 +106,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl }) => {
       savedAnalyses.unshift({
         id: data.workflow_id,
         keywords: keywordList,
-        subreddits: selectedSubreddits,
+        subreddits: [selectedSubreddit],
         results: data,
         timestamp: new Date().toISOString()
       });
@@ -83,17 +120,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl }) => {
     }
   };
 
-  /**
-   * Handle subreddit selection
-   * Why this matters: Allows users to target specific communities for more relevant insights.
-   */
-  const toggleSubreddit = (subreddit: string) => {
-    setSelectedSubreddits(prev => 
-      prev.includes(subreddit) 
-        ? prev.filter(s => s !== subreddit)
-        : [...prev, subreddit]
-    );
-  };
+  // Legacy function - no longer used, replaced by handleSubredditSelect
 
   return (
     <div className="saas-container">
@@ -110,37 +137,101 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl }) => {
         {/* Keywords Input */}
         <div className="form-group">
           <label htmlFor="keywords" className="form-label">
-            Keywords (comma-separated)
+            Keyword <span style={{fontWeight: 'normal'}}>(single keyword only)</span>
           </label>
-          <div className="input-container">
-            <Search className="input-icon" />
-            <input
-              id="keywords"
-              type="text"
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              placeholder="e.g., lead generation, sales process, cold calling"
-              className="apollo-input"
-              disabled={isAnalyzing}
-            />
-          </div>
+          
+          {!isKeywordSelected ? (
+            // Input mode - user is typing
+            <div className="input-container">
+              <Search className="input-icon" style={{transform: 'translateY(-3px)'}} />
+              <input
+                id="keywords"
+                type="text"
+                value={keywords}
+                onChange={(e) => {
+                  // Prevent commas to enforce single keyword
+                  const value = e.target.value.replace(/,/g, '');
+                  setKeywords(value);
+                }}
+                onBlur={handleKeywordBlur}
+                onKeyDown={handleKeyDown}
+                placeholder="e.g., lead generation"
+                className="apollo-input"
+                disabled={isAnalyzing}
+              />
+            </div>
+          ) : (
+            // Selected mode - show modern keyword chip with pill-form buttons
+            <div className="flex flex-wrap gap-6 p-4 border border-apollo-gray-100 rounded-xl bg-white min-h-[3.5rem] items-center shadow-sm">
+              <div 
+                className="inline-flex items-center gap-2 px-4 py-2 font-medium"
+                style={{
+                  backgroundColor: '#dcfce7',
+                  border: '2px solid #16a34a',
+                  color: '#166534',
+                  borderRadius: '10px'
+                }}
+              >
+                <span className="text-sm font-medium">{keywords}</span>
+              </div>
+              
+              {/* Modern edit button with inline styles */}
+              <button
+                onClick={handleKeywordEdit}
+                disabled={isAnalyzing}
+                className="inline-flex items-center px-4 py-2 rounded-full text-xs font-medium transition-all duration-200"
+                style={{
+                  backgroundColor: '#f3f4f6',
+                  color: '#6b7280',
+                  border: '1px solid transparent'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dbeafe';
+                  e.currentTarget.style.color = '#2563eb';
+                  e.currentTarget.style.borderColor = '#bfdbfe';
+                  e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  e.currentTarget.style.color = '#6b7280';
+                  e.currentTarget.style.borderColor = 'transparent';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+                title="Edit keyword"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '8px'}}>
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Edit
+              </button>
+            </div>
+          )}
+          
+          {keywords.includes(',') && !isKeywordSelected && (
+            <p className="text-sm text-apollo-gray-600 mt-2">
+              Only one keyword allowed per analysis. Please remove commas.
+            </p>
+          )}
         </div>
 
         {/* Subreddit Selection */}
         <div className="form-group">
-          <label className="form-label">Target Subreddits</label>
-          <div className="subreddit-grid">
-            {availableSubreddits.map((subreddit) => (
-              <button
-                key={subreddit}
-                onClick={() => toggleSubreddit(subreddit)}
-                disabled={isAnalyzing}
-                className={`apollo-btn-secondary ${selectedSubreddits.includes(subreddit) ? 'active' : ''}`}
-              >
+          <label htmlFor="subreddit" className="form-label">Select Subreddit</label>
+                      <select
+              id="subreddit"
+              value={selectedSubreddit}
+              onChange={(e) => setSelectedSubreddit(e.target.value)}
+              className="apollo-input"
+              style={{maxWidth: '24rem'}}
+              disabled={isAnalyzing}
+            >
+              {availableSubreddits.map((subreddit) => (
+              <option key={subreddit} value={subreddit}>
                 r/{subreddit}
-              </button>
+              </option>
             ))}
-          </div>
+          </select>
         </div>
 
         {/* Limit Selection */}
