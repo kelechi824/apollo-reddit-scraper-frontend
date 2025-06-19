@@ -7,7 +7,7 @@ import {
   ApiClientConfig,
   API_ENDPOINTS 
 } from './types';
-import StatusIndicator from './components/StatusIndicator';
+import AnalysisInterface from './components/AnalysisInterface';
 
 // Configure axios defaults
 const apiConfig: ApiClientConfig = {
@@ -37,72 +37,75 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-apollo-gray">
+    <div className="min-h-screen apollo-bg-primary">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              {/* Apollo Logo Placeholder */}
-              <div className="w-8 h-8 bg-apollo-yellow rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-apollo-black" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-apollo-black">Apollo Reddit Scraper</h1>
-                <p className="text-sm text-gray-500">Content Analysis & Insights</p>
-              </div>
-            </div>
-            
-            {/* Status Indicator */}
-            <div className="flex items-center space-x-2">
-              <StatusIndicator status={backendStatus} />
-            </div>
+      <header>
+        <div className="max-w-7xl header-container">
+          {/* Apollo Logo - Using Actual Logo File */}
+          <div className="apollo-authentic-logo">
+            <img 
+              src="/Apollo_logo_transparent.png" 
+              alt="Apollo Logo"
+              style={{height: '80px', width: 'auto'}}
+            />
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              Reddit Content Analysis
-            </h2>
-            <p className="text-gray-600 mb-8">
-              Discover pain points, audience insights, and content opportunities from Reddit discussions
-            </p>
-            
-            {backendStatus === 'connected' ? (
-              <div className="bg-green-50 border border-green-200 rounded-md p-4">
-                <p className="text-green-800">
-                  ✅ Backend connected successfully! Ready to start analyzing Reddit content.
+      <main>
+        {backendStatus === 'connected' ? (
+          <AnalysisInterface apiUrl={apiConfig.baseURL} />
+        ) : (
+          <div className="max-w-5xl" style={{padding: '0 1.5rem'}}>
+            <div className="apollo-card-lg" style={{padding: '4rem'}}>
+              <div className="text-center">
+                <div className="apollo-logo" style={{width: '5rem', height: '5rem', margin: '0 auto 2rem auto'}}>
+                  <img 
+                    src="/Apollo_logo_transparent.png" 
+                    alt="Apollo Logo" 
+                  />
+                </div>
+                
+                <h2 style={{fontSize: '2.5rem', fontWeight: '800', color: '#111827', marginBottom: '1.5rem'}}>
+                  Reddit Scraper & Content Analysis Platform
+                </h2>
+                <p style={{fontSize: '1.25rem', color: '#4b5563', marginBottom: '3rem', maxWidth: '48rem', margin: '0 auto 3rem auto', lineHeight: '1.6'}}>
+                  Transform Reddit discussions into actionable business insights with AI-powered analysis
                 </p>
+                
+                {backendStatus === 'disconnected' ? (
+                  <div className="error-container">
+                    <svg className="error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <p className="error-title">Backend Connection Failed</p>
+                      <p className="error-text">Please ensure the backend server is running on localhost:3003</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{background: '#fef3c7', border: '2px solid #fcd34d', borderRadius: '1.5rem', padding: '2rem', color: '#92400e'}}>
+                    <div className="flex items-center justify-center gap-4">
+                      <div className="animate-spin" style={{width: '2rem', height: '2rem', border: '3px solid #d97706', borderTop: '3px solid transparent', borderRadius: '50%'}}></div>
+                      <div>
+                        <p style={{fontSize: '1.125rem', fontWeight: '700', margin: '0'}}>Connecting to Backend</p>
+                        <p style={{margin: '0.25rem 0 0 0'}}>Establishing connection to analysis services...</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : backendStatus === 'disconnected' ? (
-              <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                <p className="text-red-800">
-                  ❌ Backend connection failed. Please ensure the backend is running on localhost:3003
-                </p>
-              </div>
-            ) : (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-                <p className="text-yellow-800">
-                  ⏳ Connecting to backend...
-                </p>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-center text-sm text-gray-500">
-            Apollo Reddit Scraper - MVP v1.0.0
-          </p>
+      <footer>
+        <div className="max-w-7xl footer-content">
+          <p className="footer-text">Apollo Reddit Scraper - Professional Business Intelligence Platform</p>
+          <p className="footer-meta">MVP v1.0.0 | Powered by OpenAI & Reddit API</p>
         </div>
       </footer>
     </div>
