@@ -1,0 +1,9 @@
+# Help GitHub language detection
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript
+*.js linguist-language=TypeScript
+
+# Exclude files from language statistics
+package-lock.json linguist-generated=true
+public/* linguist-vendored=true
+node_modules/* linguist-vendored=true 
