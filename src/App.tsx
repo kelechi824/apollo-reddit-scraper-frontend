@@ -1,21 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import './App.css';
+import { 
+  ConnectionStatus, 
+  HealthCheckResponse, 
+  ApiClientConfig,
+  API_ENDPOINTS 
+} from './types';
+import StatusIndicator from './components/StatusIndicator';
 
 // Configure axios defaults
-const api = axios.create({
+const apiConfig: ApiClientConfig = {
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3003',
   timeout: 10000,
-});
+};
 
-function App() {
-  const [backendStatus, setBackendStatus] = useState(null);
+const api = axios.create(apiConfig);
+
+const App: React.FC = () => {
+  const [backendStatus, setBackendStatus] = useState<ConnectionStatus>('connecting');
 
   // Test backend connection on load
   useEffect(() => {
-    const testBackend = async () => {
+    const testBackend = async (): Promise<void> => {
       try {
-        const response = await api.get('/health');
+        const response: AxiosResponse<HealthCheckResponse> = await api.get(API_ENDPOINTS.HEALTH);
         setBackendStatus('connected');
         console.log('Backend connection successful:', response.data);
       } catch (error) {
@@ -48,14 +57,7 @@ function App() {
             
             {/* Status Indicator */}
             <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${
-                backendStatus === 'connected' ? 'bg-green-500' : 
-                backendStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
-              }`}></div>
-              <span className="text-sm text-gray-600">
-                {backendStatus === 'connected' ? 'Connected' : 
-                 backendStatus === 'disconnected' ? 'Disconnected' : 'Connecting...'}
-              </span>
+              <StatusIndicator status={backendStatus} />
             </div>
           </div>
         </div>
