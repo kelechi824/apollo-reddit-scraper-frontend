@@ -65,6 +65,34 @@ export interface AnalyzedPost extends RedditPost {
   analysis_timestamp: string;
 }
 
+// Workflow Types
+export interface WorkflowRequest {
+  keywords: string[];
+  subreddits: string[];
+  limit?: number;
+  export_to_sheets?: {
+    spreadsheet_id: string;
+    sheet_name?: string;
+  };
+}
+
+export interface RedditSearchResponse {
+  posts: RedditPost[];
+  total_found: number;
+  keywords_used: string;
+  subreddits_used: string;
+  search_timestamp: string;
+}
+
+export interface WorkflowResponse {
+  success: boolean;
+  reddit_results: RedditSearchResponse;
+  analyzed_posts: AnalyzedPost[];
+  sheets_export?: any;
+  workflow_id: string;
+  completed_at: string;
+}
+
 // API Client Types
 export interface ApiClientConfig {
   baseURL: string;
