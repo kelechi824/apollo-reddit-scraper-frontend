@@ -229,7 +229,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       {/* Panel Header */}
       <div className="analysis-panel-header">
         <div style={{flex: 1}}>
-          <h3 className="analysis-panel-title">Business Insights</h3>
+          <h3 className="analysis-panel-title">Key Insights from Reddit</h3>
           <p className="analysis-panel-subtitle">
             Found {totalFound} posts, showing insight {currentIndex + 1} of {analyzedPosts.length}
           </p>

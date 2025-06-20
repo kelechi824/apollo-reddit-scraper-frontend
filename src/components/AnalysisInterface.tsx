@@ -148,7 +148,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
                 }}
                 onBlur={handleKeywordBlur}
                 onKeyDown={handleKeyDown}
-                placeholder="e.g., data"
+                placeholder="e.g., leads"
                 className="apollo-input"
                 disabled={isAnalyzing}
               />
