@@ -1365,8 +1365,8 @@ footer {
 
 .history-card.selected {
   border-color: var(--apollo-yellow);
-  background: var(--apollo-yellow);
-  color: var(--apollo-black);
+  background: transparent;
+  color: inherit;
 }
 
 .history-card-header {
@@ -1667,6 +1667,107 @@ footer {
 .apollo-btn-primary.saved {
   background: #16a34a;
   color: white;
+}
+
+/* Confirmation Modal Styles */
+.confirmation-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.confirmation-modal-backdrop.open {
+  opacity: 1;
+}
+
+.confirmation-modal {
+  background-color: white;
+  border-radius: 1rem;
+  max-width: 28rem;
+  width: 90%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+}
+
+.confirmation-modal.open {
+  transform: scale(1);
+}
+
+.confirmation-modal-header {
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  text-align: center;
+}
+
+.confirmation-modal-icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem auto;
+  background-color: #fef2f2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #dc2626;
+}
+
+.confirmation-modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--apollo-gray-900);
+  margin: 0 0 0.5rem 0;
+}
+
+.confirmation-modal-message {
+  font-size: 0.875rem;
+  color: var(--apollo-gray-600);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.confirmation-modal-actions {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.confirmation-modal-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  min-width: 5rem;
+}
+
+.confirmation-modal-btn-cancel {
+  background-color: var(--apollo-gray-100);
+  color: var(--apollo-gray-700);
+}
+
+.confirmation-modal-btn-cancel:hover {
+  background-color: var(--apollo-gray-200);
+}
+
+.confirmation-modal-btn-confirm {
+  background-color: #dc2626;
+  color: white;
+}
+
+.confirmation-modal-btn-confirm:hover {
+  background-color: #b91c1c;
 }
 
 /* Dig Deeper Modal Styles */
