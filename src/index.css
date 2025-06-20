@@ -723,11 +723,14 @@ footer {
 
 /* Navigation Styles */
 .navigation {
+  position: sticky;
+  top: 0;
+  height: 100vh;
   background: #ffffff;
   border-right: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .nav-header {

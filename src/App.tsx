@@ -6,6 +6,7 @@ import LandingPage from './pages/LandingPage';
 import AppPage from './pages/AppPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
+import BrandKitPage from './pages/BrandKitPage';
 
 const AppLayout: React.FC = () => {
   return (
@@ -45,6 +46,7 @@ const AppLayout: React.FC = () => {
         <div className="page-content">
           <Routes>
             <Route path="/app" element={<AppPage />} />
+            <Route path="/brand-kit" element={<BrandKitPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
