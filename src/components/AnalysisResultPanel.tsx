@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Brain } from 'lucide-react';
 import { AnalyzedPost } from '../types';
+import DigDeeperModal from './DigDeeperModal';
 
 interface AnalysisResultPanelProps {
   analyzedPosts: AnalyzedPost[];
@@ -20,6 +21,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<'original' | 'pain' | 'audience' | 'content'>('original');
   const [isPostExpanded, setIsPostExpanded] = useState(false);
+  const [isDigDeeperModalOpen, setIsDigDeeperModalOpen] = useState(false);
 
   /**
    * Highlight keywords in text content
@@ -102,7 +104,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       return (
         <div>
           {highlightKeywords(content)}
-          <div style={{ marginTop: '1.5rem' }}>
+          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <a
               href={currentPost.permalink}
               target="_blank"
@@ -128,6 +130,18 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
               Join conversation on Reddit
               <ExternalLink style={{width: '1rem', height: '1rem', marginLeft: '0.5rem', transform: 'translateY(2px)'}} />
             </a>
+            <button
+              onClick={() => setIsDigDeeperModalOpen(true)}
+              className="apollo-btn-primary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                width: 'auto'
+              }}
+            >
+              <Brain style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
+              Get conversation starters tips
+            </button>
           </div>
         </div>
       );
@@ -159,7 +173,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
             </button>
           </div>
         )}
-        <div style={{ marginTop: '1.5rem' }}>
+        <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <a
             href={currentPost.permalink}
             target="_blank"
@@ -185,6 +199,18 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
              Join conversation on Reddit
              <ExternalLink style={{width: '1rem', height: '1rem', marginLeft: '0.5rem', transform: 'translateY(2px)'}} />
            </a>
+           <button
+             onClick={() => setIsDigDeeperModalOpen(true)}
+             className="apollo-btn-primary"
+             style={{
+               display: 'inline-flex',
+               alignItems: 'center',
+               width: 'auto'
+             }}
+           >
+             <Brain style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
+             Dig Deeper with Apollo AI Sales Coach
+           </button>
         </div>
       </div>
     );
@@ -227,6 +253,17 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   }
 
   const currentPost = analyzedPosts[currentIndex];
+  
+  // Safety check in case currentPost is undefined
+  if (!currentPost) {
+    return (
+      <div className="analysis-panel">
+        <div className="analysis-panel-empty">
+          <p>Error loading post data. Please try again.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="analysis-panel">
@@ -282,7 +319,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
         {/* Post Header */}
         <div className="post-header">
           <div className="post-rank">
-            #{currentPost.post_rank}
+            #{currentPost.post_rank || currentIndex + 1}
           </div>
           <div className="post-info">
             <h4 className="post-title">{currentPost.title}</h4>
@@ -360,6 +397,29 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                 <p className="tab-panel-content">
                   {currentPost.analysis.pain_point}
                 </p>
+                <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem' }}>
+                  <button
+                    onClick={() => setIsDigDeeperModalOpen(true)}
+                    className="apollo-btn-primary"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      width: 'auto'
+                    }}
+                  >
+                    <Brain style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
+                    Dig Deeper with Apollo AI Sales Coach
+                  </button>
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#6b7280', 
+                    textAlign: 'center', 
+                    marginTop: '0.75rem',
+                    lineHeight: '1.4'
+                  }}>
+                    Get personalized sales coaching through guided discovery questions
+                  </p>
+                </div>
               </div>
             )}
 
@@ -381,6 +441,13 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Dig Deeper Modal */}
+      <DigDeeperModal
+        isOpen={isDigDeeperModalOpen}
+        onClose={() => setIsDigDeeperModalOpen(false)}
+        post={currentPost}
+      />
     </div>
   );
 };
