@@ -9,7 +9,7 @@ const Navigation: React.FC = () => {
 
       <div className="nav-menu">
         <NavLink 
-          to="/" 
+          to="/app" 
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
         >
           <Home style={{width: '1.25rem', height: '1.25rem'}} />

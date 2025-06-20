@@ -266,12 +266,12 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
           >
             {isAnalyzing ? (
               <>
-                <Clock className="animate-spin" style={{width: '2rem', height: '2rem', marginRight: '1rem'}} />
-                Analyzing Reddit Content...
+                <Clock className="animate-spin" style={{width: '1.5rem', height: '1.5rem', marginRight: '1rem'}} />
+                Generating Insights...
               </>
             ) : (
               <>
-                <Play style={{width: '2rem', height: '2rem', marginRight: '1rem'}} />
+                <Play style={{width: '1.5rem', height: '1.5rem', marginRight: '1rem'}} />
                 Run Analysis
               </>
             )}

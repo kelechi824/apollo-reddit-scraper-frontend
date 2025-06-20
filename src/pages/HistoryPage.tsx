@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Trash2, Search, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface HistoryItem {
   id: string;
@@ -12,20 +13,32 @@ interface HistoryItem {
 const HistoryPage: React.FC = () => {
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const savedAnalyses = JSON.parse(localStorage.getItem('apollo-analyses') || '[]');
     setHistoryItems(savedAnalyses);
+    
+    // Automatically select the first item if any exist
+    if (savedAnalyses.length > 0) {
+      setSelectedItem(savedAnalyses[0]);
+    }
   }, []);
 
   /**
-   * Clear all history items
-   * Why this matters: Allows users to clean up their stored analysis history
+   * Clear all history items with confirmation
+   * Why this matters: Allows users to clean up their stored analysis history with safety confirmation
    */
   const clearHistory = () => {
-    localStorage.removeItem('apollo-analyses');
-    setHistoryItems([]);
-    setSelectedItem(null);
+    const confirmed = window.confirm(
+      'Are you sure you want to clear all analysis history?\n\nThis action cannot be undone and will permanently delete all your saved analyses.'
+    );
+    
+    if (confirmed) {
+      localStorage.removeItem('apollo-analyses');
+      setHistoryItems([]);
+      setSelectedItem(null);
+    }
   };
 
   /**
@@ -40,6 +53,18 @@ const HistoryPage: React.FC = () => {
     if (selectedItem?.id === itemId) {
       setSelectedItem(null);
     }
+  };
+
+  /**
+   * Restore analysis results and navigate to app page
+   * Why this matters: Allows users to view historical analysis results in the full interface
+   */
+  const restoreAnalysis = (historyItem: HistoryItem) => {
+    // Save the historical results to the current analysis localStorage key
+    localStorage.setItem('apollo-analysis-results', JSON.stringify(historyItem.results));
+    
+    // Navigate to the app page where the results will be displayed
+    navigate('/app');
   };
 
   /**
@@ -59,14 +84,14 @@ const HistoryPage: React.FC = () => {
   return (
     <div className="history-page">
       <div className="history-header">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-6">
           <Clock style={{width: '2rem', height: '2rem'}} />
           <h1 className="page-title">Analysis History</h1>
         </div>
         {historyItems.length > 0 && (
           <button
             onClick={clearHistory}
-            className="apollo-btn-secondary"
+            className="apollo-btn-secondary danger"
           >
             <Trash2 style={{width: '1rem', height: '1rem'}} />
             Clear All History
@@ -146,7 +171,12 @@ const HistoryPage: React.FC = () => {
                   <div className="history-insights">
                     <h3>Generated Insights</h3>
                     {selectedItem.results.analyzed_posts.map((post: any, index: number) => (
-                      <div key={post.id} className="insight-summary">
+                      <div 
+                        key={post.id} 
+                        className="insight-summary clickable"
+                        onClick={() => restoreAnalysis(selectedItem)}
+                        title="Click to view full analysis"
+                      >
                         <div className="insight-header">
                           <span className="insight-rank">#{post.post_rank}</span>
                           <h4 className="insight-title">{post.title}</h4>
@@ -159,14 +189,6 @@ const HistoryPage: React.FC = () => {
                             <strong>Opportunity:</strong> {post.analysis.content_opportunity}
                           </div>
                         </div>
-                        <a
-                          href={post.permalink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="insight-link"
-                        >
-                          View Reddit Post <ExternalLink style={{width: '0.875rem', height: '0.875rem'}} />
-                        </a>
                       </div>
                     ))}
                   </div>
