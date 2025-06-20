@@ -64,6 +64,53 @@ export interface AnalyzedPost extends RedditPost {
   analysis_timestamp: string;
 }
 
+// Chat Types for "Dig Deeper" Feature
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  reddit_post_context: {
+    post_id: string;
+    title: string;
+    content: string;
+    pain_point: string;
+    audience_insight: string;
+  };
+  messages: ChatMessage[];
+  created_at: string;
+  updated_at: string;
+  status: 'active' | 'completed' | 'expired';
+}
+
+export interface StartConversationRequest {
+  post_id: string;
+  title: string;
+  content: string;
+  pain_point: string;
+  audience_insight: string;
+}
+
+export interface StartConversationResponse {
+  conversation_id: string;
+  initial_message: ChatMessage;
+}
+
+export interface SendMessageRequest {
+  conversation_id: string;
+  message: string;
+}
+
+export interface SendMessageResponse {
+  user_message: ChatMessage;
+  assistant_message: ChatMessage;
+  conversation_stage?: string;
+}
+
 // Workflow Types
 export interface WorkflowRequest {
   keywords: string[];
@@ -164,6 +211,10 @@ export const API_ENDPOINTS = {
   REDDIT_SEARCH: '/api/reddit/search',
   ANALYZE_POSTS: '/api/analysis/analyze-posts',
   EXPORT_SHEETS: '/api/sheets/save-results',
+  CHAT_START: '/api/chat/start-conversation',
+  CHAT_MESSAGE: '/api/chat/message',
+  CHAT_CONVERSATION: '/api/chat/conversation',
+  CHAT_STATUS: '/api/chat/status',
 } as const;
 
 // Subreddit Options
