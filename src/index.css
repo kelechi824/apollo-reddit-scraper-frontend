@@ -64,7 +64,13 @@ header {
   padding: 0.5rem 1.5rem;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
 }
 
 .apollo-logo-header {
@@ -83,6 +89,89 @@ header {
   height: 100%;
   width: auto;
   object-fit: contain;
+}
+
+/* Header Navigation */
+.header-navigation {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.header-nav-item {
+  color: #374151;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.125rem;
+  padding: 0.5rem 0;
+  transition: color 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.header-nav-item:hover {
+  color: #111827;
+  border-bottom-color: var(--apollo-yellow);
+}
+
+/* Header Right Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-demo-link {
+  color: #374151;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 0.5rem 0;
+  transition: color 0.2s ease;
+}
+
+.header-demo-link:hover {
+  color: #111827;
+}
+
+.header-login-btn {
+  background: transparent;
+  color: #374151;
+  border: 1px solid #6b7280;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.header-login-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  color: #111827;
+}
+
+.header-signup-btn {
+  background: #EBF212;
+  color: #000000;
+  border: none;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.header-signup-btn:hover {
+  background: #d4d41a;
+  transform: translateY(-1px);
 }
 
 /* Main Headline Section */

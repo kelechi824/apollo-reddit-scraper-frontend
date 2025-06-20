@@ -13,9 +13,26 @@ const AppLayout: React.FC = () => {
       {/* Header */}
       <header>
         <div className="header-container">
-          <Link to="/" className="apollo-logo-header">
-            <img src="/Apollo_logo_transparent.png" alt="Apollo Logo" />
-          </Link>
+          <div className="header-left">
+            <Link to="/" className="apollo-logo-header">
+              <img src="/Apollo_logo_transparent.png" alt="Apollo Logo" />
+            </Link>
+            
+            {/* Header Navigation */}
+            <nav className="header-navigation">
+              <a href="#" className="header-nav-item">Platform</a>
+              <a href="#" className="header-nav-item">Roles</a>
+              <a href="#" className="header-nav-item">Resources</a>
+              <a href="#" className="header-nav-item">Pricing</a>
+            </nav>
+          </div>
+          
+          {/* Header Actions */}
+          <div className="header-actions">
+            <a href="#" className="header-demo-link">Get a demo</a>
+            <a href="#" className="header-login-btn">Log in</a>
+            <a href="#" className="header-signup-btn">Sign up for free</a>
+          </div>
         </div>
       </header>
 
