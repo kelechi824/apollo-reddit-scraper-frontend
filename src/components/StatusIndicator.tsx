@@ -1,7 +1,31 @@
-import React from 'react';
-import { StatusIndicatorProps, ConnectionStatus } from '../types';
+import React, { useState, useEffect } from 'react';
+import { ConnectionStatus } from '../types';
 
-const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status }) => {
+interface StatusIndicatorProps {
+  apiUrl: string;
+}
+
+const StatusIndicator: React.FC<StatusIndicatorProps> = ({ apiUrl }) => {
+  const [status, setStatus] = useState<ConnectionStatus>('connecting');
+
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/api/health`);
+        if (response.ok) {
+          setStatus('connected');
+        } else {
+          setStatus('disconnected');
+        }
+      } catch (error) {
+        setStatus('disconnected');
+      }
+    };
+
+    checkConnection();
+    const interval = setInterval(checkConnection, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [apiUrl]);
   const getStatusStyles = (status: ConnectionStatus): string => {
     switch (status) {
       case 'connected':
