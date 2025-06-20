@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Trash2, Search, ExternalLink } from 'lucide-react';
+import { Clock, Trash2, Search, ExternalLink, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface HistoryItem {
@@ -13,6 +13,7 @@ interface HistoryItem {
 const HistoryPage: React.FC = () => {
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,19 +27,30 @@ const HistoryPage: React.FC = () => {
   }, []);
 
   /**
-   * Clear all history items with confirmation
-   * Why this matters: Allows users to clean up their stored analysis history with safety confirmation
+   * Show confirmation modal for clearing history
+   * Why this matters: Provides a custom modal experience instead of browser popup for better UX
    */
-  const clearHistory = () => {
-    const confirmed = window.confirm(
-      'Are you sure you want to clear all analysis history?\n\nThis action cannot be undone and will permanently delete all your saved analyses.'
-    );
-    
-    if (confirmed) {
-      localStorage.removeItem('apollo-analyses');
-      setHistoryItems([]);
-      setSelectedItem(null);
-    }
+  const showClearConfirmation = () => {
+    setShowConfirmModal(true);
+  };
+
+  /**
+   * Clear all history items after confirmation
+   * Why this matters: Performs the actual deletion of history data after user confirms
+   */
+  const confirmClearHistory = () => {
+    localStorage.removeItem('apollo-analyses');
+    setHistoryItems([]);
+    setSelectedItem(null);
+    setShowConfirmModal(false);
+  };
+
+  /**
+   * Cancel the clear history action
+   * Why this matters: Allows users to back out of the destructive action
+   */
+  const cancelClearHistory = () => {
+    setShowConfirmModal(false);
   };
 
   /**
@@ -90,7 +102,7 @@ const HistoryPage: React.FC = () => {
         </div>
         {historyItems.length > 0 && (
           <button
-            onClick={clearHistory}
+            onClick={showClearConfirmation}
             className="apollo-btn-secondary danger"
           >
             <Trash2 style={{width: '1rem', height: '1rem'}} />
@@ -196,6 +208,37 @@ const HistoryPage: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className={`confirmation-modal-backdrop ${showConfirmModal ? 'open' : ''}`}>
+          <div className={`confirmation-modal ${showConfirmModal ? 'open' : ''}`}>
+            <div className="confirmation-modal-header">
+              <div className="confirmation-modal-icon">
+                <AlertTriangle style={{width: '1.5rem', height: '1.5rem'}} />
+              </div>
+              <h3 className="confirmation-modal-title">Clear All History?</h3>
+              <p className="confirmation-modal-message">
+                This action cannot be undone and will permanently delete all your saved analyses.
+              </p>
+            </div>
+            <div className="confirmation-modal-actions">
+              <button
+                onClick={cancelClearHistory}
+                className="confirmation-modal-btn confirmation-modal-btn-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmClearHistory}
+                className="confirmation-modal-btn confirmation-modal-btn-confirm"
+              >
+                Delete All
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
