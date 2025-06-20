@@ -60,6 +60,7 @@ const AppPage: React.FC = () => {
             analyzedPosts={currentResults.analyzed_posts}
             workflowId={currentResults.workflow_id}
             totalFound={currentResults.reddit_results.total_found}
+            keywords={currentResults.reddit_results.keywords_used}
             onClear={handleClearResults}
           />
         ) : (

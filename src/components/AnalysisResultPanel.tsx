@@ -6,6 +6,7 @@ interface AnalysisResultPanelProps {
   analyzedPosts: AnalyzedPost[];
   workflowId: string;
   totalFound: number;
+  keywords: string;
   onClear: () => void;
 }
 
@@ -13,10 +14,181 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   analyzedPosts,
   workflowId,
   totalFound,
+  keywords,
   onClear
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<'original' | 'pain' | 'audience' | 'content'>('original');
+  const [isPostExpanded, setIsPostExpanded] = useState(false);
+
+  /**
+   * Highlight keywords in text content
+   * Why this matters: Makes it easy for users to quickly identify where their search keywords appear in the post content
+   */
+  const highlightKeywords = (text: string): React.ReactElement => {
+    if (!keywords || !text) {
+      return <span>{text}</span>;
+    }
+
+    // Split keywords by comma and clean them up
+    const keywordList = keywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
+    
+    if (keywordList.length === 0) {
+      return <span>{text}</span>;
+    }
+
+    // Create a regex pattern to match any of the keywords as whole words only (case-insensitive)
+    const pattern = new RegExp(`\\b(${keywordList.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
+    
+    // Split text by the pattern and create highlighted spans
+    const parts = text.split(pattern);
+    
+    return (
+      <span>
+        {parts.map((part, index) => {
+          const isKeyword = keywordList.some(keyword => 
+            part.toLowerCase() === keyword.toLowerCase()
+          );
+          
+          return isKeyword ? (
+            <span 
+              key={index} 
+              className="keyword-highlight"
+            >
+              {part}
+            </span>
+          ) : (
+            <span key={index}>{part}</span>
+          );
+        })}
+      </span>
+    );
+  };
+
+  /**
+   * Split content into paragraphs and determine if truncation is needed
+   * Why this matters: Helps identify long posts that need read more/less functionality
+   */
+  const splitIntoParagraphs = (text: string): string[] => {
+    if (!text) return [];
+    return text.split(/\n\s*\n/).filter(paragraph => paragraph.trim().length > 0);
+  };
+
+  /**
+   * Toggle post expansion state
+   * Why this matters: Allows users to control how much content they see at once
+   */
+  const togglePostExpansion = () => {
+    setIsPostExpanded(!isPostExpanded);
+  };
+
+  /**
+   * Reset expansion state when navigating to different posts
+   * Why this matters: Each post should start in collapsed state for consistent UX
+   */
+  const resetPostExpansion = () => {
+    setIsPostExpanded(false);
+  };
+
+  /**
+   * Render post content with read more/less functionality
+   * Why this matters: Provides a clean, scannable interface for long posts while allowing full content access
+   */
+  const renderPostContent = (content: string) => {
+    const paragraphs = splitIntoParagraphs(content);
+    const needsTruncation = paragraphs.length > 3;
+    
+    if (!needsTruncation) {
+      return (
+        <div>
+          {highlightKeywords(content)}
+          <div style={{ marginTop: '1.5rem' }}>
+            <a
+              href={currentPost.permalink}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                background: '#D93801',
+                color: 'white',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '0.5rem',
+                textDecoration: 'none',
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#B8310A';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#D93801';
+              }}
+            >
+              Join conversation on Reddit
+              <ExternalLink style={{width: '1rem', height: '1rem', marginLeft: '0.5rem', transform: 'translateY(2px)'}} />
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    const displayParagraphs = isPostExpanded ? paragraphs : paragraphs.slice(0, 3);
+    const displayContent = displayParagraphs.join('\n\n');
+
+    return (
+      <div>
+        {highlightKeywords(displayContent)}
+        {needsTruncation && (
+          <div style={{ marginTop: '1rem' }}>
+            <button
+              onClick={togglePostExpansion}
+              className="read-more-btn"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#2563eb',
+                fontWeight: '600',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                padding: '0.5rem 0',
+                fontSize: '0.875rem'
+              }}
+            >
+              {isPostExpanded ? 'Read less' : `Read more (${paragraphs.length - 3} more paragraphs)`}
+            </button>
+          </div>
+        )}
+        <div style={{ marginTop: '1.5rem' }}>
+          <a
+            href={currentPost.permalink}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-block',
+              background: '#D93801',
+              color: 'white',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '0.5rem',
+              textDecoration: 'none',
+              fontWeight: '600',
+              fontSize: '0.875rem',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#B8310A';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#D93801';
+            }}
+                     >
+             Join conversation on Reddit
+             <ExternalLink style={{width: '1rem', height: '1rem', marginLeft: '0.5rem', transform: 'translateY(2px)'}} />
+           </a>
+        </div>
+      </div>
+    );
+  };
 
   /**
    * Navigate to next post
@@ -26,6 +198,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
     if (currentIndex < analyzedPosts.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setActiveTab('original'); // Reset to first tab when changing posts
+      resetPostExpansion(); // Reset expansion state
     }
   };
 
@@ -37,6 +210,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
       setActiveTab('original'); // Reset to first tab when changing posts
+      resetPostExpansion(); // Reset expansion state
     }
   };
 
@@ -175,9 +349,9 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           <div className="tab-content">
             {activeTab === 'original' && (
               <div className="tab-panel">
-                <p className="tab-panel-content">
-                  {currentPost.content || 'No additional content'}
-                </p>
+                <div className="tab-panel-content">
+                  {renderPostContent(currentPost.content || 'No additional content')}
+                </div>
               </div>
             )}
 
