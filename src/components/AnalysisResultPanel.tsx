@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, Brain } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Wand2 } from 'lucide-react';
 import { AnalyzedPost } from '../types';
 import DigDeeperModal from './DigDeeperModal';
 
@@ -105,41 +105,16 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
         <div>
           {highlightKeywords(content)}
           <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <a
-              href={currentPost.permalink}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-block',
-                background: '#D93801',
-                color: 'white',
-                padding: '0.75rem 1.5rem',
-                borderRadius: '0.5rem',
-                textDecoration: 'none',
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#B8310A';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#D93801';
-              }}
-            >
-              Join conversation on Reddit
-              <ExternalLink style={{width: '1rem', height: '1rem', marginLeft: '0.5rem', transform: 'translateY(2px)'}} />
-            </a>
             <button
               onClick={() => setIsDigDeeperModalOpen(true)}
-              className="apollo-btn-primary"
+              className="apollo-btn-gradient"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 width: 'auto'
               }}
             >
-              <Brain style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
+              <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
               Get conversation starters tips
             </button>
           </div>
@@ -174,44 +149,28 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           </div>
         )}
         <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <a
-            href={currentPost.permalink}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-block',
-              background: '#D93801',
-              color: 'white',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '0.5rem',
-              textDecoration: 'none',
-              fontWeight: '600',
-              fontSize: '0.875rem',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#B8310A';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#D93801';
-            }}
-                     >
-             Join conversation on Reddit
-             <ExternalLink style={{width: '1rem', height: '1rem', marginLeft: '0.5rem', transform: 'translateY(2px)'}} />
-           </a>
            <button
              onClick={() => setIsDigDeeperModalOpen(true)}
-             className="apollo-btn-primary"
+             className="apollo-btn-gradient"
              style={{
                display: 'inline-flex',
                alignItems: 'center',
                width: 'auto'
              }}
            >
-             <Brain style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
-             Dig Deeper with Apollo AI Sales Coach
+             <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
+             Ask Conversation AI Assistant
            </button>
         </div>
+        <p style={{ 
+          fontSize: '0.75rem', 
+          color: '#6b7280', 
+          textAlign: 'left', 
+          marginTop: '0.75rem',
+          lineHeight: '1.4'
+        }}>
+          Get personalized sales coaching through guided discovery questions
+        </p>
       </div>
     );
   };
@@ -269,9 +228,6 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
     <div className="analysis-panel">
       {/* Panel Header */}
       <div className="analysis-panel-header">
-        <div className="apollo-logo" style={{width: '2.5rem', height: '2.5rem'}}>
-          <img src="/Apollo_logo_transparent.png" alt="Apollo Logo" />
-        </div>
         <div style={{flex: 1}}>
           <h3 className="analysis-panel-title">Business Insights</h3>
           <p className="analysis-panel-subtitle">
@@ -299,7 +255,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
         </button>
         
         <div className="nav-indicator">
-          <span className="nav-current">{currentIndex + 1}</span>
+          <span className="nav-current" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontWeight: '600' }}>{currentIndex + 1}</span>
           <span className="nav-divider">of</span>
           <span className="nav-total">{analyzedPosts.length}</span>
         </div>
@@ -344,9 +300,6 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                 <span className="post-stat-badge">
                   Comments: {currentPost.comments}
                 </span>
-                <span className={`urgency-badge urgency-${currentPost.analysis.urgency_level}`}>
-                  Urgency: {currentPost.analysis.urgency_level.toUpperCase()}
-                </span>
               </div>
             </div>
           </div>
@@ -359,26 +312,30 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
             <button
               className={`tab-btn ${activeTab === 'original' ? 'active' : ''}`}
               onClick={() => setActiveTab('original')}
+              style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
             >
               Post
             </button>
             <button
               className={`tab-btn ${activeTab === 'pain' ? 'active' : ''}`}
               onClick={() => setActiveTab('pain')}
+              style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
             >
               Pain Point
             </button>
             <button
-              className={`tab-btn ${activeTab === 'audience' ? 'active' : ''}`}
-              onClick={() => setActiveTab('audience')}
-            >
-              Audience Insight
-            </button>
-            <button
               className={`tab-btn ${activeTab === 'content' ? 'active' : ''}`}
               onClick={() => setActiveTab('content')}
+              style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
             >
               Content Opportunity
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'audience' ? 'active' : ''}`}
+              onClick={() => setActiveTab('audience')}
+              style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
+            >
+              Audience Summary
             </button>
           </div>
 
@@ -386,7 +343,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           <div className="tab-content">
             {activeTab === 'original' && (
               <div className="tab-panel">
-                <div className="tab-panel-content">
+                <div className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
                   {renderPostContent(currentPost.content || 'No additional content')}
                 </div>
               </div>
@@ -394,26 +351,26 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'pain' && (
               <div className="tab-panel">
-                <p className="tab-panel-content">
+                <p className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
                   {currentPost.analysis.pain_point}
                 </p>
                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem' }}>
                   <button
                     onClick={() => setIsDigDeeperModalOpen(true)}
-                    className="apollo-btn-primary"
+                    className="apollo-btn-gradient"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       width: 'auto'
                     }}
                   >
-                    <Brain style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
-                    Dig Deeper with Apollo AI Sales Coach
+                    <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
+                    Ask Conversation AI Assistant
                   </button>
                   <p style={{ 
                     fontSize: '0.75rem', 
                     color: '#6b7280', 
-                    textAlign: 'center', 
+                    textAlign: 'left', 
                     marginTop: '0.75rem',
                     lineHeight: '1.4'
                   }}>
@@ -423,18 +380,18 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
               </div>
             )}
 
-            {activeTab === 'audience' && (
+            {activeTab === 'content' && (
               <div className="tab-panel">
-                <p className="tab-panel-content">
-                  {currentPost.analysis.audience_insight}
+                <p className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+                  {currentPost.analysis.content_opportunity}
                 </p>
               </div>
             )}
 
-            {activeTab === 'content' && (
+            {activeTab === 'audience' && (
               <div className="tab-panel">
-                <p className="tab-panel-content">
-                  {currentPost.analysis.content_opportunity}
+                <p className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+                  {currentPost.analysis.audience_insight}
                 </p>
               </div>
             )}

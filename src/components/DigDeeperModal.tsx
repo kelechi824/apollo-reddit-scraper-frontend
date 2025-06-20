@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader2 } from 'lucide-react';
+import { X, Send, Loader2, ExternalLink, Paperclip, Image as ImageIcon, ThumbsUp, ThumbsDown, Copy, Check } from 'lucide-react';
 import { 
   ChatMessage, 
   StartConversationRequest, 
@@ -30,8 +30,14 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
   const [isInitializing, setIsInitializing] = useState(false);
   const [currentPostId, setCurrentPostId] = useState<string | null>(null);
   const [isResumedConversation, setIsResumedConversation] = useState(false);
+  const [attachedImage, setAttachedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, 'positive' | 'negative' | null>>({});
+  const [showThanksMessage, setShowThanksMessage] = useState<string | null>(null);
+  const [showCopiedMessage, setShowCopiedMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /**
    * Scroll to bottom of messages
@@ -227,13 +233,125 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
   };
 
   /**
-   * Handle Enter key press in input
-   * Why this matters: Provides intuitive chat UX with keyboard shortcuts.
+   * Handle Enter key press in textarea
+   * Why this matters: Provides intuitive chat UX with keyboard shortcuts, allowing Shift+Enter for new lines.
    */
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    }
+  };
+
+  /**
+   * Handle file input change
+   * Why this matters: Allows users to attach images for visual context in conversations.
+   */
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setAttachedImage(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  /**
+   * Remove attached image
+   * Why this matters: Allows users to remove accidentally attached images before sending.
+   */
+  const removeAttachedImage = () => {
+    setAttachedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  /**
+   * Open file picker
+   * Why this matters: Provides easy access to image attachment functionality.
+   */
+  const openFilePicker = () => {
+    fileInputRef.current?.click();
+  };
+
+  /**
+   * Handle copying assistant message content
+   * Why this matters: Allows users to easily copy AI insights for use in their own communications.
+   */
+  const handleCopyMessage = async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      
+      // Show copied message
+      setShowCopiedMessage(messageId);
+      
+      // Hide copied message after 2 seconds
+      setTimeout(() => {
+        setShowCopiedMessage(null);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = content;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setShowCopiedMessage(messageId);
+        setTimeout(() => {
+          setShowCopiedMessage(null);
+        }, 2000);
+      } catch (fallbackError) {
+        console.error('Fallback copy failed:', fallbackError);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  /**
+   * Handle feedback on AI responses
+   * Why this matters: Collects user feedback for reinforcement learning and improving AI responses.
+   */
+  const handleMessageFeedback = async (messageId: string, feedback: 'positive' | 'negative') => {
+    // Update local state
+    setMessageFeedback(prev => ({
+      ...prev,
+      [messageId]: feedback
+    }));
+
+    // Show thanks message
+    setShowThanksMessage(messageId);
+    
+    // Hide thanks message after 3 seconds
+    setTimeout(() => {
+      setShowThanksMessage(null);
+    }, 3000);
+
+    // Send feedback to backend for collection
+    try {
+      await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3003'}/api/chat/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          message_id: messageId,
+          feedback: feedback,
+          post_id: post.id
+        }),
+      });
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+      // Don't show error to user, just log it
     }
   };
 
@@ -363,6 +481,33 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
                 </span>
               )}
             </div>
+            <a
+              href={post.permalink}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                background: '#D93801',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.375rem',
+                textDecoration: 'none',
+                fontWeight: '500',
+                fontSize: '0.75rem',
+                marginTop: '0.75rem',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#B8310A';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#D93801';
+              }}
+            >
+              Join conversation on Reddit
+              <ExternalLink style={{width: '0.75rem', height: '0.75rem', marginLeft: '0.375rem'}} />
+            </a>
           </div>
         </div>
 
@@ -384,6 +529,50 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
                       minute: '2-digit' 
                     })}
                   </div>
+                  
+                  {/* Feedback buttons for assistant messages */}
+                  {message.role === 'assistant' && (
+                    <div className="dig-deeper-feedback-section">
+                      <div className="dig-deeper-feedback-buttons">
+                        <button
+                          onClick={() => handleCopyMessage(message.id, message.content)}
+                          className="dig-deeper-feedback-btn dig-deeper-copy-btn"
+                          title="Copy message"
+                        >
+                          <Copy style={{ width: '0.875rem', height: '0.875rem' }} />
+                        </button>
+                        <button
+                          onClick={() => handleMessageFeedback(message.id, 'positive')}
+                          className={`dig-deeper-feedback-btn ${messageFeedback[message.id] === 'positive' ? 'active positive' : ''}`}
+                          title="This response was helpful"
+                        >
+                          <ThumbsUp style={{ width: '0.875rem', height: '0.875rem' }} />
+                        </button>
+                        <button
+                          onClick={() => handleMessageFeedback(message.id, 'negative')}
+                          className={`dig-deeper-feedback-btn ${messageFeedback[message.id] === 'negative' ? 'active negative' : ''}`}
+                          title="This response could be improved"
+                        >
+                          <ThumbsDown style={{ width: '0.875rem', height: '0.875rem' }} />
+                        </button>
+                      </div>
+                      
+                      {/* Copied message */}
+                      {showCopiedMessage === message.id && (
+                        <div className="dig-deeper-copied-message">
+                          <Check style={{ width: '0.875rem', height: '0.875rem', marginRight: '0.375rem' }} />
+                          Copied!
+                        </div>
+                      )}
+                      
+                      {/* Thanks message */}
+                      {showThanksMessage === message.id && (
+                        <div className="dig-deeper-thanks-message">
+                          Thanks for your feedback!
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))
@@ -403,28 +592,104 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
 
         {/* Input */}
         <div className="dig-deeper-modal-input">
-          <div className="dig-deeper-input-row">
-            <input
+          {/* Image Preview */}
+          {imagePreview && (
+            <div style={{ 
+              padding: '1rem', 
+              borderTop: '1px solid #e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              backgroundColor: '#f9fafb'
+            }}>
+              <img 
+                src={imagePreview} 
+                alt="Attached" 
+                style={{ 
+                  width: '60px', 
+                  height: '60px', 
+                  objectFit: 'cover', 
+                  borderRadius: '0.5rem',
+                  border: '1px solid #d1d5db'
+                }} 
+              />
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: '500' }}>
+                  {attachedImage?.name}
+                </p>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>
+                  Image attached
+                </p>
+              </div>
+              <button
+                onClick={removeAttachedImage}
+                style={{
+                  padding: '0.5rem',
+                  background: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem'
+                }}
+              >
+                <X style={{ width: '1rem', height: '1rem' }} />
+              </button>
+            </div>
+          )}
+          
+          <div className="dig-deeper-input-container">
+            <textarea
               ref={inputRef}
-              type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Share your thoughts..."
               disabled={isLoading || isInitializing}
-              className="dig-deeper-input"
+              className="dig-deeper-input dig-deeper-textarea"
+              rows={3}
+              style={{
+                resize: 'none',
+                minHeight: '80px',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                width: '100%'
+              }}
             />
-            <button
-              onClick={sendMessage}
-              disabled={!inputMessage.trim() || isLoading || isInitializing}
-              className="dig-deeper-send-btn"
-            >
-              <Send className="w-5 h-5" />
-            </button>
+            
+            <div className="dig-deeper-action-row">
+              <button
+                onClick={openFilePicker}
+                disabled={isLoading || isInitializing}
+                className="dig-deeper-attach-btn"
+                title="Attach image"
+              >
+                <ImageIcon style={{ width: '1.125rem', height: '1.125rem', marginRight: '0.5rem' }} />
+                Attach Image
+              </button>
+              
+              <button
+                onClick={sendMessage}
+                disabled={!inputMessage.trim() || isLoading || isInitializing}
+                className="dig-deeper-send-btn-optimized"
+              >
+                <Send style={{ width: '1rem', height: '1rem', marginRight: '0.5rem' }} />
+                Send
+              </button>
+            </div>
           </div>
           
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+          
           <div className="dig-deeper-input-hint">
-            Press Enter to send • ESC to close
+            Press Enter to send • Shift+Enter for new line • ESC to close
           </div>
         </div>
       </div>
