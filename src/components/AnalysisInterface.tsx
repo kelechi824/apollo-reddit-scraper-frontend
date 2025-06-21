@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Play, AlertCircle, Clock } from 'lucide-react';
 import { WorkflowRequest, WorkflowResponse } from '../types';
 
@@ -14,8 +14,65 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
   const [limit, setLimit] = useState<number>(5);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [analysisStep, setAnalysisStep] = useState<number>(0);
+  const [hasCompletedAnalysis, setHasCompletedAnalysis] = useState<boolean>(false);
+  const analysisTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting'];
+
+  // Analysis progress messages with timing
+  const analysisMessages = [
+    'Deploying Agent...',
+    'Scraping Reddit...',
+    'Reading Subreddits...',
+    'Generating insights...',
+    'Almost done...'
+  ];
+
+  /**
+   * Handle analysis progress animation
+   * Why this matters: Cycles through different status messages to show AI processing stages.
+   */
+  useEffect(() => {
+    if (isAnalyzing) {
+      setAnalysisStep(0);
+      
+      // Step timing: 3s, 3s, 5s, 5s, then stay on last message
+      const stepTimings = [3000, 3000, 5000, 5000]; // milliseconds for each step
+      let currentStep = 0;
+      
+      const progressToNextStep = () => {
+        if (currentStep < stepTimings.length) {
+          analysisTimerRef.current = setTimeout(() => {
+            currentStep++;
+            if (currentStep < analysisMessages.length - 1) {
+              setAnalysisStep(currentStep);
+              progressToNextStep();
+            } else {
+              // Stay on the last message
+              setAnalysisStep(analysisMessages.length - 1);
+            }
+          }, stepTimings[currentStep]);
+        }
+      };
+      
+      progressToNextStep();
+    } else {
+      // Clear timer when analysis stops
+      if (analysisTimerRef.current) {
+        clearTimeout(analysisTimerRef.current);
+        analysisTimerRef.current = null;
+      }
+      setAnalysisStep(0);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (analysisTimerRef.current) {
+        clearTimeout(analysisTimerRef.current);
+      }
+    };
+  }, [isAnalyzing, analysisMessages.length]);
 
   /**
    * Handle keyword selection when user blurs from input or presses Enter
@@ -112,6 +169,9 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
       
       // Notify parent component
       onAnalysisComplete(data);
+      
+      // Mark analysis as completed
+      setHasCompletedAnalysis(true);
 
     } catch (err) {
       console.error('❌ Analysis failed:', err);
@@ -267,12 +327,12 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
             {isAnalyzing ? (
               <>
                 <Clock className="animate-spin" style={{width: '1.5rem', height: '1.5rem', marginRight: '1rem'}} />
-                Generating Insights...
+                {analysisMessages[analysisStep]}
               </>
             ) : (
               <>
                 <Play style={{width: '1.5rem', height: '1.5rem', marginRight: '1rem'}} />
-                Run Analysis
+                {hasCompletedAnalysis ? 'Run Again' : 'Run Analysis'}
               </>
             )}
           </button>
