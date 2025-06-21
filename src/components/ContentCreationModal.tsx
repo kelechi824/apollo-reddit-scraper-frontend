@@ -842,12 +842,17 @@ The litmus test: Ask yourself, "Could a competitor easily replicate this tomorro
 
     const userPromptTemplate = `Based on this Reddit analysis, create SEO-optimized content:
 
-**Reddit Post Context:**
+      **Reddit Post Context:**
+
 Title: ${post.title}
+
 Content: ${post.content || 'No additional content'}
+
 Pain Point: ${post.analysis.pain_point}
+
 Content Opportunity: ${post.analysis.content_opportunity}
-Audience Insight: ${post.analysis.audience_insight}
+
+Audience Summary: ${post.analysis.audience_insight}
 
 **Content Requirements:**
 1. Create an H1 title that directly addresses the pain point in question format
@@ -1308,12 +1313,36 @@ Start your response directly with the opening HTML tag and end with the closing 
     if (!showCMSModal) return null;
 
     const cmsOptions = [
-      { name: 'Webflow', description: 'Publish directly to your Webflow site' },
-      { name: 'Strapi', description: 'Add to your Strapi content library' },
-      { name: 'Contentful', description: 'Create entry in Contentful space' },
-      { name: 'Sanity', description: 'Publish to Sanity Studio' },
-      { name: 'WordPress', description: 'Create WordPress post/page' },
-      { name: 'Custom', description: 'Configure your own API endpoint' }
+      { 
+        name: 'Webflow', 
+        description: 'Publish directly to your Webflow site',
+        logo: '/webflow-logo.png'
+      },
+      { 
+        name: 'Strapi', 
+        description: 'Add to your Strapi content library',
+        logo: '/strapi-logo.png'
+      },
+      { 
+        name: 'Contentful', 
+        description: 'Create entry in Contentful space',
+        logo: '/contenful-logo.png'
+      },
+      { 
+        name: 'Sanity', 
+        description: 'Publish to Sanity Studio',
+        logo: '/sanity-logo.png'
+      },
+      { 
+        name: 'WordPress', 
+        description: 'Create WordPress post/page',
+        logo: '/wordpress-logo.png'
+      },
+      { 
+        name: 'Custom', 
+        description: 'Configure your own API endpoint',
+        logo: null
+      }
     ];
 
     return (
@@ -1363,20 +1392,106 @@ Start your response directly with the opening HTML tag and end with the closing 
                   key={cms.name}
                   style={{
                     border: '1px solid #e5e7eb',
-                    borderRadius: '0.5rem',
-                    padding: '1rem',
+                    borderRadius: '0.75rem',
+                    padding: '1.25rem',
                     cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s ease',
+                    backgroundColor: 'white',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
                   }}
                   onClick={() => {
                     setShowComingSoonMessage(cms.name);
                     setTimeout(() => setShowComingSoonMessage(null), 3000);
                   }}
-                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
                 >
-                  <h4 style={{ fontWeight: '600', marginBottom: '0.25rem', margin: '0 0 0.25rem 0' }}>{cms.name}</h4>
-                  <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>{cms.description}</p>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '1rem',
+                    marginBottom: '0.5rem'
+                  }}>
+                    {cms.logo ? (
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '0.5rem',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #f1f5f9',
+                        flexShrink: 0
+                      }}>
+                        <img 
+                          src={cms.logo} 
+                          alt={`${cms.name} logo`}
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            objectFit: 'contain'
+                          }}
+                          onError={(e) => {
+                            // Fallback to initials if logo fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = `<span style="font-size: 12px; font-weight: 600; color: #64748b;">${cms.name.charAt(0)}</span>`;
+                            }
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '0.5rem',
+                        backgroundColor: '#6366f1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <span style={{
+                          color: 'white',
+                          fontSize: '14px',
+                          fontWeight: '600'
+                        }}>
+                          {cms.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    <h4 style={{ 
+                      fontWeight: '600', 
+                      margin: 0,
+                      fontSize: '1rem',
+                      color: '#111827'
+                    }}>
+                      {cms.name}
+                    </h4>
+                  </div>
+                  <p style={{ 
+                    color: '#6b7280', 
+                    fontSize: '0.875rem', 
+                    margin: 0,
+                    paddingLeft: '3rem',
+                    lineHeight: '1.5'
+                  }}>
+                    {cms.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -1729,8 +1844,8 @@ Start your response directly with the opening HTML tag and end with the closing 
                         alignItems: 'center',
                         gap: '0.5rem',
                         padding: '0.5rem 1rem',
-                        backgroundColor: '#4285F4',
-                        color: 'white',
+                        backgroundColor: '#84ADEA',
+                        color: 'black',
                         border: 'none',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
@@ -1738,10 +1853,38 @@ Start your response directly with the opening HTML tag and end with the closing 
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
-                      onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#3367D6')}
-                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#4285F4')}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#6b96e8';
+                        e.currentTarget.style.color = 'black';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#84ADEA';
+                        e.currentTarget.style.color = 'black';
+                      }}
                     >
-                      <ExternalLink size={14} />
+                      <img 
+                        src="/google-docs-logo.png" 
+                        alt="Google Docs"
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          objectFit: 'contain'
+                        }}
+                        onError={(e) => {
+                          // Fallback to ExternalLink icon if logo fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            const icon = document.createElement('div');
+                            icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 0 0-5"/><path d="m17 7-10 10"/></svg>';
+                            icon.style.display = 'flex';
+                            icon.style.alignItems = 'center';
+                            icon.style.justifyContent = 'center';
+                            parent.insertBefore(icon, target);
+                          }
+                        }}
+                      />
                       Open in Google Docs
                     </button>
 

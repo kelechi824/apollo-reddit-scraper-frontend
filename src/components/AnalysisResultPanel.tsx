@@ -345,7 +345,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           <div className="tab-content">
             {activeTab === 'original' && (
               <div className="tab-panel">
-                <div className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+                <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {renderPostContent(currentPost.content || 'No additional content')}
                 </div>
               </div>
@@ -353,7 +353,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'pain' && (
               <div className="tab-panel">
-                <p className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+                <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {currentPost.analysis.pain_point}
                 </p>
                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem' }}>
@@ -384,7 +384,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'content' && (
               <div className="tab-panel">
-                <p className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+                <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {currentPost.analysis.content_opportunity}
                 </p>
                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem' }}>
@@ -415,7 +415,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'audience' && (
               <div className="tab-panel">
-                <p className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+                <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {currentPost.analysis.audience_insight}
                 </p>
               </div>
