@@ -842,7 +842,7 @@ The litmus test: Ask yourself, "Could a competitor easily replicate this tomorro
 
     const userPromptTemplate = `Based on this Reddit analysis, create SEO-optimized content:
 
-      **Reddit Post Context:**
+**Reddit Post Context:**
 
 Title: ${post.title}
 
@@ -1348,15 +1348,15 @@ Start your response directly with the opening HTML tag and end with the closing 
     return (
       <div 
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
           zIndex: 10001
         }}
         onClick={(e) => {
@@ -1386,17 +1386,17 @@ Start your response directly with the opening HTML tag and end with the closing 
           </div>
 
           <div style={{ position: 'relative' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {cmsOptions.map((cms) => (
-                <div
-                  key={cms.name}
-                  style={{
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '0.75rem',
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {cmsOptions.map((cms) => (
+              <div
+                key={cms.name}
+                style={{
+          border: '1px solid #e5e7eb',
+          borderRadius: '0.75rem',
                     padding: '1.25rem',
-                    cursor: 'pointer',
+                cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    backgroundColor: 'white',
+                backgroundColor: 'white',
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
                   }}
                   onClick={() => {
@@ -1453,9 +1453,9 @@ Start your response directly with the opening HTML tag and end with the closing 
                             }
                           }}
                         />
-                      </div>
+                  </div>
                     ) : (
-                      <div style={{
+                  <div style={{ 
                         width: '32px',
                         height: '32px',
                         borderRadius: '0.5rem',
@@ -1468,11 +1468,11 @@ Start your response directly with the opening HTML tag and end with the closing 
                         <span style={{
                           color: 'white',
                           fontSize: '14px',
-                          fontWeight: '600'
-                        }}>
+                    fontWeight: '600'
+                  }}>
                           {cms.name.charAt(0)}
                         </span>
-                      </div>
+                  </div>
                     )}
                     <h4 style={{ 
                       fontWeight: '600', 
@@ -1498,7 +1498,7 @@ Start your response directly with the opening HTML tag and end with the closing 
 
             {/* Coming Soon Message */}
             {showComingSoonMessage && (
-              <div style={{
+            <div style={{ 
                 position: 'absolute',
                 top: '50%',
                 left: '50%',
@@ -1515,12 +1515,12 @@ Start your response directly with the opening HTML tag and end with the closing 
                 boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                 zIndex: 10002,
                 minWidth: '250px',
-                textAlign: 'center',
+              textAlign: 'center', 
                 animation: 'fadeInScale 0.2s ease-out'
               }}>
                 {showComingSoonMessage} integration coming soon!
-              </div>
-            )}
+            </div>
+          )}
           </div>
         </div>
       </div>
@@ -1535,7 +1535,7 @@ Start your response directly with the opening HTML tag and end with the closing 
     <>
       {/* Auto-save indicator */}
       {autoSaveStatus && (
-        <div style={{ 
+      <div style={{
           position: 'fixed',
           top: '1rem',
           right: '1rem',
@@ -1569,17 +1569,17 @@ Start your response directly with the opening HTML tag and end with the closing 
 
       <div 
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '1rem'
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '1rem'
         }}
         onClick={(e) => {
           // Close modal when clicking on backdrop
@@ -1891,26 +1891,26 @@ Start your response directly with the opening HTML tag and end with the closing 
                     <div style={{ position: 'relative' }}>
                       <button
                         onClick={copyToClipboard}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.5rem 1rem',
-                          backgroundColor: '#6b7280',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875rem',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
-                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
-                      >
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
+                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
+                    >
                         <Copy size={14} />
                         Copy to Clipboard
-                      </button>
+                    </button>
                       
                       {/* Copied message */}
                       {showCopiedMessage && (
