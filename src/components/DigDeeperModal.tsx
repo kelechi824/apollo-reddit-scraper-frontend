@@ -475,39 +475,38 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
                   {conversationStage}
                 </span>
               )}
+              <a
+                href={post.permalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  background: '#D93801',
+                  color: 'white',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '0.25rem',
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  fontSize: '0.75rem',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#B8310A';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#D93801';
+                }}
+              >
+                Join conversation on Reddit
+                <ExternalLink style={{width: '0.75rem', height: '0.75rem', marginLeft: '0.375rem'}} />
+              </a>
               {isResumedConversation && (
                 <span className="dig-deeper-modal-resumed">
                   Resumed
                 </span>
               )}
             </div>
-            <a
-              href={post.permalink}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                background: '#D93801',
-                color: 'white',
-                padding: '0.5rem 1rem',
-                borderRadius: '0.375rem',
-                textDecoration: 'none',
-                fontWeight: '500',
-                fontSize: '0.75rem',
-                marginTop: '0.75rem',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#B8310A';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#D93801';
-              }}
-            >
-              Join conversation on Reddit
-              <ExternalLink style={{width: '0.75rem', height: '0.75rem', marginLeft: '0.375rem'}} />
-            </a>
           </div>
         </div>
 
