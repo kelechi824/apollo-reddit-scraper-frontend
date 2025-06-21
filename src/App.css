@@ -201,8 +201,7 @@
   display: grid;
   grid-template-columns: 280px 1fr;
   flex: 1;
-  height: calc(100vh - 140px);
-  overflow: hidden;
+  min-height: 0;
 }
 
 .page-content {

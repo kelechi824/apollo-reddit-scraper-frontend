@@ -204,6 +204,53 @@ export type DeepPartial<T> = {
 
 export type NonEmptyArray<T> = [T, ...T[]];
 
+// Brand Kit Types for Content Creation
+export interface BrandKit {
+  pythiaApi: {
+    apiKey: string;
+    isConnected: boolean;
+    lastConnected?: string;
+  };
+  url: string;
+  aboutBrand: string;
+  idealCustomerProfile: string;
+  competitors: string;
+  brandPointOfView: string;
+  authorPersona: string;
+  toneOfVoice: string;
+  headerCaseType: 'title' | 'sentence' | 'upper' | 'lower';
+  writingRules: string;
+  ctaText: string;
+  ctaDestination: string;
+  writingSample: {
+    url: string;
+    title: string;
+    body: string;
+    outline: string;
+  };
+  customVariables: Record<string, string>;
+}
+
+export interface ContentCreationRequest {
+  post_context: {
+    title: string;
+    content: string;
+    pain_point: string;
+    content_opportunity: string;
+    audience_summary: string;
+  };
+  brand_kit: BrandKit;
+  system_prompt: string;
+  user_prompt: string;
+}
+
+export interface ContentCreationResponse {
+  content: string;
+  title: string;
+  description: string;
+  generated_at: string;
+}
+
 // API Endpoints
 export const API_ENDPOINTS = {
   HEALTH: '/health',

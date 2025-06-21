@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Clock, Settings, BarChart3 } from 'lucide-react';
+import { Clock, Settings, BarChart3, BookOpen } from 'lucide-react';
 
 const Navigation: React.FC = () => {
   return (
@@ -14,6 +14,14 @@ const Navigation: React.FC = () => {
           >
             <BarChart3 className="nav-icon" />
             Analysis
+          </NavLink>
+          
+          <NavLink 
+            to="/brand-kit" 
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          >
+            <BookOpen className="nav-icon" />
+            Brand Kit
           </NavLink>
           
           <NavLink 

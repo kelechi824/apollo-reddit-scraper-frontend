@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, Wand2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Wand2, FileText } from 'lucide-react';
 import { AnalyzedPost } from '../types';
 import DigDeeperModal from './DigDeeperModal';
+import ContentCreationModal from './ContentCreationModal';
 
 interface AnalysisResultPanelProps {
   analyzedPosts: AnalyzedPost[];
@@ -22,6 +23,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   const [activeTab, setActiveTab] = useState<'original' | 'pain' | 'audience' | 'content'>('original');
   const [isPostExpanded, setIsPostExpanded] = useState(false);
   const [isDigDeeperModalOpen, setIsDigDeeperModalOpen] = useState(false);
+  const [isContentCreationModalOpen, setIsContentCreationModalOpen] = useState(false);
 
   /**
    * Highlight keywords in text content
@@ -343,7 +345,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           <div className="tab-content">
             {activeTab === 'original' && (
               <div className="tab-panel">
-                <div className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+                <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {renderPostContent(currentPost.content || 'No additional content')}
                 </div>
               </div>
@@ -351,7 +353,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'pain' && (
               <div className="tab-panel">
-                <p className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+                <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {currentPost.analysis.pain_point}
                 </p>
                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem' }}>
@@ -382,15 +384,38 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'content' && (
               <div className="tab-panel">
-                <p className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+                <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {currentPost.analysis.content_opportunity}
                 </p>
+                <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem' }}>
+                  <button
+                    onClick={() => setIsContentCreationModalOpen(true)}
+                    className="apollo-btn-gradient"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      width: 'auto'
+                    }}
+                  >
+                    <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
+                    Create Content with AI
+                  </button>
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#6b7280', 
+                    textAlign: 'left', 
+                    marginTop: '0.75rem',
+                    lineHeight: '1.4'
+                  }}>
+                    Generate AEO-optimized content using Reddit insights and Apollo brand kit
+                  </p>
+                </div>
               </div>
             )}
 
             {activeTab === 'audience' && (
               <div className="tab-panel">
-                <p className="tab-panel-content" style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+                <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {currentPost.analysis.audience_insight}
                 </p>
               </div>
@@ -403,6 +428,14 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       <DigDeeperModal
         isOpen={isDigDeeperModalOpen}
         onClose={() => setIsDigDeeperModalOpen(false)}
+        post={currentPost}
+      />
+
+      {/* Content Creation Modal */}
+      <ContentCreationModal
+        key={`content-creation-${currentPost.id || currentIndex}`}
+        isOpen={isContentCreationModalOpen}
+        onClose={() => setIsContentCreationModalOpen(false)}
         post={currentPost}
       />
     </div>
