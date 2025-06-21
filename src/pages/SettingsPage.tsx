@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, RotateCcw } from 'lucide-react';
+import { Settings, Save, RotateCcw, AlertTriangle } from 'lucide-react';
 
 interface SettingsState {
   theme: 'light' | 'dark';
@@ -21,6 +21,7 @@ const SettingsPage: React.FC = () => {
   });
 
   const [saved, setSaved] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     // Load settings from localStorage
@@ -68,11 +69,39 @@ const SettingsPage: React.FC = () => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
+  /**
+   * Show confirmation modal for clearing all data
+   * Why this matters: Provides a custom modal experience instead of browser popup for better UX
+   */
+  const showClearConfirmation = () => {
+    setShowConfirmModal(true);
+  };
+
+  /**
+   * Clear all data after confirmation
+   * Why this matters: Performs the actual deletion of all data after user confirms
+   */
+  const confirmClearData = () => {
+    localStorage.clear();
+    handleReset();
+    setShowConfirmModal(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  /**
+   * Cancel the clear data action
+   * Why this matters: Allows users to back out of the destructive action
+   */
+  const cancelClearData = () => {
+    setShowConfirmModal(false);
+  };
+
   return (
     <div className="settings-page">
       {/* Settings Header */}
       <div className="settings-header">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-6">
           <Settings style={{width: '2rem', height: '2rem'}} />
           <h1 className="page-title">Settings</h1>
         </div>
@@ -214,13 +243,7 @@ const SettingsPage: React.FC = () => {
                 <span className="setting-description">Remove all stored analyses and settings</span>
               </label>
               <button
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to clear all data? This cannot be undone.')) {
-                    localStorage.clear();
-                    handleReset();
-                    window.alert('All data cleared successfully.');
-                  }
-                }}
+                onClick={showClearConfirmation}
                 className="setting-danger-btn"
               >
                 Clear All Data
@@ -229,6 +252,37 @@ const SettingsPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className={`confirmation-modal-backdrop ${showConfirmModal ? 'open' : ''}`}>
+          <div className={`confirmation-modal ${showConfirmModal ? 'open' : ''}`}>
+            <div className="confirmation-modal-header">
+              <div className="confirmation-modal-icon">
+                <AlertTriangle style={{width: '1.5rem', height: '1.5rem'}} />
+              </div>
+              <h3 className="confirmation-modal-title">Clear All Data?</h3>
+              <p className="confirmation-modal-message">
+                This action cannot be undone and will permanently delete all your saved analyses, settings, and preferences.
+              </p>
+            </div>
+            <div className="confirmation-modal-actions">
+              <button
+                onClick={cancelClearData}
+                className="confirmation-modal-btn confirmation-modal-btn-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmClearData}
+                className="confirmation-modal-btn confirmation-modal-btn-confirm"
+              >
+                Delete All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

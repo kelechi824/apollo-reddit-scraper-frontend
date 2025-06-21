@@ -116,7 +116,7 @@ const HistoryPage: React.FC = () => {
           <Search style={{width: '4rem', height: '4rem', color: '#9ca3af'}} />
           <h3>No Analysis History</h3>
           <p>Your completed analyses will appear here</p>
-          <a href="/" className="apollo-btn-primary">
+          <a href="/app" className="apollo-btn-primary">
             Run Your First Analysis
           </a>
         </div>
