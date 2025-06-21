@@ -207,7 +207,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
     return (
       <div className="analysis-panel">
         <div className="analysis-panel-empty">
-          <p>No analysis results to display. Run an analysis to get started.</p>
+          <p>No analysis to display. Refine your search and try again.</p>
         </div>
       </div>
     );
