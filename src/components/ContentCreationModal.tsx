@@ -810,7 +810,7 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
    * Why this matters: Creates targeted prompts that leverage both Reddit insights and brand positioning.
    */
   const generateInitialPrompts = () => {
-    const systemPromptTemplate = `You are a world-class SEO and LLM SEO content marketer for Apollo with knowledge on how to create and optimize content that gets cited and visibility on platforms like Google, AI Overviews, ChatGPT, Perplexity, and Gemini. Write clear, actionable, and insightful content that reflects Apollo's innovative, data-driven, and customer-focused ethos. Maintain a confident, helpful tone that positions Apollo as the go-to solution for modern sales and marketing teams seeking efficiency and growth.
+    const systemPromptTemplate = `You are a world-class SEO, AEO, and LLM SEO content marketer for Apollo with knowledge on how to create and optimize content that gets cited and visibility on platforms like Google, AI Overviews, AI Mode, ChatGPT, Perplexity, Gemini, and AI IDE tools like Cursor, Windsurf, GitHub Copilot, and Claude. Write clear, actionable, and insightful content that reflects Apollo's innovative, data-driven, and customer-focused ethos. Maintain a confident, helpful tone that positions Apollo as the go-to solution for modern sales and marketing teams seeking efficiency and growth.
 
 CRITICAL OUTPUT REQUIREMENTS:
 - Return ONLY clean HTML content without any markdown code blocks, explanatory text, or meta-commentary
@@ -840,7 +840,7 @@ Content Creation Guidelines:
 
 The litmus test: Ask yourself, "Could a competitor easily replicate this tomorrow?" If the answer is yes, dig deeper.`;
 
-    const userPromptTemplate = `Based on this Reddit analysis, create SEO-optimized content:
+    const userPromptTemplate = `Based on this Reddit analysis, create AEO-optimized content:
 
 **Reddit Post Context:**
 
@@ -1801,7 +1801,20 @@ Start your response directly with the opening HTML tag and end with the closing 
                     fontWeight: '500',
                     margin: '0 0 0 1rem'
                   }}>
-                    Please configure your Brand Kit first
+                    Please{' '}
+                    <a
+                      href="/brand-kit"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: '#3b82f6',
+                        textDecoration: 'underline',
+                        fontWeight: '600'
+                      }}
+                    >
+                      configure your Brand Kit
+                    </a>
+                    {' '}first
                   </p>
                 )}
               </div>
@@ -1977,7 +1990,19 @@ Start your response directly with the opening HTML tag and end with the closing 
                     </p>
                     {!brandKit && (
                       <p style={{ marginTop: '1rem', color: '#ef4444', fontWeight: '500', margin: '1rem 0 0 0' }}>
-                        Please configure your Brand Kit first in the Brand Kit page
+                        Please configure your Brand Kit first in the{' '}
+                        <a
+                          href="/brand-kit"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: '#3b82f6',
+                            textDecoration: 'underline',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Brand Kit page
+                        </a>
                       </p>
                     )}
                   </div>
