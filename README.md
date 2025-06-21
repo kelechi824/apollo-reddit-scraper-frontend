@@ -1,4 +1,4 @@
-# Apollo Reddit Scraper - Frontend
+# Apollo's Reddit Prospecting & Content Generation Tool
 
 Modern React frontend for Apollo Reddit Scraper, featuring a clean UI for analyzing Reddit content and identifying audience insights and content opportunities.
 
