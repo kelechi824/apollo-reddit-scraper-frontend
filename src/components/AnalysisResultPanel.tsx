@@ -119,7 +119,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
               }}
             >
               <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
-              Get conversation starters tips
+              Get Conversation Starter Tips
             </button>
           </div>
         </div>
@@ -163,7 +163,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
              }}
            >
              <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
-             Ask Conversation AI Assistant
+             Get Conversation Starter Tips
            </button>
         </div>
         <p style={{ 

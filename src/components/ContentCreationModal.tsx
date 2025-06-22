@@ -267,6 +267,8 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
   const [hasUserInput, setHasUserInput] = useState(false);
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
   const [showComingSoonMessage, setShowComingSoonMessage] = useState<string | null>(null);
+  const [showClearConfirmation, setShowClearConfirmation] = useState(false);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
   
   const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   const userPromptRef = useRef<HTMLTextAreaElement>(null);
@@ -274,12 +276,15 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
   const systemVariablesButtonRef = useRef<HTMLButtonElement>(null);
   const userVariablesButtonRef = useRef<HTMLButtonElement>(null);
   const generationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const modalContentRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
 
   // Generation progress messages
   const generationMessages = [
     'Analyzing prompts...',
     'Optimizing for AEO/LLM SEO...',
     'Formatting content...',
+    'Creating awesomeness...',
     'Almost done...'
   ];
 
@@ -1102,6 +1107,10 @@ Return ONLY the JSON object, no additional text.`;
       saveGeneratedContent(parsedFallback.content, fallbackMetaTitle, fallbackMetaDescription);
     } finally {
       setIsGenerating(false);
+      // Auto-scroll to top after content generation
+      setTimeout(() => {
+        scrollToTop();
+      }, 100);
     }
   };
 
@@ -1420,6 +1429,80 @@ Return ONLY the JSON object, no additional text.`;
       }
     }
   };
+
+  /**
+   * Show confirmation dialog before clearing content
+   * Why this matters: Prevents accidental deletion of generated content
+   */
+  const clearGeneratedContent = () => {
+    setShowClearConfirmation(true);
+  };
+
+  /**
+   * Clear all generated content and reset to original state
+   * Why this matters: Allows users to start fresh without closing and reopening the modal
+   */
+  const confirmClearContent = () => {
+    setGeneratedContent('');
+    setMetaSeoTitle('');
+    setMetaDescription('');
+    setShowClearConfirmation(false);
+    
+    // Clear saved generated content from localStorage
+    try {
+      const savedData = localStorage.getItem('apollo_generated_content');
+      if (savedData) {
+        const data = JSON.parse(savedData);
+        const postId = post.id || post.title;
+        if (data[postId]) {
+          delete data[postId];
+          localStorage.setItem('apollo_generated_content', JSON.stringify(data));
+        }
+      }
+    } catch (error) {
+      console.error('Error clearing saved content:', error);
+    }
+  };
+
+  /**
+   * Cancel the clear confirmation dialog
+   * Why this matters: Allows users to cancel accidental clear attempts
+   */
+  const cancelClearContent = () => {
+    setShowClearConfirmation(false);
+  };
+
+  /**
+   * Scroll to top of the modal
+   * Why this matters: Helps users navigate back to top of long articles
+   */
+  const scrollToTop = () => {
+    if (rightPanelRef.current) {
+      rightPanelRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  /**
+   * Handle scroll events to show/hide scroll to top button
+   * Why this matters: Only shows the scroll button when user has scrolled down significantly
+   */
+  useEffect(() => {
+    const handleScroll = () => {
+      if (rightPanelRef.current) {
+        const scrollTop = rightPanelRef.current.scrollTop;
+        setShowScrollToTop(scrollTop > 300); // Show button after scrolling 300px
+      }
+    };
+
+    const rightPanel = rightPanelRef.current;
+    if (rightPanel) {
+      rightPanel.addEventListener('scroll', handleScroll);
+      return () => rightPanel.removeEventListener('scroll', handleScroll);
+    }
+    
+    // Return empty cleanup function if no event listener was added
+    return () => {};
+  }, []);
 
   /**
    * CMS Integration Modal Component
@@ -1927,138 +2010,176 @@ Return ONLY the JSON object, no additional text.`;
             </div>
 
             {/* Right Panel - Generated Content */}
-            <div style={{ flex: '0 0 60%', padding: '2rem', overflowY: 'auto', backgroundColor: '#f9fafb' }}>
+            <div ref={rightPanelRef} style={{ flex: '0 0 60%', padding: '2rem', overflowY: 'auto', backgroundColor: '#f9fafb', position: 'relative' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0 }}>Generated Content</h3>
                 
+                {/* Clear Button - At the very top right */}
                 {generatedContent && (
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button
-                      onClick={() => setShowCMSModal(true)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
-                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
-                    >
-                      <Globe size={14} />
-                      Publish to CMS
-                    </button>
-                    
-                    <button
-                      onClick={openGoogleDocs}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#84ADEA',
-                        color: 'black',
-                        border: 'none',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#6b96e8';
-                        e.currentTarget.style.color = 'black';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#84ADEA';
-                        e.currentTarget.style.color = 'black';
-                      }}
-                    >
-                      <img 
-                        src="/google-docs-logo.png" 
-                        alt="Google Docs"
-                        style={{
-                          width: '16px',
-                          height: '16px',
-                          objectFit: 'contain'
-                        }}
-                        onError={(e) => {
-                          // Fallback to ExternalLink icon if logo fails to load
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent) {
-                            const icon = document.createElement('div');
-                            icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 0 0-5"/><path d="m17 7-10 10"/></svg>';
-                            icon.style.display = 'flex';
-                            icon.style.alignItems = 'center';
-                            icon.style.justifyContent = 'center';
-                            parent.insertBefore(icon, target);
-                          }
-                        }}
-                      />
-                      Open in Google Docs
-                    </button>
-
-                    <div style={{ position: 'relative' }}>
-                      <button
-                        onClick={copyToClipboard}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#6b7280',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
-                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
-                    >
-                        <Copy size={14} />
-                        Copy to Clipboard
-                    </button>
-                      
-                      {/* Copied message */}
-                      {showCopiedMessage && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '3rem',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                          padding: '0.5rem 0.75rem',
-                          backgroundColor: '#10b981',
-                          color: 'white',
-                          borderRadius: '0.375rem',
-                          fontSize: '0.75rem',
-                          fontWeight: '500',
-                          whiteSpace: 'nowrap',
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                          zIndex: 1000
-                        }}>
-                          <Check style={{ width: '0.875rem', height: '0.875rem' }} />
-                          Copied!
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <button
+                    onClick={clearGeneratedContent}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#dc2626',
+                      transition: 'all 0.2s ease',
+                      marginLeft: 'auto'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dc2626';
+                      e.currentTarget.style.color = 'white';
+                      e.currentTarget.style.borderColor = '#dc2626';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#fef2f2';
+                      e.currentTarget.style.color = '#dc2626';
+                      e.currentTarget.style.borderColor = '#fecaca';
+                    }}
+                  >
+                    <X size={14} />
+                    Clear Generated Content
+                  </button>
                 )}
               </div>
+
+              {/* Action Buttons Row */}
+              {generatedContent && (
+                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  <button
+                    onClick={() => setShowCMSModal(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+                  >
+                    <Globe size={14} />
+                    Publish to CMS
+                  </button>
+                  
+                  <button
+                    onClick={openGoogleDocs}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#84ADEA',
+                      color: 'black',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#6b96e8';
+                      e.currentTarget.style.color = 'black';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#84ADEA';
+                      e.currentTarget.style.color = 'black';
+                    }}
+                  >
+                    <img 
+                      src="/google-docs-logo.png" 
+                      alt="Google Docs"
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        objectFit: 'contain'
+                      }}
+                      onError={(e) => {
+                        // Fallback to ExternalLink icon if logo fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const icon = document.createElement('div');
+                          icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 0 0-5"/><path d="m17 7-10 10"/></svg>';
+                          icon.style.display = 'flex';
+                          icon.style.alignItems = 'center';
+                          icon.style.justifyContent = 'center';
+                          parent.insertBefore(icon, target);
+                        }
+                      }}
+                    />
+                    Open in Google Docs
+                  </button>
+
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={copyToClipboard}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
+                  >
+                      <Copy size={14} />
+                      Copy to Clipboard
+                  </button>
+                    
+                    {/* Copied message */}
+                    {showCopiedMessage && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '3rem',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        padding: '0.5rem 0.75rem',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                        zIndex: 1000
+                      }}>
+                        <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                        Copied!
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+
 
               {generatedContent ? (
                 <div
@@ -2085,9 +2206,10 @@ Return ONLY the JSON object, no additional text.`;
                               padding: '0.25rem 0.5rem',
                               fontSize: '0.75rem',
                               backgroundColor: '#f3f4f6',
-                              border: '1px solid #d1d5db',
+                              border: '1px solid #10b981',
                               borderRadius: '0.375rem',
-                              cursor: 'pointer'
+                              cursor: 'pointer',
+                              color: '#10b981'
                             }}
                           >
                             Copy
@@ -2129,9 +2251,10 @@ Return ONLY the JSON object, no additional text.`;
                               padding: '0.25rem 0.5rem',
                               fontSize: '0.75rem',
                               backgroundColor: '#f3f4f6',
-                              border: '1px solid #d1d5db',
+                              border: '1px solid #10b981',
                               borderRadius: '0.375rem',
-                              cursor: 'pointer'
+                              cursor: 'pointer',
+                              color: '#10b981'
                             }}
                           >
                             Copy
@@ -2169,6 +2292,147 @@ Return ONLY the JSON object, no additional text.`;
 
                   {/* Main Content */}
                   <div dangerouslySetInnerHTML={{ __html: generatedContent }} />
+                  
+                  {/* Bottom Action Buttons - Duplicate for convenience */}
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: '2rem',
+                    paddingTop: '1rem',
+                    borderTop: '1px solid #e5e7eb'
+                  }}>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <button
+                        onClick={() => setShowCMSModal(true)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+                      >
+                        <Globe size={14} />
+                        Publish to CMS
+                      </button>
+                      
+                      <button
+                        onClick={openGoogleDocs}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#84ADEA',
+                          color: 'black',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#6b96e8';
+                          e.currentTarget.style.color = 'black';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#84ADEA';
+                          e.currentTarget.style.color = 'black';
+                        }}
+                      >
+                        <img 
+                          src="/google-docs-logo.png" 
+                          alt="Google Docs"
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            objectFit: 'contain'
+                          }}
+                          onError={(e) => {
+                            // Fallback to ExternalLink icon if logo fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              const icon = document.createElement('div');
+                              icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 0 0-5"/><path d="m17 7-10 10"/></svg>';
+                              icon.style.display = 'flex';
+                              icon.style.alignItems = 'center';
+                              icon.style.justifyContent = 'center';
+                              parent.insertBefore(icon, target);
+                            }
+                          }}
+                        />
+                        Open in Google Docs
+                      </button>
+
+                      <button
+                        onClick={copyToClipboard}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#6b7280',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
+                      >
+                        <Copy size={14} />
+                        Copy to Clipboard
+                      </button>
+                    </div>
+
+                    {/* Clear Button - Right Aligned */}
+                    <button
+                      onClick={clearGeneratedContent}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#dc2626',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#dc2626';
+                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.borderColor = '#dc2626';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#fef2f2';
+                        e.currentTarget.style.color = '#dc2626';
+                        e.currentTarget.style.borderColor = '#fecaca';
+                      }}
+                    >
+                      <X size={14} />
+                      Clear Generated Content
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div style={{
@@ -2211,6 +2475,45 @@ Return ONLY the JSON object, no additional text.`;
                   </div>
                 </div>
               )}
+
+              {/* Scroll to Top Button */}
+              {showScrollToTop && (
+                <button
+                  onClick={scrollToTop}
+                  style={{
+                    position: 'absolute',
+                    bottom: '2rem',
+                    right: '2rem',
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    transition: 'all 0.2s ease',
+                    zIndex: 1000
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#3b82f6';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  title="Scroll to top"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m18 15-6-6-6 6"/>
+                  </svg>
+                </button>
+              )}
+
             </div>
           </div>
         </div>
@@ -2228,6 +2531,125 @@ Return ONLY the JSON object, no additional text.`;
         brandKit={brandKit}
         insertVariable={insertVariable}
       />
+
+      {/* Clear Confirmation Popup */}
+      {showClearConfirmation && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            padding: '2rem',
+            maxWidth: '400px',
+            width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#fef2f2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <X size={24} style={{ color: '#dc2626' }} />
+              </div>
+              <div>
+                <h3 style={{
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  margin: 0
+                }}>
+                  Clear Generated Content?
+                </h3>
+              </div>
+            </div>
+            
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              lineHeight: '1.5',
+              margin: '0 0 1.5rem 0'
+            }}>
+              This will permanently delete the generated article, meta SEO title, and meta description. This action cannot be undone. Are you sure you want to continue?
+            </p>
+            
+            <div style={{
+              display: 'flex',
+              gap: '0.75rem',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={cancelClearContent}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={confirmClearContent}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#dc2626',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: 'white',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b91c1c';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dc2626';
+                }}
+              >
+                <X size={14} />
+                Yes, Clear Content
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
