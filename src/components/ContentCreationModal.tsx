@@ -250,7 +250,11 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
   const [systemPrompt, setSystemPrompt] = useState('');
   const [userPrompt, setUserPrompt] = useState('');
   const [generatedContent, setGeneratedContent] = useState('');
+  const [metaSeoTitle, setMetaSeoTitle] = useState('');
+  const [metaDescription, setMetaDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showMetaTitleCopied, setShowMetaTitleCopied] = useState(false);
+  const [showMetaDescCopied, setShowMetaDescCopied] = useState(false);
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [showCMSModal, setShowCMSModal] = useState(false);
   const [showVariablesMenu, setShowVariablesMenu] = useState(false);
@@ -743,7 +747,18 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
         
         // Check if we have saved content for this specific post
         if (contentData[postId]) {
-          setGeneratedContent(contentData[postId]);
+          const savedContent = contentData[postId];
+          if (typeof savedContent === 'string') {
+            // Legacy format - just content
+            setGeneratedContent(savedContent);
+            setMetaSeoTitle('');
+            setMetaDescription('');
+          } else {
+            // New format with separate fields
+            setGeneratedContent(savedContent.content || '');
+            setMetaSeoTitle(savedContent.metaSeoTitle || '');
+            setMetaDescription(savedContent.metaDescription || '');
+          }
           return;
         }
       }
@@ -753,16 +768,18 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
     
     // If no saved content, clear the display
     setGeneratedContent('');
+    setMetaSeoTitle('');
+    setMetaDescription('');
   };
 
   /**
    * Save generated content for this specific post
    * Why this matters: Persists generated content so users can return to it later.
    */
-  const saveGeneratedContent = (content: string): void => {
+  const saveGeneratedContent = (content: string, title: string = '', description: string = ''): void => {
     try {
       const postId = post.id || post.title;
-      let contentData: Record<string, string> = {};
+      let contentData: Record<string, any> = {};
       
       // Load existing saved content
       const savedData = localStorage.getItem('apollo_generated_content');
@@ -770,8 +787,13 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
         contentData = JSON.parse(savedData);
       }
       
-      // Update content for this specific post
-      contentData[postId] = content;
+      // Update content for this specific post with new format
+      contentData[postId] = {
+        content,
+        metaSeoTitle: title,
+        metaDescription: description,
+        timestamp: new Date().toISOString()
+      };
       
       // Save back to localStorage
       localStorage.setItem('apollo_generated_content', JSON.stringify(contentData));
@@ -810,7 +832,10 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
    * Why this matters: Creates targeted prompts that leverage both Reddit insights and brand positioning.
    */
   const generateInitialPrompts = () => {
+    const currentYear = new Date().getFullYear();
     const systemPromptTemplate = `You are a world-class SEO, AEO, and LLM SEO content marketer for Apollo with knowledge on how to create and optimize content that gets cited and visibility on platforms like Google, AI Overviews, AI Mode, ChatGPT, Perplexity, Gemini, and AI IDE tools like Cursor, Windsurf, GitHub Copilot, and Claude. Write clear, actionable, and insightful content that reflects Apollo's innovative, data-driven, and customer-focused ethos. Maintain a confident, helpful tone that positions Apollo as the go-to solution for modern sales and marketing teams seeking efficiency and growth.
+
+IMPORTANT: The current year is ${currentYear}. When referencing "current year," "this year," or discussing recent trends, always use ${currentYear}. Do not reference 2024 or earlier years as current.
 
 CRITICAL OUTPUT REQUIREMENTS:
 - Return ONLY clean HTML content without any markdown code blocks, explanatory text, or meta-commentary
@@ -840,7 +865,7 @@ Content Creation Guidelines:
 
 The litmus test: Ask yourself, "Could a competitor easily replicate this tomorrow?" If the answer is yes, dig deeper.`;
 
-    const userPromptTemplate = `Based on this Reddit analysis, create AEO-optimized content:
+    const userPromptTemplate = `Based on this Reddit analysis, create AEO-optimized content for ${currentYear}:
 
 **Reddit Post Context:**
 
@@ -854,7 +879,7 @@ Content Opportunity: ${post.analysis.content_opportunity}
 
 Audience Summary: ${post.analysis.audience_insight}
 
-**Content Requirements:**
+**Content Requirements (remember we are in ${currentYear}):**
 1. Create an H1 title that directly addresses the pain point in question format
 2. Write comprehensive content that provides definitive answers
 3. Include practical examples and actionable insights
@@ -866,14 +891,20 @@ Audience Summary: ${post.analysis.audience_insight}
 9. Use {{ brand_kit.ideal_customer_profile }} to inject customer testimonials only one time within the body of the content where appropriate
 10. Promote Apollo at the end of the article using our  {{ brand_kit.cta_text }}  {{ brand_kit.cta_destination }}. Open the CTA destination in a new tab (i.e., target_blank).
 
-**CRITICAL: Return ONLY the HTML content. Do not include:**
-- Introductory phrases like "Here's the content:" or "Here's the SEO-optimized content:"
-- Markdown code blocks or backticks
-- Explanatory text about the content structure
-- Analysis or commentary after the HTML
-- Any text that is not part of the actual content
+**CRITICAL OUTPUT FORMAT: Respond with a JSON object containing exactly three fields:**
 
-Start your response directly with the opening HTML tag and end with the closing tag.`;
+{
+  "content": "HTML content here",
+  "metaSeoTitle": "SEO title (50-60 characters)",
+  "metaDescription": "Meta description (150-160 characters)"
+}
+
+**Requirements for each field:**
+- content: Clean HTML content without markdown code blocks or explanatory text
+- metaSeoTitle: Optimized for search engines, 50-60 characters, includes primary keyword
+- metaDescription: Compelling description that encourages clicks, 150-160 characters, includes primary keyword and value proposition
+
+Return ONLY the JSON object, no additional text.`;
 
     setSystemPrompt(systemPromptTemplate);
     setUserPrompt(userPromptTemplate);
@@ -989,7 +1020,7 @@ Start your response directly with the opening HTML tag and end with the closing 
       };
 
       // For now, simulate the API call - you'll need to implement the backend endpoint
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/content/generate`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3003'}/api/content/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1002,9 +1033,14 @@ Start your response directly with the opening HTML tag and end with the closing 
       }
 
       const data = await response.json();
-      const cleanedContent = cleanAIContent(data.content);
-      setGeneratedContent(cleanedContent);
-      saveGeneratedContent(cleanedContent);
+      
+      // Parse the AI response to extract all fields
+      const parsedResponse = parseAIResponse(data.content);
+      
+      setGeneratedContent(parsedResponse.content);
+      setMetaSeoTitle(parsedResponse.metaSeoTitle);
+      setMetaDescription(parsedResponse.metaDescription);
+      saveGeneratedContent(parsedResponse.content, parsedResponse.metaSeoTitle, parsedResponse.metaDescription);
 
     } catch (error) {
       console.error('Error generating content:', error);
@@ -1054,12 +1090,64 @@ Start your response directly with the opening HTML tag and end with the closing 
         
         <p><strong>Ready to get started?</strong> <a href="${brandKit?.ctaDestination || 'https://apollo.io'}">${brandKit?.ctaText || 'Try Apollo for free'}</a> and see how we can help solve your ${post.analysis.pain_point} challenges.</p>
       `;
-      const cleanedFallbackContent = cleanAIContent(fallbackContent);
-      setGeneratedContent(cleanedFallbackContent);
-      saveGeneratedContent(cleanedFallbackContent);
+      
+      // Use parseAIResponse for fallback content too
+      const parsedFallback = parseAIResponse(fallbackContent);
+      const fallbackMetaTitle = `How to Solve ${post.analysis.pain_point} in ${new Date().getFullYear()}`;
+      const fallbackMetaDescription = `Discover proven strategies to address ${post.analysis.pain_point}. Learn how Apollo's comprehensive platform helps teams overcome challenges and achieve measurable results.`;
+      
+      setGeneratedContent(parsedFallback.content);
+      setMetaSeoTitle(fallbackMetaTitle);
+      setMetaDescription(fallbackMetaDescription);
+      saveGeneratedContent(parsedFallback.content, fallbackMetaTitle, fallbackMetaDescription);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  /**
+   * Parse AI response and extract JSON fields
+   * Why this matters: Properly extracts content, metaSeoTitle, and metaDescription from AI JSON response.
+   */
+  const parseAIResponse = (responseText: string): { content: string; metaSeoTitle: string; metaDescription: string } => {
+    try {
+      // First, try to parse the entire response as JSON
+      let parsed;
+      try {
+        parsed = JSON.parse(responseText);
+      } catch {
+        // If that fails, try to extract JSON from within the response
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        }
+      }
+
+      // Check if we have the expected JSON structure
+      if (parsed && typeof parsed === 'object' && parsed.content && parsed.metaSeoTitle && parsed.metaDescription) {
+        console.log('✅ Successfully parsed JSON response:', {
+          hasContent: !!parsed.content,
+          hasTitle: !!parsed.metaSeoTitle,
+          hasDescription: !!parsed.metaDescription
+        });
+        
+        return {
+          content: cleanAIContent(parsed.content),
+          metaSeoTitle: parsed.metaSeoTitle || '',
+          metaDescription: parsed.metaDescription || ''
+        };
+      }
+    } catch (error) {
+      console.log('❌ Failed to parse as JSON:', error);
+    }
+
+    console.log('⚠️ Falling back to legacy content parsing');
+    // Fallback to legacy content cleaning
+    return {
+      content: cleanAIContent(responseText),
+      metaSeoTitle: '',
+      metaDescription: ''
+    };
   };
 
   /**
@@ -1253,6 +1341,34 @@ Start your response directly with the opening HTML tag and end with the closing 
         console.error('All copy methods failed:', fallbackError);
         alert('Failed to copy content. Please select and copy manually.');
       }
+    }
+  };
+
+  /**
+   * Copy meta SEO title to clipboard with animation
+   * Why this matters: Provides consistent user feedback for meta field copying.
+   */
+  const copyMetaTitle = async () => {
+    try {
+      await navigator.clipboard.writeText(metaSeoTitle);
+      setShowMetaTitleCopied(true);
+      setTimeout(() => setShowMetaTitleCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy meta title: ', err);
+    }
+  };
+
+  /**
+   * Copy meta description to clipboard with animation
+   * Why this matters: Provides consistent user feedback for meta field copying.
+   */
+  const copyMetaDescription = async () => {
+    try {
+      await navigator.clipboard.writeText(metaDescription);
+      setShowMetaDescCopied(true);
+      setTimeout(() => setShowMetaDescCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy meta description: ', err);
     }
   };
 
@@ -1965,8 +2081,105 @@ Start your response directly with the opening HTML tag and end with the closing 
                     backgroundColor: 'white',
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
                   }}
-                  dangerouslySetInnerHTML={{ __html: generatedContent }}
-                />
+                >
+                  {/* Meta SEO Fields - Show at the top */}
+                  {(metaSeoTitle || metaDescription) && (
+                    <div style={{ marginBottom: '2rem' }}>
+                      {metaSeoTitle && (
+                        <div style={{ marginBottom: '1rem', position: 'relative' }}>
+                          <strong>Meta SEO Title:</strong> {metaSeoTitle}
+                          <button
+                            onClick={copyMetaTitle}
+                            style={{
+                              marginLeft: '0.5rem',
+                              padding: '0.25rem 0.5rem',
+                              fontSize: '0.75rem',
+                              backgroundColor: '#f3f4f6',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '0.375rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Copy
+                          </button>
+                          
+                          {/* Copied message for meta title */}
+                          {showMetaTitleCopied && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '2rem',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              padding: '0.5rem 0.75rem',
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                              zIndex: 1000
+                            }}>
+                              <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                              Copied!
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {metaDescription && (
+                        <div style={{ marginBottom: '1rem', position: 'relative' }}>
+                          <strong>Meta Description:</strong> {metaDescription}
+                          <button
+                            onClick={copyMetaDescription}
+                            style={{
+                              marginLeft: '0.5rem',
+                              padding: '0.25rem 0.5rem',
+                              fontSize: '0.75rem',
+                              backgroundColor: '#f3f4f6',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '0.375rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Copy
+                          </button>
+                          
+                          {/* Copied message for meta description */}
+                          {showMetaDescCopied && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '2rem',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              padding: '0.5rem 0.75rem',
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                              zIndex: 1000
+                            }}>
+                              <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                              Copied!
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '1.5rem 0' }} />
+                    </div>
+                  )}
+
+                  {/* Main Content */}
+                  <div dangerouslySetInnerHTML={{ __html: generatedContent }} />
+                </div>
               ) : (
                 <div style={{
                   border: '2px dashed #d1d5db',
