@@ -15,7 +15,7 @@ const SettingsPage: React.FC = () => {
     theme: 'light',
     autoSave: true,
     defaultLimit: 5,
-    apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3001',
+    apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3003',
     notifications: true,
     autoRefresh: false
   });
@@ -50,7 +50,7 @@ const SettingsPage: React.FC = () => {
       theme: 'light',
       autoSave: true,
       defaultLimit: 5,
-      apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3001',
+      apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3003',
       notifications: true,
       autoRefresh: false
     };
