@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, ExternalLink, Wand2, FileText } from 'lucide
 import { AnalyzedPost } from '../types';
 import DigDeeperModal from './DigDeeperModal';
 import ContentCreationModal from './ContentCreationModal';
+import LinkedInPostModal from './LinkedInPostModal';
 
 interface AnalysisResultPanelProps {
   analyzedPosts: AnalyzedPost[];
@@ -24,6 +25,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   const [isPostExpanded, setIsPostExpanded] = useState(false);
   const [isDigDeeperModalOpen, setIsDigDeeperModalOpen] = useState(false);
   const [isContentCreationModalOpen, setIsContentCreationModalOpen] = useState(false);
+  const [isLinkedInPostModalOpen, setIsLinkedInPostModalOpen] = useState(false);
 
   /**
    * Highlight keywords in text content
@@ -388,26 +390,69 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                   {currentPost.analysis.content_opportunity}
                 </p>
                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem' }}>
-                  <button
-                    onClick={() => setIsContentCreationModalOpen(true)}
-                    className="apollo-btn-gradient"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      width: 'auto'
-                    }}
-                  >
-                    <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
-                    Create Content with AI
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                    <button
+                      onClick={() => setIsContentCreationModalOpen(true)}
+                      className="apollo-btn-gradient"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        width: 'auto'
+                      }}
+                    >
+                      <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
+                      Create Content with AI
+                    </button>
+                    
+                    <button
+                      onClick={() => setIsLinkedInPostModalOpen(true)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '0.75rem 1.5rem',
+                        backgroundColor: '#0077b5',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(0, 119, 181, 0.2)',
+                        width: 'auto'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#005582';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 119, 181, 0.3)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#0077b5';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 119, 181, 0.2)';
+                      }}
+                    >
+                      <svg 
+                        width="18" 
+                        height="18" 
+                        viewBox="0 0 24 24" 
+                        fill="currentColor"
+                        style={{marginRight: '0.5rem'}}
+                      >
+                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                      </svg>
+                      Create LinkedIn Post
+                    </button>
+                  </div>
+                  
                   <p style={{ 
                     fontSize: '0.75rem', 
                     color: '#6b7280', 
                     textAlign: 'left', 
-                    marginTop: '0.75rem',
-                    lineHeight: '1.4'
+                    lineHeight: '1.4',
+                    margin: 0
                   }}>
-                    Generate AEO-optimized content using Reddit insights and Apollo brand kit
+                    Generate AEO-optimized content or viral LinkedIn posts using Reddit insights and Apollo brand kit
                   </p>
                 </div>
               </div>
@@ -436,6 +481,14 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
         key={`content-creation-${currentPost.id || currentIndex}`}
         isOpen={isContentCreationModalOpen}
         onClose={() => setIsContentCreationModalOpen(false)}
+        post={currentPost}
+      />
+
+      {/* LinkedIn Post Modal */}
+      <LinkedInPostModal
+        key={`linkedin-post-${currentPost.id || currentIndex}`}
+        isOpen={isLinkedInPostModalOpen}
+        onClose={() => setIsLinkedInPostModalOpen(false)}
         post={currentPost}
       />
     </div>

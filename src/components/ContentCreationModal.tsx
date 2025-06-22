@@ -1905,7 +1905,7 @@ Return ONLY the JSON object, no additional text.`;
                   ) : (
                     <>
                       <Wand2 size={16} style={{marginRight: '0.5rem'}} />
-                      {generatedContent ? 'Regenerate Content' : 'Generate Content'}
+                      {generatedContent ? 'Regenerate Article' : 'Generate Article'}
                     </>
                   )}
                 </button>
