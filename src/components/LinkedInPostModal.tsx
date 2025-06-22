@@ -223,19 +223,30 @@ const LinkedInPostModal: React.FC<LinkedInPostModalProps> = ({ isOpen, onClose, 
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saving' | 'saved' | ''>('');
   const [hasUserInput, setHasUserInput] = useState(false);
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+  const [showLinkedInMessage, setShowLinkedInMessage] = useState(false);
+  const [showRedditContext, setShowRedditContext] = useState(false);
   const [currentVariation, setCurrentVariation] = useState(0);
   const [postVariations, setPostVariations] = useState<string[]>([]);
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   
   const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   const userPromptRef = useRef<HTMLTextAreaElement>(null);
   const variablesMenuRef = useRef<HTMLDivElement>(null);
   const systemVariablesButtonRef = useRef<HTMLButtonElement>(null);
   const userVariablesButtonRef = useRef<HTMLButtonElement>(null);
+  const generatedContentRef = useRef<HTMLDivElement>(null);
 
-  // Generation progress messages
-  const generationMessages = [
+  // Generation progress messages - different for each method
+  const getMimicryMessages = () => [
     'Analyzing post style...',
+    'Crafting thought leadership content...',
+    'Optimizing for LinkedIn engagement...',
+    'Finalizing variations...'
+  ];
+
+  const getAdvancedMessages = () => [
+    'Analyzing prompts...',
     'Crafting thought leadership content...',
     'Optimizing for LinkedIn engagement...',
     'Finalizing variations...'
@@ -246,6 +257,11 @@ const LinkedInPostModal: React.FC<LinkedInPostModalProps> = ({ isOpen, onClose, 
       loadSavedData();
       setHasUserInput(false);
       setAutoSaveStatus('');
+      
+      // Reset modal state to default when opening
+      setShowAdvancedPrompts(false);
+      setShowExampleStyleSection(true);
+      setUseExampleStyle(false);
       
       // Load brand kit
       const loadBrandKit = () => {
@@ -474,6 +490,16 @@ const LinkedInPostModal: React.FC<LinkedInPostModalProps> = ({ isOpen, onClose, 
           setUserPrompt(savedUserPrompt || '');
           setExamplePostStyle(savedExample || '');
           setUseExampleStyle(savedUseExampleStyle || false);
+          
+          // Set UI state based on saved preferences
+          if (savedUseExampleStyle) {
+            setShowExampleStyleSection(true);
+            setShowAdvancedPrompts(false);
+          } else {
+            // If not using example style, show example style section by default
+            setShowExampleStyleSection(true);
+            setShowAdvancedPrompts(false);
+          }
           return;
         }
       }
@@ -481,7 +507,11 @@ const LinkedInPostModal: React.FC<LinkedInPostModalProps> = ({ isOpen, onClose, 
       console.error('Error loading saved prompts:', error);
     }
     
+    // Generate initial prompts and ensure default UI state
     generateInitialPrompts();
+    setUseExampleStyle(false);
+    setShowExampleStyleSection(true);
+    setShowAdvancedPrompts(false);
   };
 
   const generateInitialPrompts = () => {
@@ -489,6 +519,13 @@ const LinkedInPostModal: React.FC<LinkedInPostModalProps> = ({ isOpen, onClose, 
     const systemPromptTemplate = `You are a world-class LinkedIn thought leader and viral content creator specializing in ${post.analysis.pain_point}. Your expertise lies in transforming industry insights into compelling, engagement-driving LinkedIn posts that position the author as a trusted authority.
 
 CURRENT YEAR: ${currentYear}
+
+CRITICAL CONTENT RULES:
+- NEVER make up statistics, metrics, numbers, or data points
+- NEVER create fictional case studies, companies, or scenarios
+- ONLY use insights and context from the provided Reddit analysis
+- Base ALL content on the actual pain point and audience insights provided
+- If you need examples, reference general industry patterns (not specific data)
 
 LINKEDIN POST REQUIREMENTS:
 - Create thought leadership content that positions the author as an industry expert
@@ -505,27 +542,68 @@ THOUGHT LEADERSHIP FRAMEWORKS:
 3. Story-Lesson-Application (SLA)
 4. Question-Insight-Action (QIA)
 
-OUTPUT FORMAT: Return only the LinkedIn post content, no explanations.`;
+UNIQUENESS REQUIREMENT: Each of the 3 variations MUST be completely different in:
+- Hook/opening approach (different first sentences)
+- Content structure and flow (different paragraph organization)
+- Storytelling angle (different narrative approaches)
+- Key insights presented (different aspects of the pain point)
+- Call-to-action style (different engagement questions)
+- Overall messaging approach (different tones and perspectives)
 
-    const userPromptTemplate = `Create a viral LinkedIn thought leadership post using this Reddit insight:
+CRITICAL: Do NOT repeat content, phrases, or structures between variations. Each must be a standalone, unique LinkedIn post.
 
-**Reddit Context:**
-Title: ${post.title}
+OUTPUT FORMAT: Create 3 completely distinct variations and return as a JSON array of strings. Each variation must be independently valuable and unique.`;
+
+    const userPromptTemplate = `Create 3 completely unique LinkedIn thought leadership posts using ONLY this Reddit insight:
+
+Reddit Title: ${post.title}
+Reddit Content: ${post.content || 'No additional content provided'}
 Pain Point: ${post.analysis.pain_point}
 Content Opportunity: ${post.analysis.content_opportunity}
-Audience: ${post.analysis.audience_insight}
+Audience Insight: ${post.analysis.audience_insight}
 
-**Post Requirements:**
-1. Start with a hook that stops scrolling
-2. Share a valuable insight about ${post.analysis.pain_point}
-3. Include a brief story or example
-4. Position the author as someone who understands this challenge
-5. End with an engaging question or call-to-action
-6. Mention {{ brand_kit.about_brand }} naturally where relevant
-7. Use {{ brand_kit.tone_of_voice }} throughout
-8. Include {{ brand_kit.cta_text }} at the end if appropriate
+Brand Context:
+${brandKit?.aboutBrand || '{{ brand_kit.about_brand }}'}
+Tone: {{ brand_kit.tone_of_voice }}
 
-Create a post that would make industry professionals think "This person really gets it" and want to engage.`;
+STRICT REQUIREMENTS:
+- DO NOT make up any statistics, metrics, or data points
+- DO NOT create fictional examples or case studies
+- ONLY use the insights from the Reddit analysis above
+- Each variation must be completely unique in approach and content
+
+Create 3 COMPLETELY DIFFERENT LinkedIn posts that each address this pain point uniquely:
+
+**VARIATION 1: Personal reflection/thought-provoking approach**
+- Start with a controversial or thought-provoking statement (unique opening)
+- Use introspective language and personal observations
+- Focus on challenging conventional thinking about the pain point
+- End with a philosophical question that makes people think
+- Must be COMPLETELY different from variations 2 and 3
+
+**VARIATION 2: Practical problem-solving approach**  
+- Start with a direct problem statement (different opening than variation 1)
+- Provide actionable insights and solutions from the Reddit analysis
+- Use bullet points or numbered lists for clarity
+- End with implementation-focused CTA
+- Must be COMPLETELY different from variations 1 and 3
+
+**VARIATION 3: Community/discussion approach**
+- Start with a relatable scenario or observation (different opening than variations 1 and 2)
+- Focus on shared experiences and community insights
+- Use inclusive language ("we", "us", "our industry")
+- End with a discussion-starting question
+- Must be COMPLETELY different from variations 1 and 2
+
+**CRITICAL REQUIREMENTS:**
+- Each post must be completely unique in structure, tone, and messaging
+- NO repeated phrases, sentences, or concepts between variations
+- Each must stand alone as an independent LinkedIn post
+- Under 3000 characters each
+- Ready to post on LinkedIn
+- Grounded only in the provided Reddit analysis
+
+Return as a JSON array of 3 completely different LinkedIn posts.`;
 
     setSystemPrompt(systemPromptTemplate);
     setUserPrompt(userPromptTemplate);
@@ -542,57 +620,85 @@ Create a post that would make industry professionals think "This person really g
     setGenerationStep(0);
     
     try {
-      // Progress through generation steps
+      // Get appropriate messages based on generation method
+      const currentMessages = useExampleStyle ? getMimicryMessages() : getAdvancedMessages();
+      
+      // Progress through generation steps with 5-second intervals
       const progressInterval = setInterval(() => {
-        setGenerationStep(prev => (prev + 1) % generationMessages.length);
-      }, 1500);
+        setGenerationStep(prev => {
+          const nextStep = prev + 1;
+          // Stop at the last message until generation completes
+          if (nextStep >= currentMessages.length) {
+            return currentMessages.length - 1;
+          }
+          return nextStep;
+        });
+      }, 5000);
 
       let finalSystemPrompt = '';
       let finalUserPrompt = '';
 
       if (useExampleStyle && examplePostStyle.trim()) {
         // Style Mimicry Mode - analyze and replicate the example post style
-        finalSystemPrompt = `You are an expert LinkedIn content strategist specializing in viral post analysis and style replication. Your task is to analyze the provided example post and create new content that matches its exact style, structure, tone, and engagement mechanics.
+        finalSystemPrompt = `You are a LinkedIn thought leadership writer. Use the Reddit story as an EXAMPLE to create thought leadership insights, NOT to make personal claims.
 
-STYLE ANALYSIS REQUIREMENTS:
-- Identify the post's hook strategy and opening technique
-- Analyze sentence structure, paragraph breaks, and formatting patterns
-- Determine the storytelling approach and narrative flow
-- Extract the engagement mechanics (questions, calls-to-action, etc.)
-- Understand the tone of voice and personality traits
-- Note any unique stylistic elements or signature phrases
+🚨 CRITICAL RULES:
+- NEVER claim the Reddit story happened to YOU
+- NEVER say "I sold" or "my experience" or "when I worked at"
+- USE the Reddit story as an EXAMPLE to teach insights
+- Reference it as "I recently saw" or "someone shared" or "a salesperson told me"
+- CREATE THOUGHT LEADERSHIP, not personal claims
 
-REPLICATION REQUIREMENTS:
-- Match the exact structure and flow of the example post
-- Use the same hook style and opening technique
-- Replicate the paragraph breaks and formatting
-- Mirror the tone of voice and writing personality
-- Apply the same engagement strategy and closing technique
-- Maintain similar post length and pacing
-- Use similar language patterns and vocabulary level
+🎯 SIMPLE TASK:
+1. Read the example post's writing style (tone, structure, energy)
+2. Use the Reddit story as an EXAMPLE to create insights about sales/business
+3. Write in the example's style but about lessons from the Reddit story
+4. Present the Reddit facts as examples you're sharing, not your experience
 
-OUTPUT: Create 3 distinct variations that all follow the analyzed style but cover different aspects of the Reddit insight. Return as a JSON array of strings.`;
+✅ CORRECT APPROACH:
+"I recently saw a salesperson at Midwest Heating and Cooling sell $80k in one week..."
+"Someone shared how they closed 65% of prospects by focusing on relationships..."
 
-        finalUserPrompt = `EXAMPLE POST TO ANALYZE AND REPLICATE:
+❌ WRONG APPROACH:
+"When I worked at Midwest Heating and Cooling, I sold $80k..."
+"My experience shows that I closed 65% of prospects..."
+"I sold 7 deals in a row by..."
+
+🎨 STYLE MIMICRY:
+- Copy the example's tone, energy, and structure
+- Use similar formatting (bullets, emojis, questions)
+- Match their confidence and engagement style
+- DON'T copy their exact words or phrases
+
+OUTPUT: 3 LinkedIn posts using the example's style to share insights from the Reddit story as examples, not personal claims.
+
+Return as JSON array: ["post 1", "post 2", "post 3"]`;
+
+        finalUserPrompt = `EXAMPLE POST (study the writing style only):
 "${examplePostStyle}"
 
-CONTENT TO TRANSFORM USING THIS STYLE:
-Reddit Title: ${post.title}
+REDDIT STORY TO USE AS EXAMPLE:
+Title: ${post.title}
+Content: ${post.content || 'No additional content provided'}
 Pain Point: ${post.analysis.pain_point}
 Content Opportunity: ${post.analysis.content_opportunity}
 Audience Insight: ${post.analysis.audience_insight}
 
-BRAND CONTEXT:
-${brandKit.aboutBrand || 'Professional services company'}
-Tone: ${brandKit.toneOfVoice || 'Professional yet approachable'}
+BRAND: ${brandKit.aboutBrand || 'Professional services company'}
+TONE: ${brandKit.toneOfVoice || 'Professional yet approachable'}
 
-TASK: Create 3 LinkedIn posts that use the EXACT style, structure, and engagement mechanics of the example post, but transform the Reddit insights into relevant professional content. Each variation should:
+TASK: Write 3 LinkedIn thought leadership posts using the example's writing style to share insights from the Reddit story.
 
-1. **Variation 1**: Focus on the main pain point and personal experience
-2. **Variation 2**: Emphasize industry trends and strategic insights  
-3. **Variation 3**: Highlight actionable solutions and lessons learned
+IMPORTANT: Present the Reddit story as an EXAMPLE you're sharing, not your personal experience.
 
-Ensure each post matches the example's style while being authentic and valuable to a professional audience.`;
+✅ Say: "I recently saw..." "Someone shared..." "A salesperson told me..."
+❌ Don't say: "I sold..." "My experience..." "When I worked at..."
+
+Use the Reddit facts (like $80k, Midwest Heating and Cooling, 65% close rate, 7 deals) as examples in your insights, not personal claims.
+
+Write in the example's style (tone, energy, structure) but create thought leadership content about the lessons from the Reddit story.
+
+Return as JSON: ["post 1", "post 2", "post 3"]`;
       } else {
         // Advanced Prompts Mode - use custom system and user prompts
         finalSystemPrompt = systemPrompt;
@@ -603,8 +709,8 @@ Ensure each post matches the example's style while being authentic and valuable 
       const processedSystemPrompt = replaceBrandKitVariables(finalSystemPrompt, brandKit);
       const processedUserPrompt = replaceBrandKitVariables(finalUserPrompt, brandKit);
 
-      // Call the content generation API
-      const response = await fetch('/api/content/generate', {
+      // Call the content generation API using same approach as ContentCreationModal
+      const response = await fetch('https://apollo-reddit-scraper-backend.vercel.app/api/content/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -631,31 +737,265 @@ Ensure each post matches the example's style while being authentic and valuable 
 
       const data = await response.json();
       
-      // Handle both single post and variations response formats
+      // Parse the AI response to extract individual variations
       let variations: string[] = [];
-      if (Array.isArray(data.content)) {
-        variations = data.content;
-      } else if (data.variations && Array.isArray(data.variations)) {
-        variations = data.variations;
-      } else if (data.content) {
-        // Single post response - create variations by splitting or duplicating
-        variations = [data.content];
+      
+      console.log('🔍 Raw AI response:', data.content);
+      
+      // Enhanced cleaning function for LinkedIn posts
+      const cleanLinkedInVariation = (variation: string): string => {
+        let cleaned = variation;
+        
+        // Remove common AI introductory phrases
+        cleaned = cleaned.replace(/^.*?Here's.*?:?\s*/i, '');
+        cleaned = cleaned.replace(/^.*?Here are.*?:?\s*/i, '');
+        cleaned = cleaned.replace(/^.*?I'll create.*?:?\s*/i, '');
+        cleaned = cleaned.replace(/^.*?Based on.*?:?\s*/i, '');
+        cleaned = cleaned.replace(/^.*?Variation \d+.*?:?\s*/i, '');
+        cleaned = cleaned.replace(/^.*?\d+\.\s*.*?:?\s*/i, '');
+        
+        // Remove JSON formatting artifacts
+        cleaned = cleaned.replace(/^```json\s*/i, '');
+        cleaned = cleaned.replace(/^```\s*/, '');
+        cleaned = cleaned.replace(/```\s*$/, '');
+        cleaned = cleaned.replace(/^\[\s*/, '');
+        cleaned = cleaned.replace(/\s*\]$/, '');
+        cleaned = cleaned.replace(/^[\[\{]?\s*"/, '');
+        cleaned = cleaned.replace(/"\s*[\]\}]?$/, '');
+        cleaned = cleaned.replace(/",?\s*$/, '');
+        
+        // Fix escaped characters
+        cleaned = cleaned.replace(/\\n/g, '\n');
+        cleaned = cleaned.replace(/\\"/g, '"');
+        cleaned = cleaned.replace(/\\'/g, "'");
+        
+        // Remove any trailing commas or JSON artifacts
+        cleaned = cleaned.replace(/,\s*$/, '');
+        cleaned = cleaned.replace(/^\s*,/, '');
+        
+        // Clean up whitespace and formatting
+        cleaned = cleaned.trim();
+        cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n');
+        cleaned = cleaned.replace(/^\s*[\"\']|[\"\']?\s*$/g, '');
+        
+        // Ensure first letter is capitalized
+        if (cleaned.length > 0) {
+          cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+        }
+        
+        return cleaned;
+      };
+
+      try {
+        // Step 1: Try to parse as direct JSON array
+        let parsed = JSON.parse(data.content);
+        if (Array.isArray(parsed)) {
+          console.log('✅ Found JSON array with', parsed.length, 'variations');
+          variations = parsed.map((variation: string) => cleanLinkedInVariation(variation));
       } else {
-        throw new Error('Invalid response format');
+          console.log('❌ Not a direct JSON array, trying object parsing');
+          if (parsed.content && Array.isArray(parsed.content)) {
+            variations = parsed.content.map((variation: string) => cleanLinkedInVariation(variation));
+          } else if (parsed.variations && Array.isArray(parsed.variations)) {
+            variations = parsed.variations.map((variation: string) => cleanLinkedInVariation(variation));
+          }
+        }
+      } catch (directJsonError) {
+        console.log('❌ Direct JSON parse failed, trying to extract JSON array');
+        console.log('Raw response for debugging:', data.content.substring(0, 300) + '...');
+        
+        // Step 2: Try to extract JSON array from response with better regex
+        try {
+          // Look for JSON array pattern - handle multiline strings better
+          const jsonArrayMatch = data.content.match(/\[\s*"[\s\S]*?"\s*(?:,\s*"[\s\S]*?"\s*)*\]/);
+          if (jsonArrayMatch) {
+            const extracted = JSON.parse(jsonArrayMatch[0]);
+            if (Array.isArray(extracted)) {
+              console.log('✅ Extracted JSON array with', extracted.length, 'variations');
+              variations = extracted.map((variation: string) => cleanLinkedInVariation(variation));
+            }
+          }
+        } catch (extractError) {
+          console.log('❌ JSON array extraction failed, trying manual split');
+          
+          // Step 3: Manual parsing if JSON extraction fails
+          // Look for clear variation separators
+          const content = data.content;
+          const variationSeparators = [
+            /\n\s*\[\s*"[\s\S]*?"\s*,\s*"[\s\S]*?"\s*,\s*"[\s\S]*?"\s*\]/,
+            /"[\s\S]*?"\s*,\s*"[\s\S]*?"\s*,\s*"[\s\S]*?"/,
+            /Variation 1:[\s\S]*?(?=Variation 2:|$)/gi,
+            /Post 1:[\s\S]*?(?=Post 2:|$)/gi
+          ];
+          
+          let foundVariations = false;
+          for (const separator of variationSeparators) {
+            const matches = content.match(separator);
+            if (matches && matches.length > 0) {
+              console.log('✅ Found variations using manual parsing');
+              variations = matches.map((match: string) => cleanLinkedInVariation(match));
+              foundVariations = true;
+              break;
+            }
+          }
+          
+          if (!foundVariations) {
+            console.log('❌ Manual parsing failed');
+          }
+        }
       }
 
-      // Ensure we have at least one variation
+      // Step 4: If still no variations, try advanced text splitting
       if (variations.length === 0) {
-        variations = ['Error generating content. Please try again.'];
+        console.log('⚠️ No structured variations found, attempting advanced text parsing');
+        const rawContent = data.content;
+        
+        // Try to split by common AI response patterns
+        const splitPatterns = [
+          // Pattern 1: "**Post/Variation X:**" followed by content
+          /(?:\*\*(?:Post|Variation)\s*\d+:?\*\*[\s\n]*)([\s\S]*?)(?=\*\*(?:Post|Variation)\s*\d+:?\*\*|$)/gi,
+          // Pattern 2: "X." or "X)" at start of line followed by content
+          /(?:^\d+[\.\)]\s*)([\s\S]*?)(?=^\d+[\.\)]\s*|$)/gmi,
+          // Pattern 3: Clear paragraph breaks with substantial content
+          /([^\n]{200,}(?:\n\n|$))/g
+        ];
+        
+        let foundVariations = false;
+        for (const pattern of splitPatterns) {
+          const matches = [...rawContent.matchAll(pattern)];
+          if (matches.length >= 2) {
+            const extractedVariations = matches
+              .map(match => match[1] || match[0])
+              .map(text => cleanLinkedInVariation(text))
+              .filter(text => text.length > 200); // Must be substantial
+            
+            if (extractedVariations.length >= 2) {
+              variations = extractedVariations.slice(0, 3); // Take up to 3
+              console.log(`✅ Found ${variations.length} variations using pattern matching`);
+              foundVariations = true;
+              break;
+            }
+          }
+        }
+        
+        // Final fallback - try to use the entire response as a single variation
+        if (!foundVariations) {
+          console.log('❌ Could not parse multiple variations from response');
+          console.log('Raw response:', rawContent.substring(0, 500) + '...');
+          
+          // Check if we have a substantial single response to work with
+          const cleanedSingleResponse = cleanLinkedInVariation(rawContent);
+          if (cleanedSingleResponse.length > 200) {
+            console.log('📝 Using single response as primary variation');
+            variations = [cleanedSingleResponse];
+            
+            // Try to create 2 additional variations by requesting alternatives
+            console.log('🔄 Will need to generate alternatives for full set');
+          } else {
+            // Return error message requesting regeneration
+            variations = [
+              'Unable to generate multiple variations. Please try generating again.',
+              'The AI response could not be parsed into separate variations.',
+              'Click "Generate Alternative" to try again with different prompting.'
+            ];
+          }
+        }
       }
+      
+      // Ensure we have valid variations and limit to exactly 3
+      let finalVariations = variations.filter((v: string) => v && v.trim().length > 0);
+      
+      // Helper function to calculate text similarity
+      const calculateSimilarity = (text1: string, text2: string): number => {
+        const words1 = text1.toLowerCase().split(/\s+/);
+        const words2 = text2.toLowerCase().split(/\s+/);
+        const commonWords = words1.filter(word => words2.includes(word));
+        return commonWords.length / Math.max(words1.length, words2.length);
+      };
 
-      // Set the generated content
-      setPostVariations(variations);
+      // Enhanced duplicate detection and filtering
+      if (finalVariations.length > 1) {
+        const duplicates = [];
+        const uniqueVariations = [];
+        
+        for (let i = 0; i < finalVariations.length; i++) {
+          const currentVariation = finalVariations[i];
+          let isDuplicate = false;
+          
+          // Check against already accepted variations
+          for (let j = 0; j < uniqueVariations.length; j++) {
+            const existingVariation = uniqueVariations[j];
+            
+            // Multiple similarity checks
+            const firstSentenceSimilar = currentVariation.split('.')[0] === existingVariation.split('.')[0];
+            const first100CharsSimilar = currentVariation.substring(0, 100) === existingVariation.substring(0, 100);
+            const overallSimilarity = calculateSimilarity(currentVariation, existingVariation) > 0.7;
+            
+            if (firstSentenceSimilar || first100CharsSimilar || overallSimilarity) {
+              isDuplicate = true;
+              duplicates.push(`Variation ${i + 1} is too similar to variation ${uniqueVariations.indexOf(existingVariation) + 1}`);
+              break;
+            }
+          }
+          
+          if (!isDuplicate) {
+            uniqueVariations.push(currentVariation);
+          }
+        }
+        
+        if (duplicates.length > 0) {
+          console.warn('🚨 Duplicate variations detected and filtered:', duplicates);
+          finalVariations = uniqueVariations;
+        }
+      }
+      
+      // CRITICAL: Always limit to exactly 3 variations maximum
+      if (finalVariations.length > 3) {
+        console.log(`⚠️ Found ${finalVariations.length} variations, limiting to 3`);
+        finalVariations = finalVariations.slice(0, 3);
+      }
+      
+      if (finalVariations.length === 0) {
+        finalVariations.push('Error generating content. Please try again.');
+      }
+      
+      // If we have less than 3, do NOT pad with duplicates - instead request regeneration
+      if (finalVariations.length < 3 && finalVariations[0] !== 'Error generating content. Please try again.') {
+        console.warn(`⚠️ Only got ${finalVariations.length} unique variations, should have 3`);
+        // Keep what we have rather than duplicating
+      }
+      
+      console.log(`✅ Generated exactly ${finalVariations.length} LinkedIn post variations`);
+      
+      // Set the generated content as variations
+      setPostVariations(finalVariations);
       setCurrentVariation(0);
-      setGeneratedPost(variations[0]);
+      setGeneratedPost(finalVariations[0]);
       
       // Save the generated posts
-      saveGeneratedPosts(variations);
+      saveGeneratedPosts(finalVariations);
+      
+      // Scroll to generated content section
+      setTimeout(() => {
+        if (generatedContentRef.current) {
+          generatedContentRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          });
+          // Additional scroll to ensure we're at the very top
+          setTimeout(() => {
+            if (generatedContentRef.current) {
+              const rect = generatedContentRef.current.getBoundingClientRect();
+              const absoluteTop = window.pageYOffset + rect.top - 20; // 20px padding from top
+              window.scrollTo({
+                top: absoluteTop,
+                behavior: 'smooth'
+              });
+            }
+          }, 300);
+        }
+      }, 100);
       
     } catch (error) {
       console.error('Error generating LinkedIn post:', error);
@@ -688,6 +1028,19 @@ Ensure each post matches the example's style while being authentic and valuable 
     }
     
     return processedText;
+  };
+
+
+
+
+
+  /**
+   * Reset prompts to default values
+   * Why this matters: Allows users to quickly restore the proven default prompts after experimenting with custom ones
+   */
+  const resetToDefaults = () => {
+    generateInitialPrompts();
+    setHasUserInput(true); // Trigger auto-save to persist the reset
   };
 
   /**
@@ -777,10 +1130,9 @@ Ensure each post matches the example's style while being authentic and valuable 
       // Open LinkedIn in a new tab
       window.open(linkedInUrl, '_blank', 'width=600,height=600,scrollbars=yes,resizable=yes');
       
-      // Show instruction message
-      setTimeout(() => {
-        alert('Content copied to clipboard! Paste it into the LinkedIn post composer that just opened.');
-      }, 500);
+      // Show enhanced UI message instead of alert
+      setShowLinkedInMessage(true);
+      setTimeout(() => setShowLinkedInMessage(false), 8000); // Show for 8 seconds
     });
   };
 
@@ -793,6 +1145,99 @@ Ensure each post matches the example's style while being authentic and valuable 
     
     // Use the same generation logic but with alternative prompting
     await generateLinkedInPost();
+  };
+
+  /**
+   * Scroll to top of modal content
+   * Why this matters: Ensures users see new content from the beginning when navigating between variations
+   */
+  const scrollToTop = () => {
+    if (generatedContentRef.current) {
+      generatedContentRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start',
+        inline: 'nearest'
+      });
+      // Additional scroll to ensure we're at the very top
+      setTimeout(() => {
+        if (generatedContentRef.current) {
+          const rect = generatedContentRef.current.getBoundingClientRect();
+          const absoluteTop = window.pageYOffset + rect.top - 20; // 20px padding from top
+          window.scrollTo({
+            top: absoluteTop,
+            behavior: 'smooth'
+          });
+        }
+      }, 300);
+    }
+  };
+
+  /**
+   * Show confirmation dialog before clearing content
+   * Why this matters: Prevents accidental deletion of generated content
+   */
+  const clearGeneratedContent = () => {
+    setShowClearConfirmation(true);
+  };
+
+  /**
+   * Clear all generated content and reset to original state
+   * Why this matters: Allows users to start fresh without closing and reopening the modal
+   */
+  const confirmClearContent = () => {
+    setGeneratedPost('');
+    setPostVariations([]);
+    setCurrentVariation(0);
+    setIsGenerating(false);
+    setGenerationStep(0);
+    setShowClearConfirmation(false);
+    
+    // Clear saved generated posts from localStorage
+    try {
+      const savedData = localStorage.getItem('apollo_linkedin_posts');
+      if (savedData) {
+        const data = JSON.parse(savedData);
+        const postId = post.id || post.title;
+        if (data[postId]) {
+          delete data[postId];
+          localStorage.setItem('apollo_linkedin_posts', JSON.stringify(data));
+        }
+      }
+    } catch (error) {
+      console.error('Error clearing saved posts:', error);
+    }
+  };
+
+  /**
+   * Cancel the clear confirmation dialog
+   * Why this matters: Allows users to cancel accidental clear attempts
+   */
+  const cancelClearContent = () => {
+    setShowClearConfirmation(false);
+  };
+
+  /**
+   * Navigate to previous variation
+   * Why this matters: Allows users to browse through different generated post variations
+   */
+  const handlePreviousVariation = () => {
+    if (currentVariation > 0) {
+      setCurrentVariation(currentVariation - 1);
+    } else {
+      setCurrentVariation(postVariations.length - 1);
+    }
+  };
+
+  /**
+   * Navigate to next variation
+   * Why this matters: Allows users to browse through different generated post variations
+   */
+  const handleNextVariation = () => {
+    if (currentVariation < postVariations.length - 1) {
+      setCurrentVariation(currentVariation + 1);
+    } else {
+      setCurrentVariation(0);
+    }
   };
 
   /**
@@ -872,6 +1317,31 @@ Ensure each post matches the example's style while being authentic and valuable 
         </div>
       )}
 
+      {/* CSS for enhanced LinkedIn message animations */}
+      <style>
+        {`
+          @keyframes fadeInScale {
+            from {
+              opacity: 0;
+              transform: scale(0.9) translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1) translateY(0);
+            }
+          }
+          
+          @keyframes progressBar {
+            from {
+              width: 100%;
+            }
+            to {
+              width: 0%;
+            }
+          }
+        `}
+      </style>
+
       {isOpen && (
         <div 
           style={{
@@ -887,22 +1357,18 @@ Ensure each post matches the example's style while being authentic and valuable 
             zIndex: 9999,
             padding: '1rem'
           }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              onClose();
-            }
-          }}
+
         >
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '0.75rem',
-            width: '99%',
-            maxWidth: '1600px',
-            height: '90vh',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
+                  <div style={{
+          backgroundColor: 'white',
+          borderRadius: '0.75rem',
+          width: '99%',
+          maxWidth: '1800px', // Increased from 1600px
+          height: '95vh', // Increased from 90vh
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
             {/* Header */}
             <div style={{
               display: 'flex',
@@ -941,7 +1407,7 @@ Ensure each post matches the example's style while being authentic and valuable 
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
               {/* Left Panel - Prompts and Example Style */}
               <div style={{ 
-                flex: '0 0 45%', 
+                flex: '0 0 40%', 
                 padding: '2rem', 
                 borderRight: '1px solid #e5e7eb', 
                 overflowY: 'auto',
@@ -1019,6 +1485,78 @@ Ensure each post matches the example's style while being authentic and valuable 
                         onFocus={(e) => e.target.style.borderColor = '#0077b5'}
                         onBlur={(e) => e.target.style.borderColor = useExampleStyle ? '#0077b5' : '#e5e7eb'}
                       />
+                      
+                      {/* Reddit Context - Always Included - Collapsible */}
+                      <div style={{
+                        marginTop: '1rem',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '0.5rem',
+                        border: '1px solid #dee2e6'
+                      }}>
+                        <button
+                          onClick={() => setShowRedditContext(!showRedditContext)}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem 1rem',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            borderRadius: '0.5rem',
+                            transition: 'background-color 0.2s ease'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'}
+                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <h5 style={{ 
+                            fontSize: '0.875rem', 
+                            fontWeight: '600', 
+                            color: '#495057', 
+                            margin: 0
+                          }}>
+                            📊 Reddit Analysis Context (Auto-Included)
+                          </h5>
+                          <span style={{ 
+                            fontSize: '0.875rem', 
+                            color: '#6c757d',
+                            transform: showRedditContext ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.2s ease'
+                          }}>
+                            ▼
+                          </span>
+                        </button>
+                        
+                        {showRedditContext && (
+                          <div style={{ padding: '0 1rem 1rem 1rem' }}>
+                            <div style={{ 
+                              fontSize: '0.75rem', 
+                              color: '#6c757d', 
+                              lineHeight: '1.4',
+                              fontFamily: 'monospace',
+                              backgroundColor: 'white',
+                              padding: '0.75rem',
+                              borderRadius: '0.25rem',
+                              border: '1px solid #e9ecef'
+                            }}>
+                              <div><strong>📝 Reddit Title:</strong> {post.title}</div>
+                              <div style={{marginTop: '0.5rem'}}><strong>📄 Reddit Content:</strong> {post.content || 'No additional content provided'}</div>
+                              <div style={{marginTop: '0.5rem'}}><strong>🎯 Pain Point:</strong> {post.analysis.pain_point}</div>
+                              <div style={{marginTop: '0.5rem'}}><strong>💡 Content Opportunity:</strong> {post.analysis.content_opportunity}</div>
+                              <div style={{marginTop: '0.5rem'}}><strong>👥 Audience Insight:</strong> {post.analysis.audience_insight}</div>
+                            </div>
+                            <p style={{ 
+                              fontSize: '0.7rem', 
+                              color: '#6c757d', 
+                              margin: '0.75rem 0 0 0',
+                              fontStyle: 'italic'
+                            }}>
+                              This context is automatically included with your example post to ensure content is grounded in the Reddit analysis.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Generate Button for Example Style */}
@@ -1031,40 +1569,16 @@ Ensure each post matches the example's style while being authentic and valuable 
                       <button
                         onClick={generateLinkedInPost}
                         disabled={isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim()}
+                        className="apollo-btn-gradient"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '0.875rem 2rem',
-                          backgroundColor: isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim() ? '#9ca3af' : '#0077b5',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          fontSize: '1rem',
-                          fontWeight: '600',
-                          cursor: isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim() ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.2s ease',
-                          boxShadow: '0 2px 4px rgba(0, 119, 181, 0.2)',
-                          opacity: !useExampleStyle || !examplePostStyle.trim() ? 0.5 : 1
-                        }}
-                        onMouseOver={(e) => {
-                          if (!isGenerating && brandKit && useExampleStyle && examplePostStyle.trim()) {
-                            e.currentTarget.style.backgroundColor = '#005582';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 119, 181, 0.3)';
-                          }
-                        }}
-                        onMouseOut={(e) => {
-                          if (!isGenerating && brandKit && useExampleStyle && examplePostStyle.trim()) {
-                            e.currentTarget.style.backgroundColor = '#0077b5';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 119, 181, 0.2)';
-                          }
+                          opacity: isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim() ? 0.6 : 1,
+                          cursor: isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim() ? 'not-allowed' : 'pointer'
                         }}
                       >
                         {isGenerating ? (
                           <>
                             <Clock className="animate-spin" style={{width: '1rem', height: '1rem', marginRight: '0.5rem'}} />
-                            {generationMessages[generationStep]}
+                            {getMimicryMessages()[generationStep]}
                           </>
                         ) : (
                           <>
@@ -1151,9 +1665,32 @@ Ensure each post matches the example's style while being authentic and valuable 
                 {showAdvancedPrompts && !useExampleStyle && (
                   <div style={{ marginBottom: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}>
                         System Prompt
                       </label>
+                        <button
+                          onClick={resetToDefaults}
+                          style={{
+                            fontSize: '0.8rem',
+                            color: '#0077b5',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            padding: '0',
+                            fontWeight: '500'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.color = '#005582';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.color = '#0077b5';
+                          }}
+                        >
+                          (Reset to default)
+                        </button>
+                      </div>
                       <button
                         ref={systemVariablesButtonRef}
                         onClick={(e) => handleVariablesButtonClick('system', e)}
@@ -1207,9 +1744,32 @@ Ensure each post matches the example's style while being authentic and valuable 
                 {showAdvancedPrompts && !useExampleStyle && (
                   <div style={{ marginBottom: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}>
                         User Prompt
                       </label>
+                        <button
+                          onClick={resetToDefaults}
+                          style={{
+                            fontSize: '0.8rem',
+                            color: '#0077b5',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            padding: '0',
+                            fontWeight: '500'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.color = '#005582';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.color = '#0077b5';
+                          }}
+                        >
+                          (Reset to default)
+                        </button>
+                      </div>
                       <button
                         ref={userVariablesButtonRef}
                         onClick={(e) => handleVariablesButtonClick('user', e)}
@@ -1274,39 +1834,16 @@ Ensure each post matches the example's style while being authentic and valuable 
                     <button
                       onClick={generateLinkedInPost}
                       disabled={isGenerating || !brandKit}
+                      className="apollo-btn-gradient"
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0.875rem 2rem',
-                        backgroundColor: isGenerating || !brandKit ? '#9ca3af' : '#0077b5',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.5rem',
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        cursor: isGenerating || !brandKit ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(0, 119, 181, 0.2)'
-                      }}
-                      onMouseOver={(e) => {
-                        if (!isGenerating && brandKit) {
-                          e.currentTarget.style.backgroundColor = '#005582';
-                          e.currentTarget.style.transform = 'translateY(-1px)';
-                          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 119, 181, 0.3)';
-                        }
-                      }}
-                      onMouseOut={(e) => {
-                        if (!isGenerating && brandKit) {
-                          e.currentTarget.style.backgroundColor = '#0077b5';
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 119, 181, 0.2)';
-                        }
+                        opacity: isGenerating || !brandKit ? 0.6 : 1,
+                        cursor: isGenerating || !brandKit ? 'not-allowed' : 'pointer'
                       }}
                     >
                       {isGenerating ? (
                         <>
                           <Clock className="animate-spin" style={{width: '1rem', height: '1rem', marginRight: '0.5rem'}} />
-                          {generationMessages[generationStep]}
+                          {getAdvancedMessages()[generationStep]}
                         </>
                       ) : (
                         <>
@@ -1320,8 +1857,8 @@ Ensure each post matches the example's style while being authentic and valuable 
               </div>
 
               {/* Right Panel - Generated Content */}
-              <div style={{ flex: '0 0 55%', padding: '2rem', overflowY: 'auto', backgroundColor: '#f9fafb' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ flex: '0 0 60%', padding: '2rem', overflowY: 'auto', backgroundColor: '#f9fafb' }}>
+                <div ref={generatedContentRef} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0 }}>
                     Generated LinkedIn Post
                   </h3>
@@ -1334,26 +1871,26 @@ Ensure each post matches the example's style while being authentic and valuable 
                         </span>
                         <button
                           onClick={() => setCurrentVariation((prev) => (prev > 0 ? prev - 1 : postVariations.length - 1))}
-                          disabled={postVariations.length <= 1}
+                          disabled={postVariations.length <= 1 || currentVariation === 0}
                           style={{
                             padding: '0.375rem 0.75rem',
-                            backgroundColor: postVariations.length <= 1 ? '#f3f4f6' : 'white',
+                            backgroundColor: (postVariations.length <= 1 || currentVariation === 0) ? '#f3f4f6' : 'white',
                             border: '1px solid #d1d5db',
                             borderRadius: '0.375rem',
-                            cursor: postVariations.length <= 1 ? 'not-allowed' : 'pointer',
+                            cursor: (postVariations.length <= 1 || currentVariation === 0) ? 'not-allowed' : 'pointer',
                             fontSize: '0.875rem',
                             fontWeight: '500',
-                            color: postVariations.length <= 1 ? '#9ca3af' : '#374151',
+                            color: (postVariations.length <= 1 || currentVariation === 0) ? '#9ca3af' : '#374151',
                             transition: 'all 0.2s ease'
                           }}
                           onMouseOver={(e) => {
-                            if (postVariations.length > 1) {
+                            if (postVariations.length > 1 && currentVariation > 0) {
                               e.currentTarget.style.backgroundColor = '#f9fafb';
                               e.currentTarget.style.borderColor = '#9ca3af';
                             }
                           }}
                           onMouseOut={(e) => {
-                            if (postVariations.length > 1) {
+                            if (postVariations.length > 1 && currentVariation > 0) {
                               e.currentTarget.style.backgroundColor = 'white';
                               e.currentTarget.style.borderColor = '#d1d5db';
                             }
@@ -1362,27 +1899,30 @@ Ensure each post matches the example's style while being authentic and valuable 
                           ← Previous
                         </button>
                         <button
-                          onClick={() => setCurrentVariation((prev) => (prev < postVariations.length - 1 ? prev + 1 : 0))}
-                          disabled={postVariations.length <= 1}
+                          onClick={() => {
+                            setCurrentVariation((prev) => (prev < postVariations.length - 1 ? prev + 1 : 0));
+                            setTimeout(() => scrollToTop(), 100);
+                          }}
+                          disabled={postVariations.length <= 1 || currentVariation === postVariations.length - 1}
                           style={{
                             padding: '0.375rem 0.75rem',
-                            backgroundColor: postVariations.length <= 1 ? '#f3f4f6' : 'white',
+                            backgroundColor: (postVariations.length <= 1 || currentVariation === postVariations.length - 1) ? '#f3f4f6' : 'white',
                             border: '1px solid #d1d5db',
                             borderRadius: '0.375rem',
-                            cursor: postVariations.length <= 1 ? 'not-allowed' : 'pointer',
+                            cursor: (postVariations.length <= 1 || currentVariation === postVariations.length - 1) ? 'not-allowed' : 'pointer',
                             fontSize: '0.875rem',
                             fontWeight: '500',
-                            color: postVariations.length <= 1 ? '#9ca3af' : '#374151',
+                            color: (postVariations.length <= 1 || currentVariation === postVariations.length - 1) ? '#9ca3af' : '#374151',
                             transition: 'all 0.2s ease'
                           }}
                           onMouseOver={(e) => {
-                            if (postVariations.length > 1) {
+                            if (postVariations.length > 1 && currentVariation < postVariations.length - 1) {
                               e.currentTarget.style.backgroundColor = '#f9fafb';
                               e.currentTarget.style.borderColor = '#9ca3af';
                             }
                           }}
                           onMouseOut={(e) => {
-                            if (postVariations.length > 1) {
+                            if (postVariations.length > 1 && currentVariation < postVariations.length - 1) {
                               e.currentTarget.style.backgroundColor = 'white';
                               e.currentTarget.style.borderColor = '#d1d5db';
                             }
@@ -1422,8 +1962,273 @@ Ensure each post matches the example's style while being authentic and valuable 
                           }
                         }}
                       >
+                        {isGenerating ? (
+                          <>
+                            <Clock className="animate-spin" style={{width: '14px', height: '14px'}} />
+                            {useExampleStyle ? getMimicryMessages()[generationStep] : getAdvancedMessages()[generationStep]}
+                          </>
+                        ) : (
+                          <>
                         <Wand2 size={14} />
                         Generate Alternative
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Character Count and Tips - Always Visible */}
+                  <div style={{
+                  marginBottom: '1.5rem',
+                  padding: '1rem',
+                  backgroundColor: generatedPost && generatedPost.length > 3000 ? '#fef2f2' : '#f0f9ff',
+                    borderRadius: '0.75rem',
+                  border: `1px solid ${generatedPost && generatedPost.length > 3000 ? '#fecaca' : '#bfdbfe'}`
+                    }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    marginBottom: '0.75rem'
+                  }}>
+                          <div style={{
+                      fontSize: '0.875rem', 
+                      color: generatedPost && generatedPost.length > 3000 ? '#dc2626' : '#0077b5', 
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      {generatedPost && generatedPost.length > 3000 && (
+                        <span style={{ fontSize: '1rem' }}>⚠️</span>
+                      )}
+                      Character count: {generatedPost ? generatedPost.length : 0}/3000
+                      {generatedPost && generatedPost.length > 3000 && (
+                        <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>
+                          (Exceeds LinkedIn optimal limit)
+                        </span>
+                      )}
+                        </div>
+                        
+                    {/* Action Buttons */}
+                    {generatedPost && (
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                          <div style={{ position: 'relative' }}>
+                            <button
+                              onClick={copyLinkedInPost}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                backgroundColor: '#0077b5',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '0.5rem',
+                                fontSize: '0.875rem',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.backgroundColor = '#005582';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.backgroundColor = '#0077b5';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                              }}
+                            >
+                              <Copy size={14} />
+                            Copy LinkedIn Post
+                            </button>
+                            
+                            {showCopiedMessage && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '3rem',
+                                right: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                padding: '0.5rem 0.75rem',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                borderRadius: '0.375rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                zIndex: 1000
+                              }}>
+                                <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                                Copied!
+                              </div>
+                            )}
+                          </div>
+
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            onClick={openLinkedInShare}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.5rem 1rem',
+                              backgroundColor: '#f8fafc',
+                              color: '#0077b5',
+                              border: '1px solid #0077b5',
+                              borderRadius: '0.5rem',
+                              fontSize: '0.875rem',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = '#0077b5';
+                              e.currentTarget.style.color = 'white';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = '#f8fafc';
+                              e.currentTarget.style.color = '#0077b5';
+                            }}
+                            title="Automatically copies post and opens LinkedIn"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                            </svg>
+                            Copy & Open LinkedIn
+                          </button>
+                          
+                          {/* Enhanced LinkedIn message */}
+                          {showLinkedInMessage && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '3.5rem',
+                              right: 0,
+                              width: '320px',
+                              padding: '1rem 1.25rem',
+                              backgroundColor: '#0077b5',
+                              color: 'white',
+                              borderRadius: '0.75rem',
+                              fontSize: '0.875rem',
+                              fontWeight: '500',
+                              boxShadow: '0 10px 25px -3px rgba(0, 119, 181, 0.4), 0 4px 6px -2px rgba(0, 119, 181, 0.2)',
+                              zIndex: 1001,
+                              border: '2px solid #005582',
+                              animation: 'fadeInScale 0.3s ease-out'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                                <div style={{
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '50%',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  marginTop: '0.125rem'
+                                }}>
+                                  <Check size={14} />
+                        </div>
+                                <div>
+                                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
+                                    Content Copied & LinkedIn Opened!
+                      </div>
+                                  <div style={{ fontSize: '0.8rem', lineHeight: '1.4', opacity: 0.95 }}>
+                                    Your post is ready to paste in the LinkedIn composer. Just press <strong>Ctrl+V</strong> (or <strong>Cmd+V</strong> on Mac) to paste it.
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Progress bar */}
+                              <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                height: '3px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                borderRadius: '0 0 0.75rem 0.75rem',
+                                width: '100%',
+                                overflow: 'hidden'
+                              }}>
+                                <div style={{
+                                  height: '100%',
+                                  backgroundColor: 'white',
+                                  borderRadius: '0 0 0.75rem 0.75rem',
+                                  animation: 'progressBar 8s linear forwards'
+                                }} />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem'
+                  }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#0077b5' }}>
+                      💡 LinkedIn Engagement Tips
+                    </div>
+                  </div>
+                  
+                  <ul style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#374151', 
+                    margin: '0.5rem 0 0 0', 
+                    paddingLeft: '1.25rem',
+                    lineHeight: '1.5'
+                  }}>
+                    <li>Post between 8-10 AM or 12-2 PM for best reach</li>
+                    <li>Engage with comments within the first hour</li>
+                    <li>Ask a question to encourage discussion</li>
+                    <li>Tag relevant connections (2-3 max)</li>
+                  </ul>
+                  
+                  {/* Clear Button - Right Aligned */}
+                  {generatedPost && (
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'flex-end', 
+                      marginTop: '1rem',
+                      paddingTop: '1rem',
+                      borderTop: '1px solid #e5e7eb'
+                    }}>
+                      <button
+                        onClick={clearGeneratedContent}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#fef2f2',
+                          border: '1px solid #fecaca',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          color: '#dc2626',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#dc2626';
+                          e.currentTarget.style.color = 'white';
+                          e.currentTarget.style.borderColor = '#dc2626';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#fef2f2';
+                          e.currentTarget.style.color = '#dc2626';
+                          e.currentTarget.style.borderColor = '#fecaca';
+                        }}
+                      >
+                        <X size={14} />
+                        Clear Generated Content
                       </button>
                     </div>
                   )}
@@ -1453,7 +2258,7 @@ Ensure each post matches the example's style while being authentic and valuable 
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em'
                       }}>
-                        Style {currentVariation + 1}
+                        Variation {currentVariation + 1}
                       </div>
                     )}
 
@@ -1467,48 +2272,196 @@ Ensure each post matches the example's style while being authentic and valuable 
                       {generatedPost}
                     </div>
                     
+                  </div>
+                ) : (
                     <div style={{
-                      marginTop: '2rem',
-                      paddingTop: '1rem',
-                      borderTop: '1px solid #f3f4f6'
-                    }}>
-                      <div style={{ 
+                    border: '2px dashed #d1d5db',
+                    borderRadius: '0.75rem',
+                    padding: '4rem 2rem',
+                    textAlign: 'center',
+                    color: '#6b7280',
+                    minHeight: '400px',
                         display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'flex-start',
-                        marginBottom: '1rem'
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'white'
                       }}>
                         <div>
-                          <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                            Character count: {generatedPost.length}/3000
+                      <svg 
+                        width="48" 
+                        height="48" 
+                        viewBox="0 0 24 24" 
+                        fill="currentColor"
+                        style={{ margin: '0 auto 1rem', opacity: 0.3, display: 'block', color: '#0077b5' }}
+                      >
+                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                      </svg>
+                      <p style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                        Your LinkedIn post will appear here
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        Configure your settings and click "Generate LinkedIn Post" to create viral thought leadership content
+                      </p>
                           </div>
-                          
-                          {/* Engagement Tips */}
+                  </div>
+                )}
+                
+                {/* Navigation and Action Section - Below Generated Content */}
+                {postVariations.length > 0 && generatedPost && generatedPost.trim().length > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '1.5rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
+                          Variation {currentVariation + 1} of {postVariations.length}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setCurrentVariation((prev) => (prev > 0 ? prev - 1 : postVariations.length - 1));
+                            setTimeout(() => scrollToTop(), 100);
+                          }}
+                          disabled={postVariations.length <= 1 || currentVariation === 0}
+                          style={{
+                            padding: '0.375rem 0.75rem',
+                            backgroundColor: (postVariations.length <= 1 || currentVariation === 0) ? '#f3f4f6' : 'white',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '0.375rem',
+                            cursor: (postVariations.length <= 1 || currentVariation === 0) ? 'not-allowed' : 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            color: (postVariations.length <= 1 || currentVariation === 0) ? '#9ca3af' : '#374151',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            if (postVariations.length > 1 && currentVariation > 0) {
+                              e.currentTarget.style.backgroundColor = '#f9fafb';
+                              e.currentTarget.style.borderColor = '#9ca3af';
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (postVariations.length > 1 && currentVariation > 0) {
+                              e.currentTarget.style.backgroundColor = 'white';
+                              e.currentTarget.style.borderColor = '#d1d5db';
+                            }
+                          }}
+                        >
+                          ← Previous
+                        </button>
+                        <button
+                          onClick={() => {
+                            setCurrentVariation((prev) => (prev < postVariations.length - 1 ? prev + 1 : 0));
+                            setTimeout(() => scrollToTop(), 100);
+                          }}
+                          disabled={postVariations.length <= 1 || currentVariation === postVariations.length - 1}
+                          style={{
+                            padding: '0.375rem 0.75rem',
+                            backgroundColor: (postVariations.length <= 1 || currentVariation === postVariations.length - 1) ? '#f3f4f6' : 'white',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '0.375rem',
+                            cursor: (postVariations.length <= 1 || currentVariation === postVariations.length - 1) ? 'not-allowed' : 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            color: (postVariations.length <= 1 || currentVariation === postVariations.length - 1) ? '#9ca3af' : '#374151',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            if (postVariations.length > 1 && currentVariation < postVariations.length - 1) {
+                              e.currentTarget.style.backgroundColor = '#f9fafb';
+                              e.currentTarget.style.borderColor = '#9ca3af';
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (postVariations.length > 1 && currentVariation < postVariations.length - 1) {
+                              e.currentTarget.style.backgroundColor = 'white';
+                              e.currentTarget.style.borderColor = '#d1d5db';
+                            }
+                          }}
+                        >
+                          Next →
+                        </button>
+                      </div>
+                      
+                      <button
+                        onClick={generateAlternativePost}
+                        disabled={isGenerating || !brandKit}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.375rem 0.75rem',
+                          backgroundColor: isGenerating || !brandKit ? '#f3f4f6' : '#f0f9ff',
+                          color: isGenerating || !brandKit ? '#9ca3af' : '#0077b5',
+                          border: `1px solid ${isGenerating || !brandKit ? '#e5e7eb' : '#0077b5'}`,
+                          borderRadius: '0.375rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: isGenerating || !brandKit ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          if (!isGenerating && brandKit) {
+                            e.currentTarget.style.backgroundColor = '#0077b5';
+                            e.currentTarget.style.color = 'white';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (!isGenerating && brandKit) {
+                            e.currentTarget.style.backgroundColor = '#f0f9ff';
+                            e.currentTarget.style.color = '#0077b5';
+                          }
+                        }}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Clock className="animate-spin" style={{width: '14px', height: '14px'}} />
+                            {useExampleStyle ? getMimicryMessages()[generationStep] : getAdvancedMessages()[generationStep]}
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 size={14} />
+                            Generate Alternative
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Character Count and Action Buttons - Only show when content is generated */}
+                {postVariations.length > 0 && generatedPost && generatedPost.trim().length > 0 && (
                           <div style={{
-                            padding: '0.75rem',
-                            backgroundColor: '#f0f9ff',
-                            borderRadius: '0.5rem',
-                            border: '1px solid #bfdbfe',
-                            maxWidth: '300px'
-                          }}>
-                            <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#0077b5', marginBottom: '0.25rem' }}>
-                              💡 LinkedIn Engagement Tips
-                            </div>
-                            <ul style={{ 
-                              fontSize: '0.7rem', 
-                              color: '#374151', 
-                              margin: 0, 
-                              paddingLeft: '1rem',
-                              lineHeight: '1.4'
-                            }}>
-                              <li>Post between 8-10 AM or 12-2 PM for best reach</li>
-                              <li>Engage with comments within the first hour</li>
-                              <li>Ask a question to encourage discussion</li>
-                              <li>Tag relevant connections (2-3 max)</li>
-                            </ul>
-                          </div>
+                  marginTop: '1.5rem',
+                  padding: '1rem',
+                  backgroundColor: generatedPost && generatedPost.length > 3000 ? '#fef2f2' : '#f0f9ff',
+                  borderRadius: '0.75rem',
+                  border: `1px solid ${generatedPost && generatedPost.length > 3000 ? '#fecaca' : '#bfdbfe'}`
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    marginBottom: '0.75rem'
+                  }}>
+                    <div style={{
+                      fontSize: '0.875rem', 
+                      color: generatedPost && generatedPost.length > 3000 ? '#dc2626' : '#0077b5', 
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      {generatedPost && generatedPost.length > 3000 && (
+                        <span style={{ fontSize: '1rem' }}>⚠️</span>
+                      )}
+                      Character count: {generatedPost ? generatedPost.length : 0}/3000
+                      {generatedPost && generatedPost.length > 3000 && (
+                        <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>
+                          (Exceeds LinkedIn optimal limit)
+                        </span>
+                      )}
                         </div>
                         
+                    {/* Action Buttons */}
+                    {generatedPost && (
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                           <div style={{ position: 'relative' }}>
                             <button
@@ -1537,7 +2490,7 @@ Ensure each post matches the example's style while being authentic and valuable 
                               }}
                             >
                               <Copy size={14} />
-                              Copy to LinkedIn
+                            Copy LinkedIn Post
                             </button>
                             
                             {showCopiedMessage && (
@@ -1564,6 +2517,7 @@ Ensure each post matches the example's style while being authentic and valuable 
                             )}
                           </div>
 
+                        <div style={{ position: 'relative' }}>
                           <button
                             onClick={openLinkedInShare}
                             style={{
@@ -1588,47 +2542,149 @@ Ensure each post matches the example's style while being authentic and valuable 
                               e.currentTarget.style.backgroundColor = '#f8fafc';
                               e.currentTarget.style.color = '#0077b5';
                             }}
+                            title="Automatically copies post and opens LinkedIn"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
                             </svg>
-                            Open LinkedIn
+                            Copy & Open LinkedIn
                           </button>
+                          
+                          {/* Enhanced LinkedIn message */}
+                          {showLinkedInMessage && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '3.5rem',
+                              right: 0,
+                              width: '320px',
+                              padding: '1rem 1.25rem',
+                              backgroundColor: '#0077b5',
+                              color: 'white',
+                              borderRadius: '0.75rem',
+                              fontSize: '0.875rem',
+                              fontWeight: '500',
+                              boxShadow: '0 10px 25px -3px rgba(0, 119, 181, 0.4), 0 4px 6px -2px rgba(0, 119, 181, 0.2)',
+                              zIndex: 1001,
+                              border: '2px solid #005582',
+                              animation: 'fadeInScale 0.3s ease-out'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                                <div style={{
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '50%',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  marginTop: '0.125rem'
+                                }}>
+                                  <Check size={14} />
+                        </div>
+                                <div>
+                                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
+                                    Content Copied & LinkedIn Opened!
+                      </div>
+                                  <div style={{ fontSize: '0.8rem', lineHeight: '1.4', opacity: 0.95 }}>
+                                    Your post is ready to paste in the LinkedIn composer. Just press <strong>Ctrl+V</strong> (or <strong>Cmd+V</strong> on Mac) to paste it.
+                    </div>
+                  </div>
+                              </div>
+                              
+                              {/* Progress bar */}
+                  <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                height: '3px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                borderRadius: '0 0 0.75rem 0.75rem',
+                                width: '100%',
+                                overflow: 'hidden'
+                              }}>
+                                <div style={{
+                                  height: '100%',
+                                  backgroundColor: 'white',
+                                  borderRadius: '0 0 0.75rem 0.75rem',
+                                  animation: 'progressBar 8s linear forwards'
+                                }} />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
-                ) : (
-                  <div style={{
-                    border: '2px dashed #d1d5db',
-                    borderRadius: '0.75rem',
-                    padding: '4rem 2rem',
-                    textAlign: 'center',
-                    color: '#6b7280',
-                    minHeight: '400px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'white'
+
+                                    {/* LinkedIn Engagement Tips */}
+                  <div style={{ 
+                    marginTop: '1rem'
                   }}>
-                    <div>
-                      <svg 
-                        width="48" 
-                        height="48" 
-                        viewBox="0 0 24 24" 
-                        fill="currentColor"
-                        style={{ margin: '0 auto 1rem', opacity: 0.3, display: 'block', color: '#0077b5' }}
-                      >
-                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                      </svg>
-                      <p style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                        Your LinkedIn post will appear here
-                      </p>
-                      <p style={{ margin: 0 }}>
-                        Configure your settings and click "Generate LinkedIn Post" to create viral thought leadership content
-                      </p>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#0077b5',
+                      marginBottom: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}>
+                      💡 LinkedIn Engagement Tips
+                    </div>
+                    <div style={{
+                      fontSize: '0.8rem',
+                      color: '#6b7280',
+                      lineHeight: '1.4'
+                    }}>
+                      <div style={{ marginBottom: '0.25rem' }}>• Post between 8-10 AM or 12-2 PM for best reach</div>
+                      <div style={{ marginBottom: '0.25rem' }}>• Engage with comments within the first hour</div>
+                      <div style={{ marginBottom: '0.25rem' }}>• Ask a question to encourage discussion</div>
+                      <div>• Tag relevant connections (2-3 max)</div>
                     </div>
                   </div>
+                  
+                  {/* Clear Button - Right Aligned */}
+                  {generatedPost && (
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'flex-end', 
+                      paddingTop: '1rem',
+                      borderTop: '1px solid #e5e7eb'
+                    }}>
+                      <button
+                        onClick={clearGeneratedContent}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#fef2f2',
+                          border: '1px solid #fecaca',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          color: '#dc2626',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#dc2626';
+                          e.currentTarget.style.color = 'white';
+                          e.currentTarget.style.borderColor = '#dc2626';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#fef2f2';
+                          e.currentTarget.style.color = '#dc2626';
+                          e.currentTarget.style.borderColor = '#fecaca';
+                        }}
+                      >
+                        <X size={14} />
+                        Clear Generated Content
+                      </button>
+                  </div>
+                )}
+                </div>
                 )}
               </div>
             </div>
@@ -1647,8 +2703,128 @@ Ensure each post matches the example's style while being authentic and valuable 
         brandKit={brandKit}
         insertVariable={insertVariable}
       />
+
+      {/* Clear Confirmation Popup */}
+      {showClearConfirmation && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            padding: '2rem',
+            maxWidth: '400px',
+            width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#fef2f2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <X size={24} style={{ color: '#dc2626' }} />
+              </div>
+              <div>
+                <h3 style={{
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  margin: 0
+                }}>
+                  Clear Generated Content?
+                </h3>
+              </div>
+            </div>
+            
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              lineHeight: '1.5',
+              margin: '0 0 1.5rem 0'
+            }}>
+              This will permanently delete all generated LinkedIn post variations and cannot be undone. Are you sure you want to continue?
+            </p>
+            
+            <div style={{
+              display: 'flex',
+              gap: '0.75rem',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={cancelClearContent}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={confirmClearContent}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#dc2626',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: 'white',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b91c1c';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dc2626';
+                }}
+              >
+                <X size={14} />
+                Yes, Clear Content
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
 
 export default LinkedInPostModal; 
+// Fixed: Added missing navigation handlers for Previous/Next variation browsing 
