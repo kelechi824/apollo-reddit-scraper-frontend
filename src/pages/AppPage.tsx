@@ -5,7 +5,7 @@ import { WorkflowResponse } from '../types';
 
 const AppPage: React.FC = () => {
   const [currentResults, setCurrentResults] = useState<WorkflowResponse | null>(null);
-  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
 
   /**
    * Load saved results from localStorage on component mount
