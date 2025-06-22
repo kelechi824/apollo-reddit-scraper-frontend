@@ -1475,12 +1475,7 @@ Return ONLY the JSON object, no additional text.`;
         justifyContent: 'center',
           zIndex: 10001
         }}
-        onClick={(e) => {
-          // Close modal when clicking on backdrop
-          if (e.target === e.currentTarget) {
-            setShowCMSModal(false);
-          }
-        }}
+
       >
         <div style={{
           backgroundColor: 'white',
@@ -1697,12 +1692,7 @@ Return ONLY the JSON object, no additional text.`;
         zIndex: 9999,
         padding: '1rem'
         }}
-        onClick={(e) => {
-          // Close modal when clicking on backdrop
-          if (e.target === e.currentTarget) {
-            onClose();
-          }
-        }}
+
       >
         <div style={{
           backgroundColor: 'white',
@@ -1905,7 +1895,7 @@ Return ONLY the JSON object, no additional text.`;
                   ) : (
                     <>
                       <Wand2 size={16} style={{marginRight: '0.5rem'}} />
-                      {generatedContent ? 'Regenerate Content' : 'Generate Content'}
+                      {generatedContent ? 'Regenerate Article' : 'Generate Article'}
                     </>
                   )}
                 </button>
