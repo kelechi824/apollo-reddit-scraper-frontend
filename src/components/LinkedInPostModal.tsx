@@ -786,28 +786,50 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
         return cleaned;
       };
 
-      try {
-        // Step 1: Try to parse as direct JSON array
-        let parsed = JSON.parse(data.content);
-        if (Array.isArray(parsed)) {
-          console.log('✅ Found JSON array with', parsed.length, 'variations');
-          variations = parsed.map((variation: string) => cleanLinkedInVariation(variation));
+      // Handle different response formats from the API
+      let responseContent: string;
+      
+      if (Array.isArray(data.content)) {
+        // Production format: data.content is an array containing JSON string
+        console.log('📋 Detected array format response, extracting content...');
+        responseContent = data.content[0] || '';
+      } else if (typeof data.content === 'string') {
+        // Local format: data.content is a direct string
+        console.log('📋 Detected string format response...');
+        responseContent = data.content;
       } else {
-          console.log('❌ Not a direct JSON array, trying object parsing');
-          if (parsed.content && Array.isArray(parsed.content)) {
-            variations = parsed.content.map((variation: string) => cleanLinkedInVariation(variation));
-          } else if (parsed.variations && Array.isArray(parsed.variations)) {
-            variations = parsed.variations.map((variation: string) => cleanLinkedInVariation(variation));
-          }
+        console.error('❌ Unexpected response format:', typeof data.content);
+        responseContent = String(data.content || '');
+      }
+      
+      console.log('📋 Processing response content:', responseContent.substring(0, 200) + '...');
+
+      try {
+        // Extract JSON from markdown code blocks if present
+        let jsonContent = responseContent;
+        const codeBlockMatch = responseContent.match(/```json\s*([\s\S]*?)\s*```/);
+        if (codeBlockMatch) {
+          console.log('🎯 Found JSON in markdown code blocks, extracting...');
+          jsonContent = codeBlockMatch[1];
+        }
+        
+        // Try to parse as JSON array
+        const parsed = JSON.parse(jsonContent);
+        if (Array.isArray(parsed)) {
+          console.log('✅ Successfully parsed JSON array with', parsed.length, 'variations');
+          variations = parsed.map((variation: string) => cleanLinkedInVariation(variation));
+        } else if (parsed.variations && Array.isArray(parsed.variations)) {
+          console.log('✅ Found variations array in parsed object');
+          variations = parsed.variations.map((variation: string) => cleanLinkedInVariation(variation));
         }
       } catch (directJsonError) {
         console.log('❌ Direct JSON parse failed, trying to extract JSON array');
-        console.log('Raw response for debugging:', data.content.substring(0, 300) + '...');
+        console.log('Raw response for debugging:', responseContent.substring(0, 300) + '...');
         
         // Step 2: Try to extract JSON array from response with better regex
         try {
           // Look for JSON array pattern - handle multiline strings better
-          const jsonArrayMatch = data.content.match(/\[\s*"[\s\S]*?"\s*(?:,\s*"[\s\S]*?"\s*)*\]/);
+          const jsonArrayMatch = responseContent.match(/\[\s*"[\s\S]*?"\s*(?:,\s*"[\s\S]*?"\s*)*\]/);
           if (jsonArrayMatch) {
             const extracted = JSON.parse(jsonArrayMatch[0]);
             if (Array.isArray(extracted)) {
@@ -820,7 +842,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
           
           // Step 3: Manual parsing if JSON extraction fails
           // Look for clear variation separators
-          const content = data.content;
+          const content = responseContent;
           const variationSeparators = [
             /\n\s*\[\s*"[\s\S]*?"\s*,\s*"[\s\S]*?"\s*,\s*"[\s\S]*?"\s*\]/,
             /"[\s\S]*?"\s*,\s*"[\s\S]*?"\s*,\s*"[\s\S]*?"/,
@@ -848,7 +870,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
       // Step 4: If still no variations, try advanced text splitting
       if (variations.length === 0) {
         console.log('⚠️ No structured variations found, attempting advanced text parsing');
-        const rawContent = data.content;
+        const rawContent = responseContent;
         
         // Try to split by common AI response patterns
         const splitPatterns = [
@@ -862,7 +884,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
         
         let foundVariations = false;
         for (const pattern of splitPatterns) {
-          const matches = [...rawContent.matchAll(pattern)];
+          const matches = Array.from(rawContent.matchAll(pattern));
           if (matches.length >= 2) {
             const extractedVariations = matches
               .map(match => match[1] || match[0])
