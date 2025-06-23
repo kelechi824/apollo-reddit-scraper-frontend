@@ -2,7 +2,11 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Clock, Settings, BarChart3, BookOpen } from 'lucide-react';
 
-const Navigation: React.FC = () => {
+interface NavigationProps {
+  onItemClick?: () => void;
+}
+
+const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
   return (
     <nav className="navigation">
       <div className="nav-menu">
@@ -11,6 +15,7 @@ const Navigation: React.FC = () => {
           <NavLink 
             to="/app" 
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onItemClick}
           >
             <BarChart3 className="nav-icon" />
             Analysis
@@ -19,6 +24,7 @@ const Navigation: React.FC = () => {
           <NavLink 
             to="/brand-kit" 
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onItemClick}
           >
             <BookOpen className="nav-icon" />
             Brand Kit
@@ -27,6 +33,7 @@ const Navigation: React.FC = () => {
           <NavLink 
             to="/history" 
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onItemClick}
           >
             <Clock className="nav-icon" />
             History
@@ -35,6 +42,7 @@ const Navigation: React.FC = () => {
           <NavLink 
             to="/settings" 
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onItemClick}
           >
             <Settings className="nav-icon" />
             Settings

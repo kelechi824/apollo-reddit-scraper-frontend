@@ -73,12 +73,10 @@ const LinkedInVariablesMenu: React.FC<{
   return (
     <div
       ref={variablesMenuRef}
+      className="linkedin-variables-menu"
       style={{
         position: 'fixed',
         top: variablesButtonPosition.top,
-        left: variablesButtonPosition.left,
-        width: '400px',
-        maxHeight: '70vh',
         backgroundColor: 'white',
         border: '1px solid #e5e7eb',
         borderRadius: '0.75rem',
@@ -1422,42 +1420,47 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
           }}
 
         >
-                  <div style={{
-          backgroundColor: 'white',
-          borderRadius: '0.75rem',
-          width: '99%',
-          maxWidth: '1800px', // Increased from 1600px
-          height: '95vh', // Increased from 90vh
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}>
-            {/* Header */}
-            <div style={{
+                  <div 
+            className="linkedin-modal"
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '0.75rem',
+              width: '100%',
+              maxWidth: '480px', // Mobile-first: full width up to mobile max
+              height: '100vh',
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '1.5rem 2rem',
-              borderBottom: '1px solid #e5e7eb',
-              backgroundColor: '#0077b5',
-              color: 'white'
-            }}>
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header */}
+            <div 
+              className="linkedin-modal-header"
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '1px solid #e5e7eb',
+                backgroundColor: '#0077b5',
+                color: 'white',
+                position: 'relative'
+              }}
+            >
               <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.25rem', margin: 0 }}>
+                <h2 style={{ fontWeight: '600', margin: 0 }}>
                   LinkedIn Thought Leadership Generator
                 </h2>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem', opacity: 0.9 }}>
+                <p style={{ opacity: 0.9 }}>
                   Create viral LinkedIn posts using Reddit insights that position you as an industry expert
                 </p>
               </div>
               <button
                 onClick={onClose}
+                className="linkedin-modal-close"
                 style={{
                   background: 'rgba(255, 255, 255, 0.2)',
                   border: 'none',
                   cursor: 'pointer',
-                  padding: '0.5rem',
-                  borderRadius: '0.375rem',
                   color: 'white',
                   transition: 'background-color 0.15s ease'
                 }}
@@ -1467,15 +1470,10 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
             </div>
 
             {/* Content */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <div className="linkedin-modal-layout" style={{ flex: 1, overflow: 'hidden' }}>
               {/* Left Panel - Prompts and Example Style */}
-              <div style={{ 
-                flex: '0 0 40%', 
-                padding: '2rem', 
-                borderRight: '1px solid #e5e7eb', 
-                overflowY: 'auto',
-                backgroundColor: 'white'
-              }}>
+              <div className="linkedin-modal-panel"
+              >
                 <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem', color: '#374151' }}>
                   Content Generation Settings
                 </h3>
@@ -1533,16 +1531,13 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                         className="content-creation-textarea"
                         style={{
                           width: '100%',
-                          padding: '1rem 1.25rem',
                           border: useExampleStyle ? '2px solid #0077b5' : '1px solid #e5e7eb',
                           borderRadius: '0.5rem',
-                          fontSize: '0.875rem',
                           backgroundColor: '#fafafa',
                           transition: 'all 0.2s ease',
                           outline: 'none',
                           resize: 'vertical',
                           fontFamily: 'inherit',
-                          lineHeight: '1.5',
                           color: '#374151'
                         }}
                         onFocus={(e) => e.target.style.borderColor = '#0077b5'}
@@ -1757,15 +1752,13 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       <button
                         ref={systemVariablesButtonRef}
                         onClick={(e) => handleVariablesButtonClick('system', e)}
+                        className="linkedin-modal-btn"
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.5rem 1rem',
                           backgroundColor: '#f3f4f6',
                           border: '1px solid #d1d5db',
                           borderRadius: '0.375rem',
-                          fontSize: '0.8rem',
                           cursor: 'pointer'
                         }}
                       >
@@ -1785,16 +1778,13 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       className="content-creation-textarea"
                       style={{
                         width: '100%',
-                        padding: '1rem 1.25rem',
                         border: '1px solid #e5e7eb',
                         borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
                         backgroundColor: '#fafafa',
                         transition: 'all 0.2s ease',
                         outline: 'none',
                         resize: 'vertical',
                         fontFamily: 'inherit',
-                        lineHeight: '1.5',
                         color: '#374151'
                       }}
                       onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
@@ -1836,15 +1826,13 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       <button
                         ref={userVariablesButtonRef}
                         onClick={(e) => handleVariablesButtonClick('user', e)}
+                        className="linkedin-modal-btn"
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.5rem 1rem',
                           backgroundColor: '#f3f4f6',
                           border: '1px solid #d1d5db',
                           borderRadius: '0.375rem',
-                          fontSize: '0.8rem',
                           cursor: 'pointer'
                         }}
                       >
@@ -1864,16 +1852,13 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       className="content-creation-textarea"
                       style={{
                         width: '100%',
-                        padding: '1rem 1.25rem',
                         border: '1px solid #e5e7eb',
                         borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
                         backgroundColor: '#fafafa',
                         transition: 'all 0.2s ease',
                         outline: 'none',
                         resize: 'vertical',
                         fontFamily: 'inherit',
-                        lineHeight: '1.5',
                         color: '#374151'
                       }}
                       onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
@@ -1920,14 +1905,15 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
               </div>
 
               {/* Right Panel - Generated Content */}
-              <div style={{ flex: '0 0 60%', padding: '2rem', overflowY: 'auto', backgroundColor: '#f9fafb' }}>
+              <div className="linkedin-modal-panel"
+              >
                 <div ref={generatedContentRef} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0 }}>
                     Generated LinkedIn Post
                   </h3>
                   
                   {postVariations.length > 0 && (
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div className="linkedin-variations-nav" style={{ display: 'flex' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
                           Variation {currentVariation + 1} of {postVariations.length}
@@ -2049,12 +2035,13 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                     borderRadius: '0.75rem',
                   border: `1px solid ${(isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)) > 3000 ? '#fecaca' : '#bfdbfe'}`
                     }}>
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    marginBottom: '0.75rem'
-                  }}>
+                      <div 
+                        className="linkedin-char-count"
+                        style={{ 
+                          display: 'flex', 
+                          marginBottom: '0.75rem'
+                        }}
+                      >
                           <div style={{
                       fontSize: '0.875rem', 
                       color: (isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)) > 3000 ? '#dc2626' : '#0077b5', 
@@ -2080,16 +2067,14 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                           {/* Edit/Save Button */}
                           <button
                             onClick={toggleEditMode}
+                            className="linkedin-modal-btn"
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.5rem',
-                              padding: '0.5rem 1rem',
                               backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
                               color: 'white',
                               border: 'none',
                               borderRadius: '0.5rem',
-                              fontSize: '0.875rem',
                               fontWeight: '500',
                               cursor: 'pointer',
                               transition: 'all 0.2s ease'

@@ -84,12 +84,10 @@ const VariablesMenu: React.FC<{
   return (
     <div
       ref={variablesMenuRef}
+      className="content-variables-menu"
       style={{
         position: 'fixed',
         top: variablesButtonPosition.top,
-        left: variablesButtonPosition.left,
-        width: '400px',
-        maxHeight: '70vh',
         backgroundColor: 'white',
         border: '1px solid #e5e7eb',
         borderRadius: '0.75rem',
@@ -1809,38 +1807,42 @@ Return ONLY the JSON object, no additional text.`;
         <div style={{
           backgroundColor: 'white',
           borderRadius: '0.75rem',
-          width: '99%',
-          maxWidth: '1800px', // Increased from 1600px
-          height: '95vh', // Increased from 90vh
+          width: '100%',
+          maxWidth: '480px', // Mobile-first: full width up to mobile max
+          height: '100vh',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
-        }}>
+        }}
+        className="content-creation-modal"
+        >
           {/* Header */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '1.5rem 2rem',
-            borderBottom: '1px solid #e5e7eb',
-            backgroundColor: '#fafafa'
-          }}>
+          <div 
+            className="content-modal-header"
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #e5e7eb',
+              backgroundColor: '#fafafa',
+              position: 'relative'
+            }}
+          >
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.25rem', margin: 0, color: '#111827' }}>
+              <h2 style={{ fontWeight: '600', margin: 0, color: '#111827' }}>
                 Create Content with AI
               </h2>
-              <p style={{ color: '#6b7280', margin: '0.25rem 0 0 0', fontSize: '0.875rem' }}>
+              <p style={{ color: '#6b7280' }}>
                 Generate AEO-optimized content from Reddit insights using Apollo's Brand Kit
               </p>
             </div>
             <button
               onClick={onClose}
+              className="content-modal-close"
               style={{
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '0.5rem',
-                borderRadius: '0.375rem',
                 transition: 'background-color 0.15s ease'
               }}
               onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
@@ -1851,15 +1853,10 @@ Return ONLY the JSON object, no additional text.`;
           </div>
 
           {/* Content */}
-          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          <div className="content-modal-layout" style={{ flex: 1, overflow: 'hidden' }}>
             {/* Left Panel - Prompts */}
-            <div style={{ 
-              flex: '0 0 40%', 
-              padding: '2rem', 
-              borderRight: '1px solid #e5e7eb', 
-              overflowY: 'auto',
-              backgroundColor: 'white'
-            }}>
+            <div className="content-modal-panel"
+            >
               <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem', color: '#374151' }}>
                 Content Generation Prompts
               </h3>
@@ -1873,15 +1870,13 @@ Return ONLY the JSON object, no additional text.`;
                   <button
                     ref={systemVariablesButtonRef}
                     onClick={() => handleVariablesMenuToggle('system')}
+                    className="content-modal-btn"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
                       backgroundColor: '#f3f4f6',
                       border: '1px solid #d1d5db',
                       borderRadius: '0.375rem',
-                      fontSize: '0.8rem',
                       fontWeight: '500',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease'
@@ -1905,16 +1900,13 @@ Return ONLY the JSON object, no additional text.`;
                   className="content-creation-textarea"
                   style={{
                     width: '100%',
-                    padding: '1rem 1.25rem',
                     border: '1px solid #e5e7eb',
                     borderRadius: '0.5rem',
-                    fontSize: '0.875rem',
                     backgroundColor: '#fafafa',
                     transition: 'all 0.2s ease',
                     outline: 'none',
                     resize: 'vertical',
                     fontFamily: 'inherit',
-                    lineHeight: '1.5',
                     color: '#374151'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
@@ -1931,15 +1923,13 @@ Return ONLY the JSON object, no additional text.`;
                   <button
                     ref={userVariablesButtonRef}
                     onClick={() => handleVariablesMenuToggle('user')}
+                    className="content-modal-btn"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
                       backgroundColor: '#f3f4f6',
                       border: '1px solid #d1d5db',
                       borderRadius: '0.375rem',
-                      fontSize: '0.8rem',
                       fontWeight: '500',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease'
@@ -1963,16 +1953,13 @@ Return ONLY the JSON object, no additional text.`;
                   className="content-creation-textarea"
                   style={{
                     width: '100%',
-                    padding: '1rem 1.25rem',
                     border: '1px solid #e5e7eb',
                     borderRadius: '0.5rem',
-                    fontSize: '0.875rem',
                     backgroundColor: '#fafafa',
                     transition: 'all 0.2s ease',
                     outline: 'none',
                     resize: 'vertical',
                     fontFamily: 'inherit',
-                    lineHeight: '1.5',
                     color: '#374151'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
@@ -2039,7 +2026,7 @@ Return ONLY the JSON object, no additional text.`;
             </div>
 
             {/* Right Panel - Generated Content */}
-            <div ref={rightPanelRef} style={{ flex: '0 0 60%', padding: '2rem', overflowY: 'auto', backgroundColor: '#f9fafb', position: 'relative' }}>
+            <div ref={rightPanelRef} className="content-modal-panel" style={{ position: 'relative' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0 }}>Generated Content</h3>
                 
@@ -2047,16 +2034,14 @@ Return ONLY the JSON object, no additional text.`;
                 {generatedContent && (
                   <button
                     onClick={clearGeneratedContent}
+                    className="content-modal-btn"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
                       backgroundColor: '#fef2f2',
                       border: '1px solid #fecaca',
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
-                      fontSize: '0.875rem',
                       fontWeight: '500',
                       color: '#dc2626',
                       transition: 'all 0.2s ease',
@@ -2085,16 +2070,14 @@ Return ONLY the JSON object, no additional text.`;
                   {/* Edit/Save Button */}
                   <button
                     onClick={toggleEditMode}
+                    className="content-modal-btn"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
                       backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
                       color: 'white',
                       border: 'none',
                       borderRadius: '0.5rem',
-                      fontSize: '0.875rem',
                       fontWeight: '500',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
@@ -2126,16 +2109,14 @@ Return ONLY the JSON object, no additional text.`;
 
                   <button
                     onClick={() => setShowCMSModal(true)}
+                    className="content-modal-btn"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
                       backgroundColor: '#10b981',
                       color: 'white',
                       border: 'none',
                       borderRadius: '0.5rem',
-                      fontSize: '0.875rem',
                       fontWeight: '500',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
@@ -2149,16 +2130,14 @@ Return ONLY the JSON object, no additional text.`;
                   
                   <button
                     onClick={openGoogleDocs}
+                    className="content-modal-btn"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
                       backgroundColor: '#84ADEA',
                       color: 'black',
                       border: 'none',
                       borderRadius: '0.5rem',
-                      fontSize: '0.875rem',
                       fontWeight: '500',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
@@ -2201,20 +2180,18 @@ Return ONLY the JSON object, no additional text.`;
                   <div style={{ position: 'relative' }}>
                     <button
                       onClick={copyToClipboard}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#6b7280',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
+                      className="content-modal-btn"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        backgroundColor: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
                     onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
                     onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
                   >
