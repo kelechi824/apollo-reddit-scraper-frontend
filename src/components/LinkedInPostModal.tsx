@@ -229,6 +229,8 @@ const LinkedInPostModal: React.FC<LinkedInPostModalProps> = ({ isOpen, onClose, 
   const [postVariations, setPostVariations] = useState<string[]>([]);
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [editableContent, setEditableContent] = useState('');
   
   const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   const userPromptRef = useRef<HTMLTextAreaElement>(null);
@@ -236,6 +238,7 @@ const LinkedInPostModal: React.FC<LinkedInPostModalProps> = ({ isOpen, onClose, 
   const systemVariablesButtonRef = useRef<HTMLButtonElement>(null);
   const userVariablesButtonRef = useRef<HTMLButtonElement>(null);
   const generatedContentRef = useRef<HTMLDivElement>(null);
+  const editableContentRef = useRef<HTMLTextAreaElement>(null);
 
   // Generation progress messages - different for each method
   const getMimicryMessages = () => [
@@ -416,6 +419,8 @@ const LinkedInPostModal: React.FC<LinkedInPostModalProps> = ({ isOpen, onClose, 
   useEffect(() => {
     if (postVariations.length > 0 && currentVariation < postVariations.length) {
       setGeneratedPost(postVariations[currentVariation]);
+      setEditableContent(postVariations[currentVariation]);
+      setIsEditingContent(false); // Exit edit mode when switching variations
     }
   }, [currentVariation, postVariations]);
 
@@ -554,7 +559,7 @@ CRITICAL: Do NOT repeat content, phrases, or structures between variations. Each
 
 OUTPUT FORMAT: Create 3 completely distinct variations and return as a JSON array of strings. Each variation must be independently valuable and unique.`;
 
-    const userPromptTemplate = `Create 3 completely unique LinkedIn thought leadership posts using ONLY this Reddit insight:
+    const userPromptTemplate = `Create unique LinkedIn thought leadership posts using ONLY this Reddit insight:
 
 Reddit Title: ${post.title}
 Reddit Content: ${post.content || 'No additional content provided'}
@@ -571,6 +576,8 @@ STRICT REQUIREMENTS:
 - DO NOT create fictional examples or case studies
 - ONLY use the insights from the Reddit analysis above
 - Each variation must be completely unique in approach and content
+- DO NOT use emdashes (—) in the content
+- AVOID AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..." - use natural, conversational language instead
 
 Create 3 COMPLETELY DIFFERENT LinkedIn posts that each address this pain point uniquely:
 
@@ -669,6 +676,8 @@ Return as a JSON array of 3 completely different LinkedIn posts.`;
 - Use similar formatting (bullets, emojis, questions)
 - Match their confidence and engagement style
 - DON'T copy their exact words or phrases
+- DO NOT use emdashes (—) in the content
+- AVOID AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..." - write naturally
 
 OUTPUT: 3 LinkedIn posts using the example's style to share insights from the Reddit story as examples, not personal claims.
 
@@ -697,6 +706,10 @@ IMPORTANT: Present the Reddit story as an EXAMPLE you're sharing, not your perso
 Use the Reddit facts (like $80k, Midwest Heating and Cooling, 65% close rate, 7 deals) as examples in your insights, not personal claims.
 
 Write in the example's style (tone, energy, structure) but create thought leadership content about the lessons from the Reddit story.
+
+FORMATTING: 
+- DO NOT use emdashes (—) in the content
+- AVOID AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..." - write naturally and conversationally
 
 Return as JSON: ["post 1", "post 2", "post 3"]`;
       } else {
@@ -993,6 +1006,8 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
       setPostVariations(finalVariations);
       setCurrentVariation(0);
       setGeneratedPost(finalVariations[0]);
+      setEditableContent(finalVariations[0]);
+      setIsEditingContent(false);
       
       // Save the generated posts
       saveGeneratedPosts(finalVariations);
@@ -1024,7 +1039,9 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
       const errorMessage = 'Sorry, there was an error generating your LinkedIn post. Please try again.';
       setPostVariations([errorMessage]);
       setGeneratedPost(errorMessage);
+      setEditableContent(errorMessage);
       setCurrentVariation(0);
+      setIsEditingContent(false);
     } finally {
       setIsGenerating(false);
       setGenerationStep(0);
@@ -1101,15 +1118,36 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
   };
 
   /**
+   * Toggle edit mode for generated content
+   * Why this matters: Allows users to edit the generated content before copying/posting
+   */
+  const toggleEditMode = () => {
+    if (isEditingContent) {
+      // Save the edited content back to the current variation
+      setGeneratedPost(editableContent);
+      // Update the variations array with the edited content
+      const updatedVariations = [...postVariations];
+      updatedVariations[currentVariation] = editableContent;
+      setPostVariations(updatedVariations);
+      saveGeneratedPosts(updatedVariations);
+    } else {
+      // Enter edit mode - sync editable content with current post
+      setEditableContent(generatedPost);
+    }
+    setIsEditingContent(!isEditingContent);
+  };
+
+  /**
    * Copy LinkedIn post to clipboard with optimized formatting
    * Why this matters: Provides seamless copying for LinkedIn posting with proper formatting preservation
    */
   const copyLinkedInPost = async () => {
-    if (!generatedPost) return;
+    const contentToCopy = isEditingContent ? editableContent : generatedPost;
+    if (!contentToCopy) return;
     
     try {
       // LinkedIn-optimized formatting: preserve line breaks and remove excessive spacing
-      const linkedInFormattedPost = generatedPost
+      const linkedInFormattedPost = contentToCopy
         .trim()
         .replace(/\n\s*\n\s*\n/g, '\n\n') // Convert triple+ line breaks to double
         .replace(/\n\s*\n/g, '\n\n'); // Ensure consistent double line breaks
@@ -1122,7 +1160,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
       // Fallback for older browsers
       try {
         const textArea = document.createElement('textarea');
-        textArea.value = generatedPost;
+        textArea.value = contentToCopy;
         document.body.appendChild(textArea);
         textArea.select();
         document.execCommand('copy');
@@ -1142,7 +1180,8 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
    * Why this matters: Streamlines the posting process by directly opening LinkedIn with the content ready
    */
   const openLinkedInShare = () => {
-    if (!generatedPost) return;
+    const contentToCopy = isEditingContent ? editableContent : generatedPost;
+    if (!contentToCopy) return;
     
     // LinkedIn sharing URL with pre-populated text
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`;
@@ -1213,6 +1252,8 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
     setIsGenerating(false);
     setGenerationStep(0);
     setShowClearConfirmation(false);
+    setIsEditingContent(false);
+    setEditableContent('');
     
     // Clear saved generated posts from localStorage
     try {
@@ -2004,9 +2045,9 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                   <div style={{
                   marginBottom: '1.5rem',
                   padding: '1rem',
-                  backgroundColor: generatedPost && generatedPost.length > 3000 ? '#fef2f2' : '#f0f9ff',
+                  backgroundColor: (isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)) > 3000 ? '#fef2f2' : '#f0f9ff',
                     borderRadius: '0.75rem',
-                  border: `1px solid ${generatedPost && generatedPost.length > 3000 ? '#fecaca' : '#bfdbfe'}`
+                  border: `1px solid ${(isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)) > 3000 ? '#fecaca' : '#bfdbfe'}`
                     }}>
                       <div style={{ 
                         display: 'flex', 
@@ -2016,17 +2057,17 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                   }}>
                           <div style={{
                       fontSize: '0.875rem', 
-                      color: generatedPost && generatedPost.length > 3000 ? '#dc2626' : '#0077b5', 
+                      color: (isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)) > 3000 ? '#dc2626' : '#0077b5', 
                       fontWeight: '600',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem'
                     }}>
-                      {generatedPost && generatedPost.length > 3000 && (
+                      {(isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)) > 3000 && (
                         <span style={{ fontSize: '1rem' }}>⚠️</span>
                       )}
-                      Character count: {generatedPost ? generatedPost.length : 0}/3000
-                      {generatedPost && generatedPost.length > 3000 && (
+                      Character count: {isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)}/3000
+                      {(isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)) > 3000 && (
                         <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>
                           (Exceeds LinkedIn optimal limit)
                         </span>
@@ -2036,6 +2077,48 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                     {/* Action Buttons */}
                     {generatedPost && (
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                          {/* Edit/Save Button */}
+                          <button
+                            onClick={toggleEditMode}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.5rem 1rem',
+                              backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '0.5rem',
+                              fontSize: '0.875rem',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = isEditingContent ? '#059669' : '#d97706';
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = isEditingContent ? '#10b981' : '#f59e0b';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                          >
+                            {isEditingContent ? (
+                              <>
+                                <Check size={14} />
+                                Save Changes
+                              </>
+                            ) : (
+                              <>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                  <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Edit Post
+                              </>
+                            )}
+                          </button>
+
                           <div style={{ position: 'relative' }}>
                             <button
                               onClick={copyLinkedInPost}
@@ -2284,15 +2367,61 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       </div>
                     )}
 
-                    <div style={{
-                      whiteSpace: 'pre-wrap',
-                      lineHeight: '1.6',
-                      fontSize: '1rem',
-                      color: '#374151',
-                      marginTop: postVariations.length > 1 ? '1.5rem' : '0'
-                    }}>
-                      {generatedPost}
-                    </div>
+                    {/* Edit Mode Indicator */}
+                    {isEditingContent && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '1rem',
+                        left: '1rem',
+                        padding: '0.25rem 0.75rem',
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        borderRadius: '1rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        ✏️ EDITING
+                      </div>
+                    )}
+
+                    {isEditingContent ? (
+                      <textarea
+                        ref={editableContentRef}
+                        value={editableContent}
+                        onChange={(e) => setEditableContent(e.target.value)}
+                        placeholder="Edit your LinkedIn post content here..."
+                        style={{
+                          width: '100%',
+                          minHeight: '350px',
+                          padding: '1rem 1.25rem',
+                          border: '2px solid #f59e0b',
+                          borderRadius: '0.5rem',
+                          fontSize: '1rem',
+                          backgroundColor: '#fffbf5',
+                          transition: 'all 0.2s ease',
+                          outline: 'none',
+                          resize: 'vertical',
+                          fontFamily: 'inherit',
+                          lineHeight: '1.6',
+                          color: '#374151',
+                          marginTop: postVariations.length > 1 ? '1.5rem' : '0'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#d97706'}
+                        onBlur={(e) => e.target.style.borderColor = '#f59e0b'}
+                      />
+                    ) : (
+                      <div style={{
+                        whiteSpace: 'pre-wrap',
+                        lineHeight: '1.6',
+                        fontSize: '1rem',
+                        color: '#374151',
+                        marginTop: postVariations.length > 1 ? '1.5rem' : '0'
+                      }}>
+                        {generatedPost}
+                      </div>
+                    )}
                     
                   </div>
                 ) : (
@@ -2485,6 +2614,48 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                     {/* Action Buttons */}
                     {generatedPost && (
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                          {/* Edit/Save Button */}
+                          <button
+                            onClick={toggleEditMode}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.5rem 1rem',
+                              backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '0.5rem',
+                              fontSize: '0.875rem',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = isEditingContent ? '#059669' : '#d97706';
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = isEditingContent ? '#10b981' : '#f59e0b';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                          >
+                            {isEditingContent ? (
+                              <>
+                                <Check size={14} />
+                                Save Changes
+                              </>
+                            ) : (
+                              <>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                  <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Edit Post
+                              </>
+                            )}
+                          </button>
+
                           <div style={{ position: 'relative' }}>
                             <button
                               onClick={copyLinkedInPost}
