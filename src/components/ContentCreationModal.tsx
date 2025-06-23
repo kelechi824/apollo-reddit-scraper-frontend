@@ -89,9 +89,9 @@ const VariablesMenu: React.FC<{
         position: 'fixed',
         top: variablesButtonPosition.top,
         backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
+        border: '0.0625rem solid #e5e7eb',
         borderRadius: '0.75rem',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        boxShadow: '0 1.5625rem 3.125rem -0.75rem rgba(0, 0, 0, 0.25)',
         zIndex: 10000,
         overflow: 'hidden',
         display: 'flex',
@@ -101,7 +101,7 @@ const VariablesMenu: React.FC<{
       {/* Header */}
       <div style={{
         padding: '1.5rem 1.5rem 1rem 1.5rem',
-        borderBottom: '1px solid #f3f4f6',
+        borderBottom: '0.0625rem solid #f3f4f6',
         backgroundColor: '#fafafa'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -149,7 +149,7 @@ const VariablesMenu: React.FC<{
             style={{
               width: '100%',
               padding: '0.625rem 0.625rem 0.625rem 2.5rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.375rem',
               fontSize: '0.875rem',
               backgroundColor: 'white',
@@ -181,7 +181,7 @@ const VariablesMenu: React.FC<{
                 onClick={() => insertVariable(variable.value)}
                 style={{
                   padding: '1rem',
-                  border: '1px solid #e5e7eb',
+                  border: '0.0625rem solid #e5e7eb',
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -211,7 +211,7 @@ const VariablesMenu: React.FC<{
                   backgroundColor: '#f3f4f6',
                   padding: '0.25rem 0.5rem',
                   borderRadius: '0.25rem',
-                  border: '1px solid #e5e7eb',
+                  border: '0.0625rem solid #e5e7eb',
                   fontWeight: '600'
                 }}>
                   {variable.value}
@@ -269,6 +269,7 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editableContent, setEditableContent] = useState('');
+  const [showGeneratedContentModal, setShowGeneratedContentModal] = useState(false);
   
   const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   const userPromptRef = useRef<HTMLTextAreaElement>(null);
@@ -319,7 +320,7 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
         color: #111827;
         margin: 0 0 1.5rem 0;
         line-height: 1.2;
-        border-bottom: 2px solid #f3f4f6;
+        border-bottom: 0.125rem solid #f3f4f6;
         padding-bottom: 0.75rem;
       }
 
@@ -408,7 +409,7 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
       }
 
       .generated-content-display blockquote {
-        border-left: 4px solid #3b82f6;
+        border-left: 0.25rem solid #3b82f6;
         padding-left: 1rem;
         margin: 1.5rem 0;
         font-style: italic;
@@ -421,10 +422,10 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
         width: 100%;
         border-collapse: collapse;
         margin: 1.5rem 0;
-        border: 1px solid #e5e7eb;
+        border: 0.0625rem solid #e5e7eb;
         border-radius: 0.5rem;
         overflow: hidden;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 0.0625 0.1875rem rgba(0, 0, 0, 0.1);
       }
 
       .generated-content-display th {
@@ -434,8 +435,8 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
         font-weight: 600;
         font-size: 0.875rem;
         color: #374151;
-        border-bottom: 1px solid #e5e7eb;
-        border-right: 1px solid #e5e7eb;
+        border-bottom: 0.0625rem solid #e5e7eb;
+        border-right: 0.0625rem solid #e5e7eb;
       }
 
       .generated-content-display th:last-child {
@@ -444,8 +445,8 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
 
       .generated-content-display td {
         padding: 0.875rem 1rem;
-        border-bottom: 1px solid #f3f4f6;
-        border-right: 1px solid #f3f4f6;
+        border-bottom: 0.0625rem solid #f3f4f6;
+        border-right: 0.0625rem solid #f3f4f6;
         font-size: 0.875rem;
         line-height: 1.5;
         color: #374151;
@@ -464,7 +465,7 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
       }
 
       .generated-content-display div[style*="border"] {
-        border: 1px solid #e5e7eb !important;
+        border: 0.0625rem solid #e5e7eb !important;
         border-radius: 0.5rem;
         padding: 1rem;
         margin: 1rem 0;
@@ -472,7 +473,7 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
       }
 
       .generated-content-display div[style*="red"] {
-        border: 1px solid #e5e7eb !important;
+        border: 0.0625rem solid #e5e7eb !important;
         background-color: #f8fafc !important;
       }
 
@@ -485,7 +486,7 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
       .generated-content-display .section {
         margin: 1.5rem 0;
         padding: 1rem;
-        border: 1px solid #e5e7eb;
+        border: 0.0625rem solid #e5e7eb;
         border-radius: 0.5rem;
         background-color: #f8fafc;
       }
@@ -494,10 +495,10 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
       .generated-content-display .strategy {
         margin: 1.5rem 0;
         padding: 1.5rem;
-        border: 1px solid #dbeafe;
+        border: 0.0625rem solid #dbeafe;
         border-radius: 0.75rem;
         background-color: #eff6ff;
-        border-left: 4px solid #3b82f6;
+        border-left: 0.25rem solid #3b82f6;
       }
 
       /* Override any problematic inline styles */
@@ -514,9 +515,9 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
       }
 
       /* Fix any red borders or colors that might appear */
-      .generated-content-display [style*="border: 1px solid red"],
-      .generated-content-display [style*="border:1px solid red"] {
-        border: 1px solid #e5e7eb !important;
+      .generated-content-display [style*="border: 0.0625rem solid red"],
+      .generated-content-display [style*="border:0.0625rem solid red"] {
+        border: 0.0625rem solid #e5e7eb !important;
       }
 
       /* Ensure proper spacing for content blocks */
@@ -549,6 +550,109 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
         to {
           opacity: 1;
           transform: translate(-50%, -50%) scale(1);
+        }
+      }
+
+      /* Mobile-specific styles for content creation modal */
+      @media (max-width: 48rem) {
+        .content-modal-header {
+          padding: 1rem !important;
+        }
+        
+        .content-modal-header h2 {
+          font-size: 1rem !important;
+        }
+        
+        .content-modal-header p {
+          font-size: 0.875rem !important;
+          margin: 0.25rem 0 0 0 !important;
+        }
+        
+        .content-modal-panel {
+          padding: 1rem !important;
+        }
+        
+        .content-modal-layout {
+          flex-direction: column !important;
+        }
+        
+        .content-modal-btn {
+          padding: 0.75rem 1rem !important;
+          font-size: 0.875rem !important;
+          min-height: 2.75rem !important;
+        }
+
+        /* Variables menu mobile popup modal */
+        .content-variables-menu {
+          position: fixed !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          width: 90vw !important;
+          max-width: 25rem !important;
+          height: 80vh !important;
+          max-height: 37.5rem !important;
+          z-index: 10001 !important;
+        }
+
+        /* Generated content mobile modal */
+        .content-generated-display {
+          position: fixed !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          width: 95vw !important;
+          height: 90vh !important;
+          z-index: 10000 !important;
+          background: white !important;
+          border-radius: 0.75rem !important;
+          box-shadow: 0 1.5625rem 3.125rem -0.75rem rgba(0, 0, 0, 0.25) !important;
+          overflow: hidden !important;
+        }
+
+        /* Mobile backdrop for modals */
+        .mobile-modal-backdrop {
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          background-color: rgba(0, 0, 0, 0.5) !important;
+          z-index: 9999 !important;
+        }
+
+        /* Show mobile view button and hide desktop content */
+        .mobile-view-content-btn {
+          display: block !important;
+        }
+
+        .generated-content-display {
+          display: none !important;
+        }
+
+                     /* Hide edit buttons on mobile */
+             .mobile-hide-edit {
+               display: none !important;
+             }
+
+             /* Hide placeholder content on mobile */
+             .content-placeholder-section {
+               display: none !important;
+             }
+
+             /* Reduce text area font size on mobile */
+             .content-modal-layout textarea {
+               font-size: 0.75rem !important;
+             }
+
+             .content-modal-layout textarea::placeholder {
+               font-size: 0.75rem !important;
+             }
+
+        /* Adjust button containers when edit buttons are hidden */
+        .content-modal-layout .content-action-buttons {
+          gap: 1rem !important;
+          justify-content: center !important;
         }
       }
     `;
@@ -962,36 +1066,47 @@ Return ONLY the JSON object, no additional text.`;
 
   /**
    * Handle variables menu toggle with button positioning
-   * Why this matters: Positions the popup menu to the right of the clicked button, with special positioning for User Prompt to avoid viewport cutoff.
+   * Why this matters: Positions the popup menu to the right of the clicked button on desktop, or as a centered modal on mobile.
    */
   const handleVariablesMenuToggle = (promptField: 'system' | 'user') => {
     setActivePromptField(promptField);
     
-    // Get button position
-    const buttonRef = promptField === 'system' ? systemVariablesButtonRef.current : userVariablesButtonRef.current;
-    if (buttonRef) {
-      const rect = buttonRef.getBoundingClientRect();
-      let topPosition = rect.top + window.scrollY;
-      
-      // For User Prompt, position menu much higher to ensure full visibility
-      if (promptField === 'user') {
-        const menuHeight = Math.min(window.innerHeight * 0.7, 600); // 70vh or 600px max
-        const viewportHeight = window.innerHeight;
-        const spaceBelow = viewportHeight - rect.bottom;
-        
-        // Always position the menu above the button for User Prompt to ensure full visibility
-        topPosition = rect.top + window.scrollY - menuHeight + 250; // Move down 250px from the calculated position
-        
-        // Ensure it doesn't go above the viewport
-        if (topPosition < window.scrollY + 20) {
-          topPosition = window.scrollY + 20;
-        }
-      }
-      
+    // Check if mobile
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+      // On mobile, use centered modal positioning
       setVariablesButtonPosition({
-        top: topPosition,
-        left: rect.right + window.scrollX + 12 // Position to the right with 12px gap
+        top: window.innerHeight / 2,
+        left: window.innerWidth / 2
       });
+    } else {
+      // Desktop positioning logic
+      const buttonRef = promptField === 'system' ? systemVariablesButtonRef.current : userVariablesButtonRef.current;
+      if (buttonRef) {
+        const rect = buttonRef.getBoundingClientRect();
+        let topPosition = rect.top + window.scrollY;
+        
+        // For User Prompt, position menu much higher to ensure full visibility
+        if (promptField === 'user') {
+          const menuHeight = Math.min(window.innerHeight * 0.7, 600); // 70vh or 37.5rem max
+          const viewportHeight = window.innerHeight;
+          const spaceBelow = viewportHeight - rect.bottom;
+          
+          // Always position the menu above the button for User Prompt to ensure full visibility
+          topPosition = rect.top + window.scrollY - menuHeight + 250; // Move down 15.625rem from the calculated position
+          
+          // Ensure it doesn't go above the viewport
+          if (topPosition < window.scrollY + 20) {
+            topPosition = window.scrollY + 20;
+          }
+        }
+        
+        setVariablesButtonPosition({
+          top: topPosition,
+          left: rect.right + window.scrollX + 12 // Position to the right with 0.75rem gap
+        });
+      }
     }
     
     setShowVariablesMenu(!showVariablesMenu);
@@ -1510,6 +1625,17 @@ Return ONLY the JSON object, no additional text.`;
   };
 
   /**
+   * Handle viewing generated content on mobile
+   * Why this matters: Shows generated content as a full-screen modal on mobile for better readability
+   */
+  const handleViewGeneratedContent = () => {
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile && generatedContent) {
+      setShowGeneratedContentModal(true);
+    }
+  };
+
+  /**
    * Handle scroll events to show/hide scroll to top button
    * Why this matters: Only shows the scroll button when user has scrolled down significantly
    */
@@ -1517,7 +1643,7 @@ Return ONLY the JSON object, no additional text.`;
     const handleScroll = () => {
       if (rightPanelRef.current) {
         const scrollTop = rightPanelRef.current.scrollTop;
-        setShowScrollToTop(scrollTop > 300); // Show button after scrolling 300px
+        setShowScrollToTop(scrollTop > 300); // Show button after scrolling 18.75rem
       }
     };
 
@@ -1591,7 +1717,7 @@ Return ONLY the JSON object, no additional text.`;
           backgroundColor: 'white',
           borderRadius: '0.75rem',
           padding: '2rem',
-          maxWidth: '500px',
+          maxWidth: '31.25rem',
           width: '90%',
           maxHeight: '80vh',
           overflowY: 'auto'
@@ -1612,13 +1738,13 @@ Return ONLY the JSON object, no additional text.`;
               <div
                 key={cms.name}
                 style={{
-          border: '1px solid #e5e7eb',
+          border: '0.0625rem solid #e5e7eb',
           borderRadius: '0.75rem',
                     padding: '1.25rem',
                 cursor: 'pointer',
                     transition: 'all 0.2s ease',
                 backgroundColor: 'white',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                    boxShadow: '0 0.0625 0.1875rem rgba(0, 0, 0, 0.05)'
                   }}
                   onClick={() => {
                     setShowComingSoonMessage(cms.name);
@@ -1627,13 +1753,13 @@ Return ONLY the JSON object, no additional text.`;
                   onMouseOver={(e) => {
                     e.currentTarget.style.backgroundColor = '#f9fafb';
                     e.currentTarget.style.borderColor = '#d1d5db';
-                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)';
+                    e.currentTarget.style.transform = 'translateY(-0.0625)';
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.backgroundColor = 'white';
                     e.currentTarget.style.borderColor = '#e5e7eb';
-                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                    e.currentTarget.style.boxShadow = '0 0.0625 0.1875rem rgba(0, 0, 0, 0.05)';
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
@@ -1645,23 +1771,23 @@ Return ONLY the JSON object, no additional text.`;
                   }}>
                     {cms.logo ? (
                       <div style={{
-                        width: '32px',
-                        height: '32px',
+                        width: '2rem',
+                        height: '2rem',
                         borderRadius: '0.5rem',
                         overflow: 'hidden',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         backgroundColor: '#f8fafc',
-                        border: '1px solid #f1f5f9',
+                        border: '0.0625rem solid #f1f5f9',
                         flexShrink: 0
                       }}>
                         <img 
                           src={cms.logo} 
                           alt={`${cms.name} logo`}
                           style={{
-                            width: '24px',
-                            height: '24px',
+                            width: '1.5rem',
+                            height: '1.5rem',
                             objectFit: 'contain'
                           }}
                           onError={(e) => {
@@ -1670,15 +1796,15 @@ Return ONLY the JSON object, no additional text.`;
                             target.style.display = 'none';
                             const parent = target.parentElement;
                             if (parent) {
-                              parent.innerHTML = `<span style="font-size: 12px; font-weight: 600; color: #64748b;">${cms.name.charAt(0)}</span>`;
+                              parent.innerHTML = `<span style="font-size: 0.75rem; font-weight: 600; color: #64748b;">${cms.name.charAt(0)}</span>`;
                             }
                           }}
                         />
                   </div>
                     ) : (
                   <div style={{ 
-                        width: '32px',
-                        height: '32px',
+                        width: '2rem',
+                        height: '2rem',
                         borderRadius: '0.5rem',
                         backgroundColor: '#6366f1',
                         display: 'flex',
@@ -1688,7 +1814,7 @@ Return ONLY the JSON object, no additional text.`;
                       }}>
                         <span style={{
                           color: 'white',
-                          fontSize: '14px',
+                          fontSize: '10.25rem',
                     fontWeight: '600'
                   }}>
                           {cms.name.charAt(0)}
@@ -1733,9 +1859,9 @@ Return ONLY the JSON object, no additional text.`;
                 borderRadius: '0.75rem',
                 fontSize: '1rem',
                 fontWeight: '600',
-                boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                boxShadow: '0 0.625rem 1.5625rem -0.1875rem rgba(0, 0, 0, 0.1), 0 0.25rem 0.375rem -0.125rem rgba(0, 0, 0, 0.05)',
                 zIndex: 10002,
-                minWidth: '250px',
+                minWidth: '15.625rem',
               textAlign: 'center', 
                 animation: 'fadeInScale 0.2s ease-out'
               }}>
@@ -1766,9 +1892,9 @@ Return ONLY the JSON object, no additional text.`;
           gap: '0.5rem',
           padding: '0.75rem 1rem',
           backgroundColor: 'white',
-          border: '1px solid #e5e7eb',
+          border: '0.0625rem solid #e5e7eb',
           borderRadius: '0.5rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1), 0 0.125rem 0.25rem -0.0625rem rgba(0, 0, 0, 0.06)',
           color: autoSaveStatus === 'saving' ? '#6b7280' : '#10b981',
           fontSize: '0.875rem',
           fontWeight: '500',
@@ -1776,7 +1902,7 @@ Return ONLY the JSON object, no additional text.`;
         }}>
           {autoSaveStatus === 'saving' ? (
             <>
-              <Clock className="animate-spin" style={{ width: '12px', height: '12px' }} />
+              <Clock className="animate-spin" style={{ width: '0.75rem', height: '0.75rem' }} />
               Auto-saving prompts...
             </>
           ) : (
@@ -1808,8 +1934,8 @@ Return ONLY the JSON object, no additional text.`;
           backgroundColor: 'white',
           borderRadius: '0.75rem',
           width: '100%',
-          maxWidth: '480px', // Mobile-first: full width up to mobile max
-          height: '100vh',
+          maxWidth: '95vw', // Mobile-first: full width with small margin
+          height: '95vh', // Slightly smaller height for mobile
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
@@ -1823,7 +1949,8 @@ Return ONLY the JSON object, no additional text.`;
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              borderBottom: '1px solid #e5e7eb',
+              padding: '1.5rem',
+              borderBottom: '0.0625rem solid #e5e7eb',
               backgroundColor: '#fafafa',
               position: 'relative'
             }}
@@ -1853,9 +1980,14 @@ Return ONLY the JSON object, no additional text.`;
           </div>
 
           {/* Content */}
-          <div className="content-modal-layout" style={{ flex: 1, overflow: 'hidden' }}>
+          <div className="content-modal-layout" style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
             {/* Left Panel - Prompts */}
-            <div className="content-modal-panel"
+            <div className="content-modal-panel" style={{ 
+              flex: 1, 
+              padding: '1.5rem', 
+              overflowY: 'auto',
+              borderRight: '0.0625rem solid #e5e7eb'
+            }}
             >
               <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem', color: '#374151' }}>
                 Content Generation Prompts
@@ -1875,7 +2007,7 @@ Return ONLY the JSON object, no additional text.`;
                       display: 'flex',
                       alignItems: 'center',
                       backgroundColor: '#f3f4f6',
-                      border: '1px solid #d1d5db',
+                      border: '0.0625rem solid #d1d5db',
                       borderRadius: '0.375rem',
                       fontWeight: '500',
                       cursor: 'pointer',
@@ -1900,7 +2032,7 @@ Return ONLY the JSON object, no additional text.`;
                   className="content-creation-textarea"
                   style={{
                     width: '100%',
-                    border: '1px solid #e5e7eb',
+                    border: '0.0625rem solid #e5e7eb',
                     borderRadius: '0.5rem',
                     backgroundColor: '#fafafa',
                     transition: 'all 0.2s ease',
@@ -1928,7 +2060,7 @@ Return ONLY the JSON object, no additional text.`;
                       display: 'flex',
                       alignItems: 'center',
                       backgroundColor: '#f3f4f6',
-                      border: '1px solid #d1d5db',
+                      border: '0.0625rem solid #d1d5db',
                       borderRadius: '0.375rem',
                       fontWeight: '500',
                       cursor: 'pointer',
@@ -1953,7 +2085,7 @@ Return ONLY the JSON object, no additional text.`;
                   className="content-creation-textarea"
                   style={{
                     width: '100%',
-                    border: '1px solid #e5e7eb',
+                    border: '0.0625rem solid #e5e7eb',
                     borderRadius: '0.5rem',
                     backgroundColor: '#fafafa',
                     transition: 'all 0.2s ease',
@@ -1975,7 +2107,7 @@ Return ONLY the JSON object, no additional text.`;
                 padding: '1.5rem',
                 backgroundColor: '#fafafa',
                 borderRadius: '0.75rem',
-                border: '1px solid #f3f4f6'
+                border: '0.0625rem solid #f3f4f6'
               }}>
                 <button
                   onClick={generateContent}
@@ -2026,11 +2158,16 @@ Return ONLY the JSON object, no additional text.`;
             </div>
 
             {/* Right Panel - Generated Content */}
-            <div ref={rightPanelRef} className="content-modal-panel" style={{ position: 'relative' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0 }}>Generated Content</h3>
+            <div ref={rightPanelRef} className="content-modal-panel" style={{ 
+              position: 'relative',
+              flex: 1,
+              padding: '1.5rem',
+              overflowY: 'auto'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0, marginBottom: '1rem' }}>Generated Content</h3>
                 
-                {/* Clear Button - At the very top right */}
+                {/* Clear Button - Centered */}
                 {generatedContent && (
                   <button
                     onClick={clearGeneratedContent}
@@ -2039,13 +2176,12 @@ Return ONLY the JSON object, no additional text.`;
                       display: 'flex',
                       alignItems: 'center',
                       backgroundColor: '#fef2f2',
-                      border: '1px solid #fecaca',
+                      border: '0.0625rem solid #fecaca',
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
                       fontWeight: '500',
                       color: '#dc2626',
-                      transition: 'all 0.2s ease',
-                      marginLeft: 'auto'
+                      transition: 'all 0.2s ease'
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.backgroundColor = '#dc2626';
@@ -2066,25 +2202,37 @@ Return ONLY the JSON object, no additional text.`;
 
               {/* Action Buttons Row */}
               {generatedContent && (
-                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                <div className="content-action-buttons" style={{ 
+                  display: 'flex', 
+                  gap: '0.75rem', 
+                  marginBottom: '1.5rem',
+                  flexWrap: 'wrap', // Allow wrapping on mobile
+                  justifyContent: 'center' // Center the buttons
+                }}>
                   {/* Edit/Save Button */}
                   <button
                     onClick={toggleEditMode}
-                    className="content-modal-btn"
+                    className="content-modal-btn mobile-hide-edit"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
                       backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
                       color: 'white',
                       border: 'none',
                       borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
                       fontWeight: '500',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.2s ease',
+                      minHeight: '2.75rem', // Touch-friendly
+                      minWidth: '7.5rem',
+                      justifyContent: 'center'
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.backgroundColor = isEditingContent ? '#059669' : '#d97706';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.transform = 'translateY(-0.0625)';
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = isEditingContent ? '#10b981' : '#f59e0b';
@@ -2113,13 +2261,19 @@ Return ONLY the JSON object, no additional text.`;
                     style={{
                       display: 'flex',
                       alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
                       backgroundColor: '#10b981',
                       color: 'white',
                       border: 'none',
                       borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
                       fontWeight: '500',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.2s ease',
+                      minHeight: '2.75rem', // Touch-friendly
+                      minWidth: '7.5rem',
+                      justifyContent: 'center'
                     }}
                     onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
                     onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
@@ -2134,13 +2288,19 @@ Return ONLY the JSON object, no additional text.`;
                     style={{
                       display: 'flex',
                       alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
                       backgroundColor: '#84ADEA',
                       color: 'black',
                       border: 'none',
                       borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
                       fontWeight: '500',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.2s ease',
+                      minHeight: '2.75rem', // Touch-friendly
+                      minWidth: '12.5rem',
+                      justifyContent: 'center'
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.backgroundColor = '#6b96e8';
@@ -2155,8 +2315,8 @@ Return ONLY the JSON object, no additional text.`;
                       src="/google-docs-logo.png" 
                       alt="Google Docs"
                       style={{
-                        width: '16px',
-                        height: '16px',
+                        width: '1rem',
+                        height: '1rem',
                         objectFit: 'contain'
                       }}
                       onError={(e) => {
@@ -2174,7 +2334,7 @@ Return ONLY the JSON object, no additional text.`;
                         }
                       }}
                     />
-                    Open in Google Docs
+                    Google Docs
                   </button>
 
                   <div style={{ position: 'relative' }}>
@@ -2184,19 +2344,25 @@ Return ONLY the JSON object, no additional text.`;
                       style={{
                         display: 'flex',
                         alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
                         backgroundColor: '#6b7280',
                         color: 'white',
                         border: 'none',
                         borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
                         fontWeight: '500',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        minHeight: '2.75rem', // Touch-friendly
+                        minWidth: '7.5rem',
+                        justifyContent: 'center'
                       }}
                     onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
                     onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
                   >
                       <Copy size={14} />
-                      Copy to Clipboard
+                      Copy
                   </button>
                     
                     {/* Copied message */}
@@ -2216,7 +2382,7 @@ Return ONLY the JSON object, no additional text.`;
                         fontSize: '0.75rem',
                         fontWeight: '500',
                         whiteSpace: 'nowrap',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                        boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
                         zIndex: 1000
                       }}>
                         <Check style={{ width: '0.875rem', height: '0.875rem' }} />
@@ -2227,18 +2393,49 @@ Return ONLY the JSON object, no additional text.`;
                 </div>
               )}
 
-
+              {/* Mobile View Content Button */}
+              {generatedContent && (
+                <div className="mobile-view-content-btn" style={{ display: 'none', marginBottom: '1rem' }}>
+                  <button
+                    onClick={handleViewGeneratedContent}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '1rem 1.5rem',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.75rem',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      width: '100%',
+                      justifyContent: 'center'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#3b82f6')}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    View Generated Content
+                  </button>
+                </div>
+              )}
 
               {generatedContent ? (
                 <div
                   className="generated-content-display"
                   style={{
-                    border: '1px solid #e5e7eb',
+                    border: '0.0625rem solid #e5e7eb',
                     borderRadius: '0.75rem',
                     padding: '2rem',
-                    minHeight: '400px',
+                    minHeight: '25rem',
                     backgroundColor: 'white',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                    boxShadow: '0 0.0625 0.1875rem rgba(0, 0, 0, 0.1)'
                   }}
                 >
                   {/* Meta SEO Fields - Show at the top */}
@@ -2254,7 +2451,7 @@ Return ONLY the JSON object, no additional text.`;
                               padding: '0.25rem 0.5rem',
                               fontSize: '0.75rem',
                               backgroundColor: '#f3f4f6',
-                              border: '1px solid #10b981',
+                              border: '0.0625rem solid #10b981',
                               borderRadius: '0.375rem',
                               cursor: 'pointer',
                               color: '#10b981'
@@ -2280,7 +2477,7 @@ Return ONLY the JSON object, no additional text.`;
                               fontSize: '0.75rem',
                               fontWeight: '500',
                               whiteSpace: 'nowrap',
-                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                              boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
                               zIndex: 1000
                             }}>
                               <Check style={{ width: '0.875rem', height: '0.875rem' }} />
@@ -2299,7 +2496,7 @@ Return ONLY the JSON object, no additional text.`;
                               padding: '0.25rem 0.5rem',
                               fontSize: '0.75rem',
                               backgroundColor: '#f3f4f6',
-                              border: '1px solid #10b981',
+                              border: '0.0625rem solid #10b981',
                               borderRadius: '0.375rem',
                               cursor: 'pointer',
                               color: '#10b981'
@@ -2325,7 +2522,7 @@ Return ONLY the JSON object, no additional text.`;
                               fontSize: '0.75rem',
                               fontWeight: '500',
                               whiteSpace: 'nowrap',
-                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                              boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
                               zIndex: 1000
                             }}>
                               <Check style={{ width: '0.875rem', height: '0.875rem' }} />
@@ -2334,7 +2531,7 @@ Return ONLY the JSON object, no additional text.`;
                           )}
                         </div>
                       )}
-                      <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '1.5rem 0' }} />
+                      <hr style={{ border: 'none', borderTop: '0.0625rem solid #e5e7eb', margin: '1.5rem 0' }} />
                     </div>
                   )}
 
@@ -2346,7 +2543,7 @@ Return ONLY the JSON object, no additional text.`;
                       padding: '0.75rem 1rem',
                       backgroundColor: '#fffbf5',
                       borderRadius: '0.5rem',
-                      border: '2px solid #f59e0b',
+                      border: '0.125rem solid #f59e0b',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem'
@@ -2369,9 +2566,9 @@ Return ONLY the JSON object, no additional text.`;
                       placeholder="Edit your content here..."
                       style={{
                         width: '100%',
-                        minHeight: '600px',
+                        minHeight: '37.5rem',
                         padding: '1rem 1.25rem',
-                        border: '2px solid #f59e0b',
+                        border: '0.125rem solid #f59e0b',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
                         backgroundColor: '#fffbf5',
@@ -2391,22 +2588,26 @@ Return ONLY the JSON object, no additional text.`;
                   
                   {/* Bottom Action Buttons - Duplicate for convenience */}
                   <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
                     marginTop: '2rem',
                     paddingTop: '1rem',
-                    borderTop: '1px solid #e5e7eb'
+                    borderTop: '0.0625rem solid #e5e7eb'
                   }}>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <div className="content-action-buttons" style={{ 
+                      display: 'flex', 
+                      gap: '0.75rem',
+                      marginBottom: '1rem',
+                      flexWrap: 'wrap', // Stack on mobile
+                      justifyContent: 'center' // Center the buttons
+                    }}>
                       {/* Edit/Save Button */}
                       <button
                         onClick={toggleEditMode}
+                        className="mobile-hide-edit"
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.5rem',
-                          padding: '0.5rem 1rem',
+                          padding: '0.75rem 1rem',
                           backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
                           color: 'white',
                           border: 'none',
@@ -2414,11 +2615,14 @@ Return ONLY the JSON object, no additional text.`;
                           fontSize: '0.875rem',
                           fontWeight: '500',
                           cursor: 'pointer',
-                          transition: 'all 0.2s ease'
+                          transition: 'all 0.2s ease',
+                          minHeight: '2.75rem',
+                          minWidth: '7.5rem',
+                          justifyContent: 'center'
                         }}
                         onMouseOver={(e) => {
                           e.currentTarget.style.backgroundColor = isEditingContent ? '#059669' : '#d97706';
-                          e.currentTarget.style.transform = 'translateY(-1px)';
+                          e.currentTarget.style.transform = 'translateY(-0.0625)';
                         }}
                         onMouseOut={(e) => {
                           e.currentTarget.style.backgroundColor = isEditingContent ? '#10b981' : '#f59e0b';
@@ -2447,7 +2651,7 @@ Return ONLY the JSON object, no additional text.`;
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.5rem',
-                          padding: '0.5rem 1rem',
+                          padding: '0.75rem 1rem',
                           backgroundColor: '#10b981',
                           color: 'white',
                           border: 'none',
@@ -2455,7 +2659,10 @@ Return ONLY the JSON object, no additional text.`;
                           fontSize: '0.875rem',
                           fontWeight: '500',
                           cursor: 'pointer',
-                          transition: 'all 0.2s ease'
+                          transition: 'all 0.2s ease',
+                          minHeight: '2.75rem',
+                          minWidth: '7.5rem',
+                          justifyContent: 'center'
                         }}
                         onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
                         onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
@@ -2470,7 +2677,7 @@ Return ONLY the JSON object, no additional text.`;
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.5rem',
-                          padding: '0.5rem 1rem',
+                          padding: '0.75rem 1rem',
                           backgroundColor: '#84ADEA',
                           color: 'black',
                           border: 'none',
@@ -2478,7 +2685,10 @@ Return ONLY the JSON object, no additional text.`;
                           fontSize: '0.875rem',
                           fontWeight: '500',
                           cursor: 'pointer',
-                          transition: 'all 0.2s ease'
+                          transition: 'all 0.2s ease',
+                          minHeight: '2.75rem',
+                          minWidth: '12.5rem',
+                          justifyContent: 'center'
                         }}
                         onMouseOver={(e) => {
                           e.currentTarget.style.backgroundColor = '#6b96e8';
@@ -2493,8 +2703,8 @@ Return ONLY the JSON object, no additional text.`;
                           src="/google-docs-logo.png" 
                           alt="Google Docs"
                           style={{
-                            width: '16px',
-                            height: '16px',
+                            width: '1rem',
+                            height: '1rem',
                             objectFit: 'contain'
                           }}
                           onError={(e) => {
@@ -2512,7 +2722,7 @@ Return ONLY the JSON object, no additional text.`;
                             }
                           }}
                         />
-                        Open in Google Docs
+                        Google Docs
                       </button>
 
                       <button
@@ -2521,7 +2731,7 @@ Return ONLY the JSON object, no additional text.`;
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.5rem',
-                          padding: '0.5rem 1rem',
+                          padding: '0.75rem 1rem',
                           backgroundColor: '#6b7280',
                           color: 'white',
                           border: 'none',
@@ -2529,32 +2739,38 @@ Return ONLY the JSON object, no additional text.`;
                           fontSize: '0.875rem',
                           fontWeight: '500',
                           cursor: 'pointer',
-                          transition: 'all 0.2s ease'
+                          transition: 'all 0.2s ease',
+                          minHeight: '2.75rem',
+                          minWidth: '7.5rem',
+                          justifyContent: 'center'
                         }}
                         onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
                         onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
                       >
                         <Copy size={14} />
-                        Copy to Clipboard
+                        Copy
                       </button>
                     </div>
 
-                    {/* Clear Button - Right Aligned */}
+                    {/* Clear Button - Full width on mobile */}
                     <button
                       onClick={clearGeneratedContent}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
-                        padding: '0.5rem 1rem',
+                        padding: '0.75rem 1rem',
                         backgroundColor: '#fef2f2',
-                        border: '1px solid #fecaca',
+                        border: '0.0625rem solid #fecaca',
                         borderRadius: '0.5rem',
                         cursor: 'pointer',
                         fontSize: '0.875rem',
                         fontWeight: '500',
                         color: '#dc2626',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        minHeight: '2.75rem',
+                        width: '100%',
+                        justifyContent: 'center'
                       }}
                       onMouseOver={(e) => {
                         e.currentTarget.style.backgroundColor = '#dc2626';
@@ -2573,13 +2789,13 @@ Return ONLY the JSON object, no additional text.`;
                   </div>
                 </div>
               ) : (
-                <div style={{
-                  border: '2px dashed #d1d5db',
+                <div className="content-placeholder-section" style={{
+                  border: '0.125rem dashed #d1d5db',
                   borderRadius: '0.75rem',
                   padding: '4rem 2rem',
                   textAlign: 'center',
                   color: '#6b7280',
-                  minHeight: '400px',
+                  minHeight: '25rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -2622,8 +2838,8 @@ Return ONLY the JSON object, no additional text.`;
                     position: 'absolute',
                     bottom: '2rem',
                     right: '2rem',
-                    width: '48px',
-                    height: '48px',
+                    width: '3rem',
+                    height: '3rem',
                     borderRadius: '50%',
                     backgroundColor: '#3b82f6',
                     color: 'white',
@@ -2632,7 +2848,7 @@ Return ONLY the JSON object, no additional text.`;
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.15)',
                     transition: 'all 0.2s ease',
                     zIndex: 1000
                   }}
@@ -2658,6 +2874,14 @@ Return ONLY the JSON object, no additional text.`;
       </div>
 
       <CMSModal />
+      {/* Mobile backdrop for variables menu */}
+      {showVariablesMenu && window.innerWidth <= 768 && (
+        <div 
+          className="mobile-modal-backdrop"
+          onClick={() => setShowVariablesMenu(false)}
+        />
+      )}
+
       <VariablesMenu
         showVariablesMenu={showVariablesMenu}
         variablesButtonPosition={variablesButtonPosition}
@@ -2669,6 +2893,203 @@ Return ONLY the JSON object, no additional text.`;
         brandKit={brandKit}
         insertVariable={insertVariable}
       />
+
+      {/* Mobile Generated Content Modal */}
+      {showGeneratedContentModal && (
+        <>
+          <div 
+            className="mobile-modal-backdrop"
+            onClick={() => setShowGeneratedContentModal(false)}
+          />
+          <div className="content-generated-display" style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '95vw',
+            height: '90vh',
+            zIndex: 10000,
+            background: 'white',
+            borderRadius: '0.75rem',
+            boxShadow: '0 1.5625rem 3.125rem -0.75rem rgba(0, 0, 0, 0.25)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Mobile Modal Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '1rem 1.5rem',
+              borderBottom: '0.0625rem solid #e5e7eb',
+              backgroundColor: '#fafafa'
+            }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: '#111827' }}>
+                Generated Content
+              </h3>
+              <button
+                onClick={() => setShowGeneratedContentModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  borderRadius: '0.25rem',
+                  transition: 'background-color 0.15s ease'
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ 
+              flex: 1, 
+              padding: '1.5rem', 
+              overflowY: 'auto',
+              backgroundColor: 'white'
+            }}>
+              {/* Meta SEO Fields */}
+              {(metaSeoTitle || metaDescription) && (
+                <div style={{ marginBottom: '2rem' }}>
+                  {metaSeoTitle && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <strong>Meta SEO Title:</strong> {metaSeoTitle}
+                      <button
+                        onClick={copyMetaTitle}
+                        style={{
+                          marginLeft: '0.5rem',
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.75rem',
+                          backgroundColor: '#f3f4f6',
+                          border: '0.0625rem solid #10b981',
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          color: '#10b981'
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  )}
+                  {metaDescription && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <strong>Meta Description:</strong> {metaDescription}
+                      <button
+                        onClick={copyMetaDescription}
+                        style={{
+                          marginLeft: '0.5rem',
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.75rem',
+                          backgroundColor: '#f3f4f6',
+                          border: '0.0625rem solid #10b981',
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          color: '#10b981'
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  )}
+                  <hr style={{ border: 'none', borderTop: '0.0625rem solid #e5e7eb', margin: '1.5rem 0' }} />
+                </div>
+              )}
+
+              {/* Content */}
+              <div 
+                style={{ 
+                  display: 'block',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                  lineHeight: '1.6',
+                  color: '#374151'
+                }}
+                dangerouslySetInnerHTML={{ __html: generatedContent }} 
+              />
+            </div>
+
+            {/* Mobile Modal Actions */}
+            <div style={{
+              padding: '1rem 1.5rem',
+              borderTop: '0.0625rem solid #e5e7eb',
+              backgroundColor: '#fafafa',
+              display: 'flex',
+              gap: '0.75rem',
+              flexWrap: 'wrap',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => {
+                  copyToClipboard();
+                  setShowGeneratedContentModal(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  minHeight: '2.75rem',
+                  minWidth: '7.5rem',
+                  justifyContent: 'center'
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
+              >
+                <Copy size={14} />
+                Copy Content
+              </button>
+
+              <button
+                onClick={() => {
+                  openGoogleDocs();
+                  setShowGeneratedContentModal(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#84ADEA',
+                  color: 'black',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  minHeight: '2.75rem',
+                  minWidth: '12.5rem',
+                  justifyContent: 'center'
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#6b96e8')}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#84ADEA')}
+              >
+                <img 
+                  src="/google-docs-logo.png" 
+                  alt="Google Docs"
+                  style={{
+                    width: '1rem',
+                    height: '1rem',
+                    objectFit: 'contain'
+                  }}
+                />
+                Google Docs
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Clear Confirmation Popup */}
       {showClearConfirmation && (
@@ -2688,9 +3109,9 @@ Return ONLY the JSON object, no additional text.`;
             backgroundColor: 'white',
             borderRadius: '0.75rem',
             padding: '2rem',
-            maxWidth: '400px',
+            maxWidth: '25rem',
             width: '90%',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 1.25rem 1.5625rem -5px rgba(0, 0, 0, 0.1), 0 0.625rem 0.625rem -5px rgba(0, 0, 0, 0.04)'
           }}>
             <div style={{
               display: 'flex',
@@ -2699,8 +3120,8 @@ Return ONLY the JSON object, no additional text.`;
               marginBottom: '1rem'
             }}>
               <div style={{
-                width: '48px',
-                height: '48px',
+                width: '3rem',
+                height: '3rem',
                 borderRadius: '50%',
                 backgroundColor: '#fef2f2',
                 display: 'flex',
@@ -2740,7 +3161,7 @@ Return ONLY the JSON object, no additional text.`;
                 style={{
                   padding: '0.5rem 1rem',
                   backgroundColor: 'white',
-                  border: '1px solid #d1d5db',
+                  border: '0.0625rem solid #d1d5db',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   fontWeight: '500',

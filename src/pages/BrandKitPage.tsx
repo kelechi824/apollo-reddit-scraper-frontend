@@ -338,9 +338,9 @@ const BrandKitPage: React.FC = () => {
           gap: '0.5rem',
           padding: '0.75rem 1rem',
           backgroundColor: 'white',
-          border: '1px solid #e5e7eb',
+          border: '0.0625rem solid #e5e7eb',
           borderRadius: '0.5rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1), 0 0.125rem 0.25rem -0.0625rem rgba(0, 0, 0, 0.06)',
           color: autoSaveStatus === 'saving' ? '#6b7280' : '#10b981',
           fontSize: '0.875rem',
           fontWeight: '500',
@@ -349,10 +349,10 @@ const BrandKitPage: React.FC = () => {
           {autoSaveStatus === 'saving' ? (
             <>
               <div style={{
-                width: '12px',
-                height: '12px',
-                border: '2px solid transparent',
-                borderTop: '2px solid #6b7280',
+                width: '0.75rem',
+                height: '0.75rem',
+                border: '0.125rem solid transparent',
+                borderTop: '0.125rem solid #6b7280',
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite'
               }} />
@@ -371,12 +371,12 @@ const BrandKitPage: React.FC = () => {
 
       <div className="brand-kit-page" style={{ 
         padding: '2rem', 
-        maxWidth: '1200px', 
+        maxWidth: '112.5rem', 
         margin: '0 auto'
       }}>
       <div style={{ marginBottom: '3rem', textAlign: 'center' }}>
         <h1 style={{ fontSize: '2.5rem', fontWeight: '700', marginBottom: '0.75rem', color: '#111827' }}>Brand Kit</h1>
-        <p style={{ color: '#6b7280', fontSize: '1.125rem', maxWidth: '600px', margin: '0 auto' }}>
+        <p style={{ color: '#6b7280', fontSize: '1.125rem', maxWidth: '37.5rem', margin: '0 auto' }}>
           Configure brand information for consistent AI content creation.
         </p>
       </div>
@@ -384,7 +384,7 @@ const BrandKitPage: React.FC = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         {/* Pythia API Integration */}
         <div style={{ 
-          border: '2px solid #B8B0E8', 
+          border: '0.125rem solid #B8B0E8', 
           borderRadius: '0.75rem', 
           padding: '1.5rem',
           backgroundColor: '#E0DBFF'
@@ -423,9 +423,9 @@ const BrandKitPage: React.FC = () => {
                   placeholder="Enter your Pythia API key..."
                   style={{
                     flex: '1',
-                    minWidth: '250px',
+                    minWidth: '15.625rem',
                     padding: '1rem 1.25rem',
-                    border: '1px solid #e5e7eb',
+                    border: '0.0625rem solid #e5e7eb',
                     borderRadius: '0.5rem',
                     fontSize: '0.875rem',
                     backgroundColor: '#fafafa',
@@ -451,17 +451,17 @@ const BrandKitPage: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
-                    minWidth: '120px',
+                    minWidth: '7.5rem',
                     justifyContent: 'center'
                   }}
                 >
                   {isTestingConnection ? (
                     <>
                       <div style={{
-                        width: '12px',
-                        height: '12px',
-                        border: '2px solid transparent',
-                        borderTop: '2px solid white',
+                        width: '0.75rem',
+                        height: '0.75rem',
+                        border: '0.125rem solid transparent',
+                        borderTop: '0.125rem solid white',
                         borderRadius: '50%',
                         animation: 'spin 1s linear infinite'
                       }} />
@@ -509,7 +509,7 @@ const BrandKitPage: React.FC = () => {
                 padding: '0.75rem',
                 backgroundColor: connectionMessage.includes('success') ? '#dcfce7' : '#fee2e2',
                 borderRadius: '0.5rem',
-                border: `1px solid ${connectionMessage.includes('success') ? '#bbf7d0' : '#fecaca'}`
+                border: `0.0625rem solid ${connectionMessage.includes('success') ? '#bbf7d0' : '#fecaca'}`
               }}>
                 <AlertCircle size={16} style={{ 
                   color: connectionMessage.includes('success') ? '#16a34a' : '#dc2626' 
@@ -529,7 +529,7 @@ const BrandKitPage: React.FC = () => {
               backgroundColor: '#f8fafc', 
               padding: '1rem', 
               borderRadius: '0.5rem',
-              border: '1px solid #e2e8f0'
+              border: '0.0625rem solid #e2e8f0'
             }}>
               <h4 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#475569' }}>
                 How to get your Pythia API Key:
@@ -552,7 +552,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* Brand URL */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             Brand URL
           </label>
@@ -564,7 +564,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -581,7 +581,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* About the Brand */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             About the Brand
           </label>
@@ -593,7 +593,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -611,7 +611,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* Ideal Customer Profile */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             Ideal Customer Profile
           </label>
@@ -623,7 +623,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -641,7 +641,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* Competitors */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             Competitors
           </label>
@@ -653,7 +653,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -670,7 +670,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* Brand Point of View */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             Brand Point of View
           </label>
@@ -682,7 +682,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -700,7 +700,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* Author Persona */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             Author Persona
           </label>
@@ -712,7 +712,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -730,7 +730,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* Tone of Voice */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             Tone of Voice
           </label>
@@ -742,7 +742,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -760,7 +760,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* Header Case Type */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             Header Case Type
           </label>
@@ -770,7 +770,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -792,7 +792,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* Writing Rules */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             Writing Rules
           </label>
@@ -804,7 +804,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -822,7 +822,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* CTA Text */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             CTA Text
           </label>
@@ -834,7 +834,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -851,7 +851,7 @@ const BrandKitPage: React.FC = () => {
         </div>
 
         {/* CTA Destination */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
             CTA Destination
           </label>
@@ -863,7 +863,7 @@ const BrandKitPage: React.FC = () => {
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               backgroundColor: '#fafafa',
@@ -882,7 +882,7 @@ const BrandKitPage: React.FC = () => {
         {/* Writing Sample Section */}
         <div style={{ 
           backgroundColor: 'white', 
-          border: '1px solid #f3f4f6', 
+          border: '0.0625rem solid #f3f4f6', 
           borderRadius: '0.75rem', 
           padding: '2rem' 
         }}>
@@ -901,7 +901,7 @@ const BrandKitPage: React.FC = () => {
                 style={{
                   width: '100%',
                   padding: '1rem 1.25rem',
-                  border: '1px solid #e5e7eb',
+                  border: '0.0625rem solid #e5e7eb',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   backgroundColor: '#fafafa',
@@ -926,7 +926,7 @@ const BrandKitPage: React.FC = () => {
                 style={{
                   width: '100%',
                   padding: '1rem 1.25rem',
-                  border: '1px solid #e5e7eb',
+                  border: '0.0625rem solid #e5e7eb',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   backgroundColor: '#fafafa',
@@ -951,7 +951,7 @@ const BrandKitPage: React.FC = () => {
                 style={{
                   width: '100%',
                   padding: '1rem 1.25rem',
-                  border: '1px solid #e5e7eb',
+                  border: '0.0625rem solid #e5e7eb',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   backgroundColor: '#fafafa',
@@ -977,7 +977,7 @@ const BrandKitPage: React.FC = () => {
                 style={{
                   width: '100%',
                   padding: '1rem 1.25rem',
-                  border: '1px solid #e5e7eb',
+                  border: '0.0625rem solid #e5e7eb',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   backgroundColor: '#fafafa',
@@ -996,7 +996,7 @@ const BrandKitPage: React.FC = () => {
         {/* Custom Variables */}
         <div style={{ 
           backgroundColor: 'white', 
-          border: '1px solid #f3f4f6', 
+          border: '0.0625rem solid #f3f4f6', 
           borderRadius: '0.75rem', 
           padding: '2rem' 
         }}>
@@ -1015,7 +1015,7 @@ const BrandKitPage: React.FC = () => {
               style={{
                 flex: '1',
                 padding: '1rem 1.25rem',
-                border: '1px solid #e5e7eb',
+                border: '0.0625rem solid #e5e7eb',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
                 backgroundColor: '#fafafa',
@@ -1034,7 +1034,7 @@ const BrandKitPage: React.FC = () => {
               style={{
                 flex: '2',
                 padding: '1rem 1.25rem',
-                border: '1px solid #e5e7eb',
+                border: '0.0625rem solid #e5e7eb',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
                 backgroundColor: '#f9fafb',
@@ -1086,7 +1086,7 @@ const BrandKitPage: React.FC = () => {
                   style={{
                     flex: '1',
                     padding: '0.5rem 0.75rem',
-                    border: '2px solid #3b82f6',
+                    border: '0.125rem solid #3b82f6',
                     borderRadius: '0.25rem',
                     fontSize: '0.875rem',
                     backgroundColor: 'white',
@@ -1100,7 +1100,7 @@ const BrandKitPage: React.FC = () => {
                   style={{
                     flex: '1',
                     padding: '0.5rem 0.75rem',
-                    border: '1px solid #e5e7eb',
+                    border: '0.0625rem solid #e5e7eb',
                     borderRadius: '0.25rem',
                     fontSize: '0.875rem',
                     backgroundColor: '#fafafa',
@@ -1122,7 +1122,7 @@ const BrandKitPage: React.FC = () => {
                 fontSize: '0.75rem',
                 fontFamily: 'monospace',
                 color: '#6b7280',
-                border: '1px solid #e5e7eb'
+                border: '0.0625rem solid #e5e7eb'
               }}>
                 {value}
               </code>
@@ -1162,7 +1162,7 @@ const BrandKitPage: React.FC = () => {
           padding: '2rem',
           backgroundColor: '#fafafa',
           borderRadius: '0.75rem',
-          border: '1px solid #f3f4f6'
+          border: '0.0625rem solid #f3f4f6'
         }}>
           <button
             onClick={handleSave}
@@ -1181,7 +1181,7 @@ const BrandKitPage: React.FC = () => {
               cursor: isSaving ? 'not-allowed' : 'pointer',
               opacity: isSaving ? 0.6 : 1,
               transition: 'all 0.2s ease',
-              boxShadow: '0 2px 4px rgba(59, 130, 246, 0.15)'
+              boxShadow: '0 0.125rem 0.25rem rgba(59, 130, 246, 0.15)'
             }}
             onMouseOver={(e) => !isSaving && ((e.target as HTMLButtonElement).style.backgroundColor = '#2563eb')}
             onMouseOut={(e) => !isSaving && ((e.target as HTMLButtonElement).style.backgroundColor = '#3b82f6')}
