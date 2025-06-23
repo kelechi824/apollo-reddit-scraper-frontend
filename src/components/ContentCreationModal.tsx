@@ -938,6 +938,15 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
   };
 
   /**
+   * Reset prompts to default values
+   * Why this matters: Allows users to quickly restore the proven default prompts after experimenting with custom ones
+   */
+  const resetToDefaults = () => {
+    generateInitialPrompts();
+    setHasUserInput(true); // Trigger auto-save to persist the reset
+  };
+
+  /**
    * Generate system and user prompts with Reddit context
    * Why this matters: Creates targeted prompts that leverage both Reddit insights and brand positioning.
    */
@@ -1142,8 +1151,8 @@ Return ONLY the JSON object, no additional text.`;
         user_prompt: processedUserPrompt
       };
 
-      // For now, simulate the API call - you'll need to implement the backend endpoint
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3003'}/api/content/generate`, {
+      // Call the content generation API
+      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/content/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1996,9 +2005,32 @@ Return ONLY the JSON object, no additional text.`;
               {/* System Prompt */}
               <div style={{ marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}>
-                    System Prompt
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}>
+                      System Prompt
+                    </label>
+                    <button
+                      onClick={resetToDefaults}
+                      style={{
+                        fontSize: '0.8rem',
+                        color: '#0077b5',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        padding: '0',
+                        fontWeight: '500'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.color = '#005582';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.color = '#0077b5';
+                      }}
+                    >
+                      (Reset to default)
+                    </button>
+                  </div>
                   <button
                     ref={systemVariablesButtonRef}
                     onClick={() => handleVariablesMenuToggle('system')}
@@ -2049,9 +2081,32 @@ Return ONLY the JSON object, no additional text.`;
               {/* User Prompt */}
               <div style={{ marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}>
-                    User Prompt
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}>
+                      User Prompt
+                    </label>
+                    <button
+                      onClick={resetToDefaults}
+                      style={{
+                        fontSize: '0.8rem',
+                        color: '#0077b5',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        padding: '0',
+                        fontWeight: '500'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.color = '#005582';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.color = '#0077b5';
+                      }}
+                    >
+                      (Reset to default)
+                    </button>
+                  </div>
                   <button
                     ref={userVariablesButtonRef}
                     onClick={() => handleVariablesMenuToggle('user')}

@@ -140,7 +140,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
 
       console.log('🚀 Starting analysis workflow:', request);
 
-      const response = await fetch(`${apiUrl}/api/workflow/run-analysis`, {
+      const response = await fetch(`${apiUrl.replace(/\/$/, '')}/api/workflow/run-analysis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
