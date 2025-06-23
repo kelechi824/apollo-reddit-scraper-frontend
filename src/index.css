@@ -4827,6 +4827,7 @@ footer {
     font-size: 1rem !important;
     min-height: 3rem;
     -webkit-appearance: none;
+    appearance: none;
   }
 }
 
@@ -5153,7 +5154,6 @@ html {
   
   /* Image loading optimization */
   img {
-    loading: lazy;
     will-change: opacity;
     transition: opacity 0.3s ease;
   }
@@ -5926,10 +5926,7 @@ html, body {
 
 /* Keyboard Navigation Testing */
 @media (max-width: 48rem) {
-  .keyboard-nav-test {
-    tab-index: 0;
-  }
-  
+  /* Note: tabindex should be set in HTML, not CSS */
   .keyboard-nav-test:focus {
     outline: 0.125rem solid #3b82f6;
     outline-offset: 0.125rem;
@@ -6166,10 +6163,7 @@ html, body {
     outline-offset: 0.125rem;
   }
   
-  /* Tab order optimization */
-  .tab-order-1 { tab-index: 1; }
-  .tab-order-2 { tab-index: 2; }
-  .tab-order-3 { tab-index: 3; }
+  /* Tab order optimization - tabindex should be set in HTML, not CSS */
 }
 
 /* Screen Reader Support */
@@ -6456,10 +6450,12 @@ html, body {
     .ios-accessibility {
       -webkit-touch-callout: default;
       -webkit-user-select: text;
+      user-select: text;
     }
     
     .ios-button {
       -webkit-appearance: none;
+      appearance: none;
       border-radius: 0.5rem;
     }
     
