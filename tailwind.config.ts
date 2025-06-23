@@ -19,8 +19,8 @@ const config: Config = {
         'sans': ['Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        'apollo': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-        'apollo-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        'apollo': '0 0.0625 0.1875rem 0 rgba(0, 0, 0, 0.1), 0 0.0625 0.125rem 0 rgba(0, 0, 0, 0.06)',
+        'apollo-lg': '0 0.625rem 15px -0.1875rem rgba(0, 0, 0, 0.1), 0 0.25rem 0.375rem -0.125rem rgba(0, 0, 0, 0.05)',
       }
     },
   },

@@ -11,6 +11,7 @@ import BrandKitPage from './pages/BrandKitPage';
 
 const AppLayout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   /**
    * Handle body scroll lock when mobile menu is open
@@ -34,15 +35,25 @@ const AppLayout: React.FC = () => {
    * Why this matters: Provides mobile users with access to navigation in a standard slide-in pattern
    */
   const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+    if (isMobileMenuOpen) {
+      closeMobileMenu();
+    } else {
+      setIsMobileMenuOpen(true);
+      setIsClosing(false);
+    }
   };
 
   /**
-   * Close mobile menu when navigation item is clicked
-   * Why this matters: Improves UX by automatically closing menu after navigation
+   * Close mobile menu with animation
+   * Why this matters: Provides smooth exit animation for better UX
    */
   const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
+    setIsClosing(true);
+    // Wait for animation to complete before hiding
+    setTimeout(() => {
+      setIsMobileMenuOpen(false);
+      setIsClosing(false);
+    }, 300); // Match animation duration
   };
 
   return (
@@ -51,20 +62,11 @@ const AppLayout: React.FC = () => {
       <header>
         <div className="header-container">
           <div className="header-left">
-            {/* Mobile Hamburger Menu Button */}
-            <button 
-              className="mobile-menu-toggle mobile-only"
-              onClick={toggleMobileMenu}
-              aria-label="Toggle navigation menu"
-            >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-
             <Link to="/" className="apollo-logo-header">
               <img src="/Apollo_logo_transparent.png" alt="Apollo Logo" />
             </Link>
             
-            {/* Header Navigation */}
+            {/* Header Navigation - Show on desktop */}
             <nav className="header-navigation">
               <a href="#" className="header-nav-item">Platform</a>
               <a href="#" className="header-nav-item">Roles</a>
@@ -76,16 +78,31 @@ const AppLayout: React.FC = () => {
           {/* Header Actions */}
           <div className="header-actions">
             <a href="#" className="header-demo-link desktop-only">Get a demo</a>
-            <a href="#" className="header-login-btn">Log in</a>
+            <a href="#" className="header-login-btn desktop-only">Log in</a>
             <a href="#" className="header-signup-btn">Sign up for free</a>
+            
+            {/* Mobile Hamburger Menu Button - Right aligned on mobile */}
+            <button 
+              className="mobile-menu-toggle mobile-only"
+              onClick={toggleMobileMenu}
+              aria-label="Toggle navigation menu"
+            >
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
         </div>
       </header>
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="mobile-menu-overlay mobile-only" onClick={closeMobileMenu}>
-          <div className="mobile-menu-content" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className={`mobile-menu-overlay mobile-only ${isClosing ? 'closing' : ''}`} 
+          onClick={closeMobileMenu}
+        >
+          <div 
+            className={`mobile-menu-content ${isClosing ? 'closing' : ''}`} 
+            onClick={(e) => e.stopPropagation()}
+          >
             <Navigation onItemClick={closeMobileMenu} />
           </div>
         </div>

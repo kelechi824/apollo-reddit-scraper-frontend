@@ -78,9 +78,9 @@ const LinkedInVariablesMenu: React.FC<{
         position: 'fixed',
         top: variablesButtonPosition.top,
         backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
+        border: '0.0625rem solid #e5e7eb',
         borderRadius: '0.75rem',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        boxShadow: '0 1.5625rem 3.125rem -0.75rem rgba(0, 0, 0, 0.25)',
         zIndex: 10000,
         overflow: 'hidden',
         display: 'flex',
@@ -89,7 +89,7 @@ const LinkedInVariablesMenu: React.FC<{
     >
       <div style={{
         padding: '1.5rem 1.5rem 1rem 1.5rem',
-        borderBottom: '1px solid #f3f4f6',
+        borderBottom: '0.0625rem solid #f3f4f6',
         backgroundColor: '#fafafa'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -132,7 +132,7 @@ const LinkedInVariablesMenu: React.FC<{
             style={{
               width: '100%',
               padding: '0.625rem 0.625rem 0.625rem 2.5rem',
-              border: '1px solid #e5e7eb',
+              border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.375rem',
               fontSize: '0.875rem',
               outline: 'none'
@@ -150,7 +150,7 @@ const LinkedInVariablesMenu: React.FC<{
                 onClick={() => insertVariable(variable.value)}
                 style={{
                   padding: '1rem',
-                  border: '1px solid #e5e7eb',
+                  border: '0.0625rem solid #e5e7eb',
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -228,6 +228,7 @@ const LinkedInPostModal: React.FC<LinkedInPostModalProps> = ({ isOpen, onClose, 
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
+  const [showGeneratedPostModal, setShowGeneratedPostModal] = useState(false);
   const [editableContent, setEditableContent] = useState('');
   
   const systemPromptRef = useRef<HTMLTextAreaElement>(null);
@@ -519,7 +520,7 @@ const LinkedInPostModal: React.FC<LinkedInPostModalProps> = ({ isOpen, onClose, 
 
   const generateInitialPrompts = () => {
     const currentYear = new Date().getFullYear();
-    const systemPromptTemplate = `You are a world-class LinkedIn thought leader and viral content creator specializing in ${post.analysis.pain_point}. Your expertise lies in transforming industry insights into compelling, engagement-driving LinkedIn posts that position the author as a trusted authority.
+    const systemPromptTemplate = `You are a world-class LinkedIn thought leader and viral content creator specializing in turning Reddit's users pain points into thought leadership content. Your expertise lies in transforming industry insights into compelling, engagement-driving LinkedIn posts that position the author as a trusted authority.
 
 CURRENT YEAR: ${currentYear}
 
@@ -1022,7 +1023,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
           setTimeout(() => {
             if (generatedContentRef.current) {
               const rect = generatedContentRef.current.getBoundingClientRect();
-              const absoluteTop = window.pageYOffset + rect.top - 20; // 20px padding from top
+              const absoluteTop = window.pageYOffset + rect.top - 20; // 1.25rem padding from top
               window.scrollTo({
                 top: absoluteTop,
                 behavior: 'smooth'
@@ -1085,30 +1086,42 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
    * Why this matters: Opens the variables menu positioned to the right of the clicked button to prevent cutoff
    */
   const handleVariablesButtonClick = (field: 'system' | 'user', event: React.MouseEvent<HTMLButtonElement>) => {
-    const button = event.currentTarget;
-    const rect = button.getBoundingClientRect();
+    // Check if mobile
+    const isMobile = window.innerWidth <= 768;
     
-    const menuHeight = Math.min(window.innerHeight * 0.7, 600); // 70vh or 600px max
-    let topPosition = rect.top + window.scrollY;
-    
-    // Move both System and User Prompt menus up significantly to ensure full visibility
-    if (field === 'system') {
-      // For System Prompt, position menu higher
-      topPosition = rect.top + window.scrollY - menuHeight + 200; // Move up significantly
-    } else if (field === 'user') {
-      // For User Prompt, position menu even higher to ensure full visibility
-      topPosition = rect.top + window.scrollY - menuHeight + 150; // Move up even more
+    if (isMobile) {
+      // On mobile, use centered modal positioning
+      setVariablesButtonPosition({
+        top: window.innerHeight / 2,
+        left: window.innerWidth / 2
+      });
+    } else {
+      // Desktop positioning logic
+      const button = event.currentTarget;
+      const rect = button.getBoundingClientRect();
+      
+      const menuHeight = Math.min(window.innerHeight * 0.7, 600); // 70vh or 37.5rem max
+      let topPosition = rect.top + window.scrollY;
+      
+      // Move both System and User Prompt menus up significantly to ensure full visibility
+      if (field === 'system') {
+        // For System Prompt, position menu higher
+        topPosition = rect.top + window.scrollY - menuHeight + 200; // Move up significantly
+      } else if (field === 'user') {
+        // For User Prompt, position menu even higher to ensure full visibility
+        topPosition = rect.top + window.scrollY - menuHeight + 150; // Move up even more
+      }
+      
+      // Ensure it doesn't go above the viewport
+      if (topPosition < window.scrollY + 20) {
+        topPosition = window.scrollY + 20;
+      }
+      
+      setVariablesButtonPosition({
+        top: topPosition,
+        left: rect.right + window.scrollX + 12 // Position to the right with 0.75rem gap
+      });
     }
-    
-    // Ensure it doesn't go above the viewport
-    if (topPosition < window.scrollY + 20) {
-      topPosition = window.scrollY + 20;
-    }
-    
-    setVariablesButtonPosition({
-      top: topPosition,
-      left: rect.right + window.scrollX + 12 // Position to the right with 12px gap
-    });
     
     setActivePromptField(field);
     setShowVariablesMenu(true);
@@ -1221,7 +1234,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
       setTimeout(() => {
         if (generatedContentRef.current) {
           const rect = generatedContentRef.current.getBoundingClientRect();
-          const absoluteTop = window.pageYOffset + rect.top - 20; // 20px padding from top
+          const absoluteTop = window.pageYOffset + rect.top - 20; // 1.25rem padding from top
           window.scrollTo({
             top: absoluteTop,
             behavior: 'smooth'
@@ -1302,6 +1315,17 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
   };
 
   /**
+   * Handle viewing generated post on mobile
+   * Why this matters: Shows generated post as a full-screen modal on mobile for better readability
+   */
+  const handleViewGeneratedPost = () => {
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile && generatedPost) {
+      setShowGeneratedPostModal(true);
+    }
+  };
+
+  /**
    * Insert variable into the appropriate prompt field
    * Why this matters: Allows users to easily add brand kit variables to their prompts without scrolling to bottom
    */
@@ -1356,9 +1380,9 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
           gap: '0.5rem',
           padding: '0.75rem 1rem',
           backgroundColor: 'white',
-          border: '1px solid #e5e7eb',
+          border: '0.0625rem solid #e5e7eb',
           borderRadius: '0.5rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1), 0 0.125rem 0.25rem -0.0625rem rgba(0, 0, 0, 0.06)',
           color: autoSaveStatus === 'saving' ? '#6b7280' : '#10b981',
           fontSize: '0.875rem',
           fontWeight: '500',
@@ -1366,7 +1390,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
         }}>
           {autoSaveStatus === 'saving' ? (
             <>
-              <Clock className="animate-spin" style={{ width: '12px', height: '12px' }} />
+              <Clock className="animate-spin" style={{ width: '0.75rem', height: '0.75rem' }} />
               Auto-saving LinkedIn prompts...
             </>
           ) : (
@@ -1384,7 +1408,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
           @keyframes fadeInScale {
             from {
               opacity: 0;
-              transform: scale(0.9) translateY(-10px);
+              transform: scale(0.9) translateY(-0.625rem);
             }
             to {
               opacity: 1;
@@ -1399,6 +1423,143 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
             to {
               width: 0%;
             }
+          }
+
+          /* Mobile-specific styles for LinkedIn modal */
+          @media (max-width: 48rem) {
+            .linkedin-modal-header {
+              padding: 1rem !important;
+            }
+            
+            .linkedin-modal-header h2 {
+              font-size: 1rem !important;
+            }
+            
+            .linkedin-modal-header p {
+              font-size: 0.875rem !important;
+              margin: 0.25rem 0 0 0 !important;
+            }
+            
+            .linkedin-modal-panel {
+              padding: 1rem !important;
+            }
+            
+            .linkedin-modal-layout {
+              flex-direction: column !important;
+            }
+
+            /* Variables menu mobile popup modal */
+            .linkedin-variables-menu {
+              position: fixed !important;
+              top: 50% !important;
+              left: 50% !important;
+              transform: translate(-50%, -50%) !important;
+              width: 90vw !important;
+              max-width: 25rem !important;
+              height: 80vh !important;
+              max-height: 37.5rem !important;
+              z-index: 10001 !important;
+            }
+
+            /* Show mobile view button and hide desktop content */
+            .mobile-view-post-btn {
+              display: block !important;
+            }
+
+            .generated-posts-display {
+              display: none !important;
+            }
+
+                         /* Mobile backdrop for modals */
+             .mobile-modal-backdrop {
+               position: fixed !important;
+               top: 0 !important;
+               left: 0 !important;
+               right: 0 !important;
+               bottom: 0 !important;
+               background-color: rgba(0, 0, 0, 0.5) !important;
+               z-index: 9999 !important;
+             }
+
+             /* Hide edit buttons on mobile */
+             .mobile-hide-edit {
+               display: none !important;
+             }
+
+             /* Adjust button containers when edit buttons are hidden */
+             .linkedin-modal-layout .linkedin-action-buttons {
+               gap: 1rem !important;
+               justify-content: center !important;
+             }
+
+             /* Mobile optimization for all LinkedIn action buttons */
+             .linkedin-action-buttons button {
+               padding: 0.75rem 1rem !important;
+               font-size: 0.875rem !important;
+               min-height: 2.75rem !important;
+               min-width: 7.5rem !important;
+               justify-content: center !important;
+             }
+
+             /* Hide generated content section on mobile only when no content exists */
+             .linkedin-generated-section:not(.has-content) {
+               display: none !important;
+             }
+
+             /* Hide character count section, navigation, and placeholder on mobile */
+             .linkedin-character-count-section,
+             .linkedin-navigation-section,
+             .generated-posts-display {
+               display: none !important;
+             }
+
+             /* Hide placeholder content on mobile */
+             .linkedin-placeholder-content {
+               display: none !important;
+             }
+
+             /* Mobile optimization for top navigation */
+             .linkedin-variations-nav {
+               justify-content: center !important;
+               width: 100% !important;
+             }
+
+             /* Reduce text area font size on mobile */
+             .linkedin-modal-layout textarea {
+               font-size: 0.75rem !important;
+             }
+
+             .linkedin-modal-layout textarea::placeholder {
+               font-size: 0.75rem !important;
+             }
+
+             .linkedin-nav-controls {
+               justify-content: center !important;
+               width: 100% !important;
+               flex-direction: column !important;
+               gap: 0.5rem !important;
+             }
+
+             .linkedin-variation-counter {
+               text-align: center !important;
+               width: 100% !important;
+               margin-bottom: 0.25rem !important;
+               font-size: 0.8rem !important;
+             }
+
+             .linkedin-nav-controls button {
+               padding: 0.5rem 0.75rem !important;
+               font-size: 0.8rem !important;
+               min-width: 80px !important;
+               min-height: 2.5rem !important;
+             }
+
+             .linkedin-generate-alt-btn {
+               margin-top: 0.5rem !important;
+               width: 100% !important;
+               max-width: 12.5rem !important;
+               justify-content: center !important;
+             }
           }
         `}
       </style>
@@ -1440,7 +1601,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                borderBottom: '1px solid #e5e7eb',
+                borderBottom: '0.0625rem solid #e5e7eb',
                 backgroundColor: '#0077b5',
                 color: 'white',
                 position: 'relative'
@@ -1486,7 +1647,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                     padding: '1rem',
                     backgroundColor: '#f8fafc',
                     borderRadius: '0.5rem',
-                    border: '1px solid #e2e8f0'
+                    border: '0.0625rem solid #e2e8f0'
                   }}>
                     <p style={{ 
                       fontSize: '0.875rem', 
@@ -1502,7 +1663,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                 {/* Example Post Style Section - Collapsible */}
                 {showExampleStyleSection && (
                   <>
-                    <div style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#f0f9ff', borderRadius: '0.75rem', border: '1px solid #0077b5' }}>
+                    <div style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#f0f9ff', borderRadius: '0.75rem', border: '0.0625rem solid #0077b5' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                         <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#0077b5', margin: 0 }}>
                           Example Post Style (Optional)
@@ -1512,7 +1673,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                             type="checkbox"
                             checked={useExampleStyle}
                             onChange={(e) => setUseExampleStyle(e.target.checked)}
-                            style={{ width: '16px', height: '16px' }}
+                                                          style={{ width: '1rem', height: '1rem' }}
                           />
                           <span style={{ fontSize: '0.875rem', color: '#374151' }}>Use this style</span>
                         </label>
@@ -1531,7 +1692,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                         className="content-creation-textarea"
                         style={{
                           width: '100%',
-                          border: useExampleStyle ? '2px solid #0077b5' : '1px solid #e5e7eb',
+                          border: useExampleStyle ? '0.125rem solid #0077b5' : '0.0625rem solid #e5e7eb',
                           borderRadius: '0.5rem',
                           backgroundColor: '#fafafa',
                           transition: 'all 0.2s ease',
@@ -1549,7 +1710,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                         marginTop: '1rem',
                         backgroundColor: '#f8f9fa',
                         borderRadius: '0.5rem',
-                        border: '1px solid #dee2e6'
+                        border: '0.0625rem solid #dee2e6'
                       }}>
                         <button
                           onClick={() => setShowRedditContext(!showRedditContext)}
@@ -1596,7 +1757,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                               backgroundColor: 'white',
                               padding: '0.75rem',
                               borderRadius: '0.25rem',
-                              border: '1px solid #e9ecef'
+                              border: '0.0625rem solid #e9ecef'
                             }}>
                               <div><strong>📝 Reddit Title:</strong> {post.title}</div>
                               <div style={{marginTop: '0.5rem'}}><strong>📄 Reddit Content:</strong> {post.content || 'No additional content provided'}</div>
@@ -1669,7 +1830,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                         gap: '0.5rem',
                         padding: '0.75rem 1rem',
                         backgroundColor: '#f8fafc',
-                        border: '1px solid #e2e8f0',
+                        border: '0.0625rem solid #e2e8f0',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
                         fontWeight: '500',
@@ -1704,7 +1865,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                     padding: '1rem',
                     backgroundColor: '#fff7ed',
                     borderRadius: '0.5rem',
-                    border: '1px solid #fed7aa'
+                    border: '0.0625rem solid #fed7aa'
                   }}>
                     <p style={{ 
                       fontSize: '0.875rem', 
@@ -1757,7 +1918,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                           display: 'flex',
                           alignItems: 'center',
                           backgroundColor: '#f3f4f6',
-                          border: '1px solid #d1d5db',
+                          border: '0.0625rem solid #d1d5db',
                           borderRadius: '0.375rem',
                           cursor: 'pointer'
                         }}
@@ -1778,7 +1939,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       className="content-creation-textarea"
                       style={{
                         width: '100%',
-                        border: '1px solid #e5e7eb',
+                        border: '0.0625rem solid #e5e7eb',
                         borderRadius: '0.5rem',
                         backgroundColor: '#fafafa',
                         transition: 'all 0.2s ease',
@@ -1831,7 +1992,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                           display: 'flex',
                           alignItems: 'center',
                           backgroundColor: '#f3f4f6',
-                          border: '1px solid #d1d5db',
+                          border: '0.0625rem solid #d1d5db',
                           borderRadius: '0.375rem',
                           cursor: 'pointer'
                         }}
@@ -1852,7 +2013,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       className="content-creation-textarea"
                       style={{
                         width: '100%',
-                        border: '1px solid #e5e7eb',
+                        border: '0.0625rem solid #e5e7eb',
                         borderRadius: '0.5rem',
                         backgroundColor: '#fafafa',
                         transition: 'all 0.2s ease',
@@ -1877,7 +2038,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                     padding: '1.5rem',
                     backgroundColor: '#f8fafc',
                     borderRadius: '0.75rem',
-                    border: '1px solid #e2e8f0'
+                    border: '0.0625rem solid #e2e8f0'
                   }}>
                     <button
                       onClick={generateLinkedInPost}
@@ -1905,7 +2066,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
               </div>
 
               {/* Right Panel - Generated Content */}
-              <div className="linkedin-modal-panel"
+              <div className={`linkedin-modal-panel linkedin-generated-section ${generatedPost ? 'has-content' : ''}`}
               >
                 <div ref={generatedContentRef} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0 }}>
@@ -1913,9 +2074,9 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                   </h3>
                   
                   {postVariations.length > 0 && (
-                    <div className="linkedin-variations-nav" style={{ display: 'flex' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
+                    <div className="linkedin-variations-nav" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', justifyContent: 'flex-end' }}>
+                      <div className="linkedin-nav-controls" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span className="linkedin-variation-counter" style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
                           Variation {currentVariation + 1} of {postVariations.length}
                         </span>
                         <button
@@ -1924,7 +2085,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                           style={{
                             padding: '0.375rem 0.75rem',
                             backgroundColor: (postVariations.length <= 1 || currentVariation === 0) ? '#f3f4f6' : 'white',
-                            border: '1px solid #d1d5db',
+                            border: '0.0625rem solid #d1d5db',
                             borderRadius: '0.375rem',
                             cursor: (postVariations.length <= 1 || currentVariation === 0) ? 'not-allowed' : 'pointer',
                             fontSize: '0.875rem',
@@ -1956,7 +2117,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                           style={{
                             padding: '0.375rem 0.75rem',
                             backgroundColor: (postVariations.length <= 1 || currentVariation === postVariations.length - 1) ? '#f3f4f6' : 'white',
-                            border: '1px solid #d1d5db',
+                            border: '0.0625rem solid #d1d5db',
                             borderRadius: '0.375rem',
                             cursor: (postVariations.length <= 1 || currentVariation === postVariations.length - 1) ? 'not-allowed' : 'pointer',
                             fontSize: '0.875rem',
@@ -1979,50 +2140,51 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                         >
                           Next →
                         </button>
+                        
+                        <button
+                          onClick={generateAlternativePost}
+                          disabled={isGenerating || !brandKit}
+                          className="linkedin-generate-alt-btn"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.375rem 0.75rem',
+                            backgroundColor: isGenerating || !brandKit ? '#f3f4f6' : '#f0f9ff',
+                            color: isGenerating || !brandKit ? '#9ca3af' : '#0077b5',
+                            border: `0.0625rem solid ${isGenerating || !brandKit ? '#e5e7eb' : '#0077b5'}`,
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            cursor: isGenerating || !brandKit ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            if (!isGenerating && brandKit) {
+                              e.currentTarget.style.backgroundColor = '#0077b5';
+                              e.currentTarget.style.color = 'white';
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (!isGenerating && brandKit) {
+                              e.currentTarget.style.backgroundColor = '#f0f9ff';
+                              e.currentTarget.style.color = '#0077b5';
+                            }
+                          }}
+                        >
+                          {isGenerating ? (
+                            <>
+                              <Clock className="animate-spin" style={{width: '10.25rem', height: '10.25rem'}} />
+                              {useExampleStyle ? getMimicryMessages()[generationStep] : getAdvancedMessages()[generationStep]}
+                            </>
+                          ) : (
+                            <>
+                          <Wand2 size={14} />
+                          Generate Alternative
+                            </>
+                          )}
+                        </button>
                       </div>
-                      
-                      <button
-                        onClick={generateAlternativePost}
-                        disabled={isGenerating || !brandKit}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.375rem 0.75rem',
-                          backgroundColor: isGenerating || !brandKit ? '#f3f4f6' : '#f0f9ff',
-                          color: isGenerating || !brandKit ? '#9ca3af' : '#0077b5',
-                          border: `1px solid ${isGenerating || !brandKit ? '#e5e7eb' : '#0077b5'}`,
-                          borderRadius: '0.375rem',
-                          fontSize: '0.875rem',
-                          fontWeight: '500',
-                          cursor: isGenerating || !brandKit ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseOver={(e) => {
-                          if (!isGenerating && brandKit) {
-                            e.currentTarget.style.backgroundColor = '#0077b5';
-                            e.currentTarget.style.color = 'white';
-                          }
-                        }}
-                        onMouseOut={(e) => {
-                          if (!isGenerating && brandKit) {
-                            e.currentTarget.style.backgroundColor = '#f0f9ff';
-                            e.currentTarget.style.color = '#0077b5';
-                          }
-                        }}
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Clock className="animate-spin" style={{width: '14px', height: '14px'}} />
-                            {useExampleStyle ? getMimicryMessages()[generationStep] : getAdvancedMessages()[generationStep]}
-                          </>
-                        ) : (
-                          <>
-                        <Wand2 size={14} />
-                        Generate Alternative
-                          </>
-                        )}
-                      </button>
                     </div>
                   )}
                 </div>
@@ -2033,7 +2195,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                   padding: '1rem',
                   backgroundColor: (isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)) > 3000 ? '#fef2f2' : '#f0f9ff',
                     borderRadius: '0.75rem',
-                  border: `1px solid ${(isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)) > 3000 ? '#fecaca' : '#bfdbfe'}`
+                  border: `0.0625rem solid ${(isEditingContent ? editableContent.length : (generatedPost ? generatedPost.length : 0)) > 3000 ? '#fecaca' : '#bfdbfe'}`
                     }}>
                       <div 
                         className="linkedin-char-count"
@@ -2063,25 +2225,37 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                         
                     {/* Action Buttons */}
                     {generatedPost && (
-                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <div className="linkedin-action-buttons" style={{ 
+                          display: 'flex', 
+                          gap: '0.75rem', 
+                          alignItems: 'center',
+                          flexWrap: 'wrap', // Allow wrapping on mobile
+                          justifyContent: 'center' // Center the buttons
+                        }}>
                           {/* Edit/Save Button */}
                           <button
                             onClick={toggleEditMode}
-                            className="linkedin-modal-btn"
+                            className="linkedin-modal-btn mobile-hide-edit"
                             style={{
                               display: 'flex',
                               alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.75rem 1rem',
                               backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
                               color: 'white',
                               border: 'none',
                               borderRadius: '0.5rem',
+                              fontSize: '0.875rem',
                               fontWeight: '500',
                               cursor: 'pointer',
-                              transition: 'all 0.2s ease'
+                              transition: 'all 0.2s ease',
+                              minHeight: '2.75rem', // Touch-friendly
+                              minWidth: '7.5rem',
+                              justifyContent: 'center'
                             }}
                             onMouseOver={(e) => {
                               e.currentTarget.style.backgroundColor = isEditingContent ? '#059669' : '#d97706';
-                              e.currentTarget.style.transform = 'translateY(-1px)';
+                              e.currentTarget.style.transform = 'translateY(-0.0625)';
                             }}
                             onMouseOut={(e) => {
                               e.currentTarget.style.backgroundColor = isEditingContent ? '#10b981' : '#f59e0b';
@@ -2111,7 +2285,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
-                                padding: '0.5rem 1rem',
+                                padding: '0.75rem 1rem',
                                 backgroundColor: '#0077b5',
                                 color: 'white',
                                 border: 'none',
@@ -2119,11 +2293,14 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                                 fontSize: '0.875rem',
                                 fontWeight: '500',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s ease'
+                                transition: 'all 0.2s ease',
+                                minHeight: '2.75rem', // Touch-friendly
+                                minWidth: '13.75rem',
+                                justifyContent: 'center'
                               }}
                               onMouseOver={(e) => {
                                 e.currentTarget.style.backgroundColor = '#005582';
-                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.transform = 'translateY(-0.0625)';
                               }}
                               onMouseOut={(e) => {
                                 e.currentTarget.style.backgroundColor = '#0077b5';
@@ -2149,7 +2326,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                                 fontSize: '0.75rem',
                                 fontWeight: '500',
                                 whiteSpace: 'nowrap',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
                                 zIndex: 1000
                               }}>
                                 <Check style={{ width: '0.875rem', height: '0.875rem' }} />
@@ -2168,7 +2345,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                               padding: '0.5rem 1rem',
                               backgroundColor: '#f8fafc',
                               color: '#0077b5',
-                              border: '1px solid #0077b5',
+                              border: '0.0625rem solid #0077b5',
                               borderRadius: '0.5rem',
                               fontSize: '0.875rem',
                               fontWeight: '500',
@@ -2197,22 +2374,22 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                               position: 'absolute',
                               top: '3.5rem',
                               right: 0,
-                              width: '320px',
+                              width: '20rem',
                               padding: '1rem 1.25rem',
                               backgroundColor: '#0077b5',
                               color: 'white',
                               borderRadius: '0.75rem',
                               fontSize: '0.875rem',
                               fontWeight: '500',
-                              boxShadow: '0 10px 25px -3px rgba(0, 119, 181, 0.4), 0 4px 6px -2px rgba(0, 119, 181, 0.2)',
+                              boxShadow: '0 0.625rem 1.5625rem -0.1875rem rgba(0, 119, 181, 0.4), 0 0.25rem 0.375rem -0.125rem rgba(0, 119, 181, 0.2)',
                               zIndex: 1001,
-                              border: '2px solid #005582',
+                              border: '0.125rem solid #005582',
                               animation: 'fadeInScale 0.3s ease-out'
                             }}>
                               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                                 <div style={{
-                                  width: '24px',
-                                  height: '24px',
+                                  width: '1.5rem',
+                                  height: '1.5rem',
                                   borderRadius: '50%',
                                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                                   display: 'flex',
@@ -2238,7 +2415,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                                 position: 'absolute',
                                 bottom: 0,
                                 left: 0,
-                                height: '3px',
+                                height: '0.1875rem',
                                 backgroundColor: 'rgba(255, 255, 255, 0.3)',
                                 borderRadius: '0 0 0.75rem 0.75rem',
                                 width: '100%',
@@ -2281,14 +2458,14 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                     <li>Tag relevant connections (2-3 max)</li>
                   </ul>
                   
-                  {/* Clear Button - Right Aligned */}
+                  {/* Clear Button - Centered */}
                   {generatedPost && (
                     <div style={{ 
                       display: 'flex', 
-                      justifyContent: 'flex-end', 
+                      justifyContent: 'center', 
                       marginTop: '1rem',
                       paddingTop: '1rem',
-                      borderTop: '1px solid #e5e7eb'
+                      borderTop: '0.0625rem solid #e5e7eb'
                     }}>
                       <button
                         onClick={clearGeneratedContent}
@@ -2298,7 +2475,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                           gap: '0.5rem',
                           padding: '0.5rem 1rem',
                           backgroundColor: '#fef2f2',
-                          border: '1px solid #fecaca',
+                          border: '0.0625rem solid #fecaca',
                           borderRadius: '0.5rem',
                           cursor: 'pointer',
                           fontSize: '0.875rem',
@@ -2324,13 +2501,46 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                   )}
                 </div>
 
+                {/* Mobile View Post Button */}
+                {generatedPost && (
+                  <div className="mobile-view-post-btn" style={{ display: 'none', marginBottom: '1rem' }}>
+                    <button
+                      onClick={handleViewGeneratedPost}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '1rem 1.5rem',
+                        backgroundColor: '#0077b5',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.75rem',
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        width: '100%',
+                        justifyContent: 'center'
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#005885')}
+                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#0077b5')}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                      View LinkedIn Post
+                    </button>
+                  </div>
+                )}
+
                 {generatedPost ? (
-                  <div style={{
-                    border: '1px solid #e5e7eb',
+                  <div className="generated-posts-display" style={{
+                    border: '0.0625rem solid #e5e7eb',
                     borderRadius: '0.75rem',
                     padding: '2rem',
                     backgroundColor: 'white',
-                    minHeight: '400px',
+                    minHeight: '25rem',
                     position: 'relative'
                   }}>
                     {/* Variation Type Badge */}
@@ -2379,9 +2589,9 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                         placeholder="Edit your LinkedIn post content here..."
                         style={{
                           width: '100%',
-                          minHeight: '350px',
+                          minHeight: '33.125rem',
                           padding: '1rem 1.25rem',
-                          border: '2px solid #f59e0b',
+                          border: '0.125rem solid #f59e0b',
                           borderRadius: '0.5rem',
                           fontSize: '1rem',
                           backgroundColor: '#fffbf5',
@@ -2410,13 +2620,13 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                     
                   </div>
                 ) : (
-                    <div style={{
-                    border: '2px dashed #d1d5db',
+                    <div className="linkedin-placeholder-content" style={{
+                    border: '0.125rem dashed #d1d5db',
                     borderRadius: '0.75rem',
                     padding: '4rem 2rem',
                     textAlign: 'center',
                     color: '#6b7280',
-                    minHeight: '400px',
+                    minHeight: '25rem',
                         display: 'flex', 
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2444,7 +2654,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                 
                 {/* Navigation and Action Section - Below Generated Content */}
                 {postVariations.length > 0 && generatedPost && generatedPost.trim().length > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '1.5rem' }}>
+                  <div className="linkedin-navigation-section" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '1.5rem' }}>
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
@@ -2459,7 +2669,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                           style={{
                             padding: '0.375rem 0.75rem',
                             backgroundColor: (postVariations.length <= 1 || currentVariation === 0) ? '#f3f4f6' : 'white',
-                            border: '1px solid #d1d5db',
+                            border: '0.0625rem solid #d1d5db',
                             borderRadius: '0.375rem',
                             cursor: (postVariations.length <= 1 || currentVariation === 0) ? 'not-allowed' : 'pointer',
                             fontSize: '0.875rem',
@@ -2491,7 +2701,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                           style={{
                             padding: '0.375rem 0.75rem',
                             backgroundColor: (postVariations.length <= 1 || currentVariation === postVariations.length - 1) ? '#f3f4f6' : 'white',
-                            border: '1px solid #d1d5db',
+                            border: '0.0625rem solid #d1d5db',
                             borderRadius: '0.375rem',
                             cursor: (postVariations.length <= 1 || currentVariation === postVariations.length - 1) ? 'not-allowed' : 'pointer',
                             fontSize: '0.875rem',
@@ -2526,7 +2736,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                           padding: '0.375rem 0.75rem',
                           backgroundColor: isGenerating || !brandKit ? '#f3f4f6' : '#f0f9ff',
                           color: isGenerating || !brandKit ? '#9ca3af' : '#0077b5',
-                          border: `1px solid ${isGenerating || !brandKit ? '#e5e7eb' : '#0077b5'}`,
+                          border: `0.0625rem solid ${isGenerating || !brandKit ? '#e5e7eb' : '#0077b5'}`,
                           borderRadius: '0.375rem',
                           fontSize: '0.875rem',
                           fontWeight: '500',
@@ -2548,7 +2758,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       >
                         {isGenerating ? (
                           <>
-                            <Clock className="animate-spin" style={{width: '14px', height: '14px'}} />
+                            <Clock className="animate-spin" style={{width: '10.25rem', height: '10.25rem'}} />
                             {useExampleStyle ? getMimicryMessages()[generationStep] : getAdvancedMessages()[generationStep]}
                           </>
                         ) : (
@@ -2564,12 +2774,12 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
 
                 {/* Character Count and Action Buttons - Only show when content is generated */}
                 {postVariations.length > 0 && generatedPost && generatedPost.trim().length > 0 && (
-                          <div style={{
+                          <div className="linkedin-character-count-section" style={{
                   marginTop: '1.5rem',
                   padding: '1rem',
                   backgroundColor: generatedPost && generatedPost.length > 3000 ? '#fef2f2' : '#f0f9ff',
                   borderRadius: '0.75rem',
-                  border: `1px solid ${generatedPost && generatedPost.length > 3000 ? '#fecaca' : '#bfdbfe'}`
+                  border: `0.0625rem solid ${generatedPost && generatedPost.length > 3000 ? '#fecaca' : '#bfdbfe'}`
                 }}>
                   <div style={{ 
                     display: 'flex', 
@@ -2598,15 +2808,16 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                         
                     {/* Action Buttons */}
                     {generatedPost && (
-                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                          {/* Edit/Save Button */}
-                          <button
-                            onClick={toggleEditMode}
-                            style={{
+                        <div className="linkedin-action-buttons" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                                      {/* Edit/Save Button */}
+                            <button
+                              onClick={toggleEditMode}
+                              className="mobile-hide-edit"
+                              style={{
                               display: 'flex',
                               alignItems: 'center',
                               gap: '0.5rem',
-                              padding: '0.5rem 1rem',
+                              padding: '0.75rem 1rem',
                               backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
                               color: 'white',
                               border: 'none',
@@ -2614,11 +2825,14 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                               fontSize: '0.875rem',
                               fontWeight: '500',
                               cursor: 'pointer',
-                              transition: 'all 0.2s ease'
+                              transition: 'all 0.2s ease',
+                              minHeight: '2.75rem',
+                              minWidth: '7.5rem',
+                              justifyContent: 'center'
                             }}
                             onMouseOver={(e) => {
                               e.currentTarget.style.backgroundColor = isEditingContent ? '#059669' : '#d97706';
-                              e.currentTarget.style.transform = 'translateY(-1px)';
+                              e.currentTarget.style.transform = 'translateY(-0.0625)';
                             }}
                             onMouseOut={(e) => {
                               e.currentTarget.style.backgroundColor = isEditingContent ? '#10b981' : '#f59e0b';
@@ -2648,7 +2862,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
-                                padding: '0.5rem 1rem',
+                                padding: '0.75rem 1rem',
                                 backgroundColor: '#0077b5',
                                 color: 'white',
                                 border: 'none',
@@ -2656,11 +2870,14 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                                 fontSize: '0.875rem',
                                 fontWeight: '500',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s ease'
+                                transition: 'all 0.2s ease',
+                                minHeight: '2.75rem',
+                                minWidth: '13.125rem',
+                                justifyContent: 'center'
                               }}
                               onMouseOver={(e) => {
                                 e.currentTarget.style.backgroundColor = '#005582';
-                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.transform = 'translateY(-0.0625)';
                               }}
                               onMouseOut={(e) => {
                                 e.currentTarget.style.backgroundColor = '#0077b5';
@@ -2686,7 +2903,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                                 fontSize: '0.75rem',
                                 fontWeight: '500',
                                 whiteSpace: 'nowrap',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
                                 zIndex: 1000
                               }}>
                                 <Check style={{ width: '0.875rem', height: '0.875rem' }} />
@@ -2705,7 +2922,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                               padding: '0.5rem 1rem',
                               backgroundColor: '#f8fafc',
                               color: '#0077b5',
-                              border: '1px solid #0077b5',
+                              border: '0.0625rem solid #0077b5',
                               borderRadius: '0.5rem',
                               fontSize: '0.875rem',
                               fontWeight: '500',
@@ -2734,22 +2951,22 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                               position: 'absolute',
                               top: '3.5rem',
                               right: 0,
-                              width: '320px',
+                              width: '20rem',
                               padding: '1rem 1.25rem',
                               backgroundColor: '#0077b5',
                               color: 'white',
                               borderRadius: '0.75rem',
                               fontSize: '0.875rem',
                               fontWeight: '500',
-                              boxShadow: '0 10px 25px -3px rgba(0, 119, 181, 0.4), 0 4px 6px -2px rgba(0, 119, 181, 0.2)',
+                              boxShadow: '0 0.625rem 1.5625rem -0.1875rem rgba(0, 119, 181, 0.4), 0 0.25rem 0.375rem -0.125rem rgba(0, 119, 181, 0.2)',
                               zIndex: 1001,
-                              border: '2px solid #005582',
+                              border: '0.125rem solid #005582',
                               animation: 'fadeInScale 0.3s ease-out'
                             }}>
                               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                                 <div style={{
-                                  width: '24px',
-                                  height: '24px',
+                                  width: '1.5rem',
+                                  height: '1.5rem',
                                   borderRadius: '50%',
                                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                                   display: 'flex',
@@ -2775,7 +2992,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                                 position: 'absolute',
                                 bottom: 0,
                                 left: 0,
-                                height: '3px',
+                                height: '0.1875rem',
                                 backgroundColor: 'rgba(255, 255, 255, 0.3)',
                                 borderRadius: '0 0 0.75rem 0.75rem',
                                 width: '100%',
@@ -2822,13 +3039,13 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                     </div>
                   </div>
                   
-                  {/* Clear Button - Right Aligned */}
+                  {/* Clear Button - Centered */}
                   {generatedPost && (
                     <div style={{ 
                       display: 'flex', 
-                      justifyContent: 'flex-end', 
+                      justifyContent: 'center', 
                       paddingTop: '1rem',
-                      borderTop: '1px solid #e5e7eb'
+                      borderTop: '0.0625rem solid #e5e7eb'
                     }}>
                       <button
                         onClick={clearGeneratedContent}
@@ -2838,7 +3055,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                           gap: '0.5rem',
                           padding: '0.5rem 1rem',
                           backgroundColor: '#fef2f2',
-                          border: '1px solid #fecaca',
+                          border: '0.0625rem solid #fecaca',
                           borderRadius: '0.5rem',
                           cursor: 'pointer',
                           fontSize: '0.875rem',
@@ -2882,8 +3099,291 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
         insertVariable={insertVariable}
       />
 
-      {/* Clear Confirmation Popup */}
-      {showClearConfirmation && (
+              {/* Mobile backdrop for variables menu */}
+        {showVariablesMenu && window.innerWidth <= 768 && (
+          <div 
+            className="mobile-modal-backdrop"
+            onClick={() => setShowVariablesMenu(false)}
+          />
+        )}
+
+        {/* Mobile Generated Post Modal */}
+        {showGeneratedPostModal && (
+          <>
+            <div 
+              className="mobile-modal-backdrop"
+              onClick={() => setShowGeneratedPostModal(false)}
+            />
+            <div style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '95vw',
+              height: '90vh',
+              zIndex: 10000,
+              background: 'white',
+              borderRadius: '0.75rem',
+              boxShadow: '0 1.5625rem 3.125rem -0.75rem rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              {/* Mobile Modal Header */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem 1.5rem',
+                borderBottom: '0.0625rem solid #e5e7eb',
+                backgroundColor: '#0077b5',
+                color: 'white'
+              }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0 }}>
+                  LinkedIn Post {postVariations.length > 1 ? `(Variation ${currentVariation + 1} of ${postVariations.length})` : ''}
+                </h3>
+                <button
+                  onClick={() => setShowGeneratedPostModal(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.25rem',
+                    borderRadius: '0.25rem',
+                    color: 'white',
+                    transition: 'background-color 0.15s ease'
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)')}
+                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)')}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div style={{ 
+                flex: 1, 
+                padding: '1.5rem', 
+                overflowY: 'auto',
+                backgroundColor: 'white'
+              }}>
+                <div style={{
+                  whiteSpace: 'pre-wrap',
+                  lineHeight: '1.6',
+                  fontSize: '1rem',
+                  color: '#374151'
+                }}>
+                  {generatedPost}
+                </div>
+
+                {/* Character Count */}
+                <div style={{
+                  marginTop: '1.5rem',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: generatedPost && generatedPost.length > 3000 ? '#fef2f2' : '#f0f9ff',
+                  borderRadius: '0.5rem',
+                  border: `0.0625rem solid ${generatedPost && generatedPost.length > 3000 ? '#fecaca' : '#bfdbfe'}`,
+                  textAlign: 'center'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.375rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: generatedPost && generatedPost.length > 3000 ? '#dc2626' : '#0077b5',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    {generatedPost && generatedPost.length > 3000 && (
+                      <span style={{ fontSize: '1rem' }}>⚠️</span>
+                    )}
+                    Character count: {generatedPost ? generatedPost.length : 0}/3000
+                    {generatedPost && generatedPost.length > 3000 && (
+                      <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>
+                        (Exceeds LinkedIn optimal limit)
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* LinkedIn Engagement Tips */}
+                <div style={{ 
+                  marginTop: '1rem',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#f0f9ff',
+                  borderRadius: '0.5rem',
+                  border: '0.0625rem solid #bfdbfe'
+                }}>
+                  <div style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#0077b5',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}>
+                    💡 LinkedIn Engagement Tips
+                  </div>
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    lineHeight: '1.4'
+                  }}>
+                    <div style={{ marginBottom: '0.25rem' }}>• Post between 8-10 AM or 12-2 PM for best reach</div>
+                    <div style={{ marginBottom: '0.25rem' }}>• Engage with comments within the first hour</div>
+                    <div style={{ marginBottom: '0.25rem' }}>• Ask a question to encourage discussion</div>
+                    <div>• Tag relevant connections (2-3 max)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Modal Actions */}
+              <div style={{
+                padding: '1rem 1.5rem',
+                borderTop: '0.0625rem solid #e5e7eb',
+                backgroundColor: '#fafafa',
+                display: 'flex',
+                gap: '0.75rem',
+                flexWrap: 'wrap',
+                justifyContent: 'center'
+              }}>
+                {/* Navigation buttons for variations */}
+                {postVariations.length > 1 && (
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', width: '100%', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => {
+                        setCurrentVariation((prev) => (prev > 0 ? prev - 1 : postVariations.length - 1));
+                      }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: 'white',
+                        border: '0.0625rem solid #d1d5db',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#374151',
+                        transition: 'all 0.2s ease',
+                        minWidth: '100px'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                        e.currentTarget.style.borderColor = '#9ca3af';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white';
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                      }}
+                    >
+                      ← Previous
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCurrentVariation((prev) => (prev < postVariations.length - 1 ? prev + 1 : 0));
+                      }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: 'white',
+                        border: '0.0625rem solid #d1d5db',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#374151',
+                        transition: 'all 0.2s ease',
+                        minWidth: '100px'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                        e.currentTarget.style.borderColor = '#9ca3af';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white';
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                      }}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div style={{
+                  display: 'flex',
+                  gap: '0.75rem',
+                  flexWrap: 'wrap', // Allow wrapping on mobile
+                  justifyContent: 'center' // Center the buttons
+                }}>
+                  <button
+                    onClick={() => {
+                      copyLinkedInPost();
+                      setShowGeneratedPostModal(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      minHeight: '2.75rem', // Touch-friendly
+                      minWidth: '13.125rem',
+                      justifyContent: 'center'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
+                  >
+                    <Copy size={14} />
+                    Copy Post
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      openLinkedInShare();
+                      setShowGeneratedPostModal(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#0077b5',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      minHeight: '2.75rem', // Touch-friendly
+                      minWidth: '180px',
+                      justifyContent: 'center'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#005885')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#0077b5')}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                    Copy & Open LinkedIn
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Clear Confirmation Popup */}
+        {showClearConfirmation && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -2900,9 +3400,9 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
             backgroundColor: 'white',
             borderRadius: '0.75rem',
             padding: '2rem',
-            maxWidth: '400px',
+            maxWidth: '25rem',
             width: '90%',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 1.25rem 1.5625rem -5px rgba(0, 0, 0, 0.1), 0 0.625rem 0.625rem -5px rgba(0, 0, 0, 0.04)'
           }}>
             <div style={{
               display: 'flex',
@@ -2911,8 +3411,8 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
               marginBottom: '1rem'
             }}>
               <div style={{
-                width: '48px',
-                height: '48px',
+                width: '3rem',
+                height: '3rem',
                 borderRadius: '50%',
                 backgroundColor: '#fef2f2',
                 display: 'flex',
@@ -2952,7 +3452,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                 style={{
                   padding: '0.5rem 1rem',
                   backgroundColor: 'white',
-                  border: '1px solid #d1d5db',
+                  border: '0.0625rem solid #d1d5db',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   fontWeight: '500',

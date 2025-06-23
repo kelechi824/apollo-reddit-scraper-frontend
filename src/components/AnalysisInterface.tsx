@@ -196,7 +196,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
           {!isKeywordSelected ? (
             // Input mode - user is typing
             <div className="input-container">
-              <Search className="input-icon" style={{transform: 'translateY(-3px)'}} />
+              <Search className="input-icon" style={{transform: 'translateY(-0.1875rem)'}} />
               <input
                 id="keywords"
                 type="text"
@@ -220,9 +220,9 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
                 className="inline-flex items-center gap-2 px-4 py-2 font-medium"
                 style={{
                   backgroundColor: '#dcfce7',
-                  border: '2px solid #16a34a',
+                  border: '0.125rem solid #16a34a',
                   color: '#166534',
-                  borderRadius: '10px'
+                  borderRadius: '0.625rem'
                 }}
               >
                 <span className="text-sm font-medium">{keywords}</span>
@@ -236,13 +236,13 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
                 style={{
                   backgroundColor: '#f3f4f6',
                   color: '#6b7280',
-                  border: '1px solid transparent'
+                  border: '0.0625rem solid transparent'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#dbeafe';
                   e.currentTarget.style.color = '#2563eb';
                   e.currentTarget.style.borderColor = '#bfdbfe';
-                  e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.boxShadow = '0 0.0625 0.1875rem 0 rgba(0, 0, 0, 0.1)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = '#f3f4f6';
@@ -252,7 +252,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
                 }}
                 title="Edit keyword"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '8px'}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '0.5rem'}}>
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                   <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
@@ -322,16 +322,22 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
           <button
             onClick={handleAnalysis}
             disabled={isAnalyzing}
-            className="apollo-btn-primary btn-large"
+            className="apollo-btn-primary btn-large analysis-run-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.75rem'
+            }}
           >
             {isAnalyzing ? (
               <>
-                <Clock className="animate-spin" style={{width: '1.5rem', height: '1.5rem', marginRight: '1rem'}} />
+                <Clock className="animate-spin" style={{width: '1rem', height: '1rem'}} />
                 {analysisMessages[analysisStep]}
               </>
             ) : (
               <>
-                <Play style={{width: '1.5rem', height: '1.5rem', marginRight: '1rem'}} />
+                <Play style={{width: '1rem', height: '1rem'}} />
                 {hasCompletedAnalysis ? 'Run Again' : 'Run Analysis'}
               </>
             )}

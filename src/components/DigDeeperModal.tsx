@@ -595,7 +595,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
           {imagePreview && (
             <div style={{ 
               padding: '1rem', 
-              borderTop: '1px solid #e5e7eb',
+              borderTop: '0.0625rem solid #e5e7eb',
               display: 'flex',
               alignItems: 'center',
               gap: '1rem',
@@ -605,11 +605,11 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
                 src={imagePreview} 
                 alt="Attached" 
                 style={{ 
-                  width: '60px', 
-                  height: '60px', 
+                  width: '3.75rem', 
+                  height: '3.75rem', 
                   objectFit: 'cover', 
                   borderRadius: '0.5rem',
-                  border: '1px solid #d1d5db'
+                  border: '0.0625rem solid #d1d5db'
                 }} 
               />
               <div style={{ flex: 1 }}>
@@ -650,7 +650,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
               style={{
                 resize: 'none',
                 minHeight: '80px',
-                maxHeight: '200px',
+                maxHeight: '12.5rem',
                 overflowY: 'auto',
                 width: '100%'
               }}

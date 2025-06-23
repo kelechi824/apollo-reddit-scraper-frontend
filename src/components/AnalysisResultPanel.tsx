@@ -358,7 +358,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                 <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {currentPost.analysis.pain_point}
                 </p>
-                <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem' }}>
+                <div style={{ marginTop: '1.5rem', borderTop: '0.0625rem solid #e5e7eb', paddingTop: '1.5rem' }}>
                   <button
                     onClick={() => setIsDigDeeperModalOpen(true)}
                     className="apollo-btn-gradient"
@@ -389,15 +389,16 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                 <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {currentPost.analysis.content_opportunity}
                 </p>
-                <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem' }}>
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                <div style={{ marginTop: '1.5rem', borderTop: '0.0625rem solid #e5e7eb', paddingTop: '1.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem', justifyContent: window.innerWidth > 768 ? 'flex-start' : 'center' }}>
                     <button
                       onClick={() => setIsContentCreationModalOpen(true)}
                       className="apollo-btn-gradient"
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        width: 'auto'
+                        minWidth: '12.5rem',
+                        justifyContent: 'center'
                       }}
                     >
                       <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
@@ -409,27 +410,29 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        padding: '0.75rem 1.5rem',
+                        justifyContent: 'center',
+                        padding: '1rem 2rem',
                         backgroundColor: '#0077b5',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
+                        borderRadius: '0.75rem',
+                        fontSize: '1rem',
                         fontWeight: '600',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(0, 119, 181, 0.2)',
-                        width: 'auto'
+                        boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 119, 181, 0.2)',
+                        minWidth: '21.25rem',
+                        gap: '0.5rem'
                       }}
                       onMouseOver={(e) => {
                         e.currentTarget.style.backgroundColor = '#005582';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 119, 181, 0.3)';
+                        e.currentTarget.style.transform = 'translateY(-0.0625)';
+                        e.currentTarget.style.boxShadow = '0 0.25rem 0.5rem rgba(0, 119, 181, 0.3)';
                       }}
                       onMouseOut={(e) => {
                         e.currentTarget.style.backgroundColor = '#0077b5';
                         e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 119, 181, 0.2)';
+                        e.currentTarget.style.boxShadow = '0 0.125rem 0.25rem rgba(0, 119, 181, 0.2)';
                       }}
                     >
                       <svg 
