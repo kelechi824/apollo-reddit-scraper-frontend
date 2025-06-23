@@ -269,6 +269,8 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
   const [showComingSoonMessage, setShowComingSoonMessage] = useState<string | null>(null);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [editableContent, setEditableContent] = useState('');
   
   const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   const userPromptRef = useRef<HTMLTextAreaElement>(null);
@@ -278,6 +280,7 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
   const generationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
+  const editableContentRef = useRef<HTMLTextAreaElement>(null);
 
   // Generation progress messages
   const generationMessages = [
@@ -895,6 +898,8 @@ Audience Summary: ${post.analysis.audience_insight}
 8. Include data points, statistics, or specific examples where relevant
 9. Use {{ brand_kit.ideal_customer_profile }} to inject customer testimonials only one time within the body of the content where appropriate
 10. Promote Apollo at the end of the article using our  {{ brand_kit.cta_text }}  {{ brand_kit.cta_destination }}. Open the CTA destination in a new tab (i.e., target_blank).
+11. DO NOT use emdashes (—) in the content
+12. AVOID AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..." - use natural, human-like language instead
 
 **CRITICAL OUTPUT FORMAT: Respond with a JSON object containing exactly three fields:**
 
@@ -1043,6 +1048,8 @@ Return ONLY the JSON object, no additional text.`;
       const parsedResponse = parseAIResponse(data.content);
       
       setGeneratedContent(parsedResponse.content);
+      setEditableContent(parsedResponse.content);
+      setIsEditingContent(false);
       setMetaSeoTitle(parsedResponse.metaSeoTitle);
       setMetaDescription(parsedResponse.metaDescription);
       saveGeneratedContent(parsedResponse.content, parsedResponse.metaSeoTitle, parsedResponse.metaDescription);
@@ -1102,6 +1109,8 @@ Return ONLY the JSON object, no additional text.`;
       const fallbackMetaDescription = `Discover proven strategies to address ${post.analysis.pain_point}. Learn how Apollo's comprehensive platform helps teams overcome challenges and achieve measurable results.`;
       
       setGeneratedContent(parsedFallback.content);
+      setEditableContent(parsedFallback.content);
+      setIsEditingContent(false);
       setMetaSeoTitle(fallbackMetaTitle);
       setMetaDescription(fallbackMetaDescription);
       saveGeneratedContent(parsedFallback.content, fallbackMetaTitle, fallbackMetaDescription);
@@ -1221,14 +1230,31 @@ Return ONLY the JSON object, no additional text.`;
   };
 
   /**
+   * Toggle edit mode for generated content
+   * Why this matters: Allows users to edit the generated content before copying/publishing
+   */
+  const toggleEditMode = () => {
+    if (isEditingContent) {
+      // Save the edited content
+      setGeneratedContent(editableContent);
+      saveGeneratedContent(editableContent, metaSeoTitle, metaDescription);
+    } else {
+      // Enter edit mode - sync editable content with current content
+      setEditableContent(generatedContent);
+    }
+    setIsEditingContent(!isEditingContent);
+  };
+
+  /**
    * Copy content to clipboard with enhanced formatting
    * Why this matters: Provides the best possible copy experience with rich text formatting preserved across different applications.
    */
   const copyToClipboard = async () => {
+    const contentToCopy = isEditingContent ? editableContent : generatedContent;
     try {
       // Create a temporary div to render the HTML content with better styling
       const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = generatedContent;
+      tempDiv.innerHTML = contentToCopy;
       
       // Apply inline styles to preserve formatting better
       tempDiv.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -1386,7 +1412,8 @@ Return ONLY the JSON object, no additional text.`;
    * Why this matters: Creates a new Google Document pre-populated with the generated content.
    */
   const openGoogleDocs = async () => {
-    if (!generatedContent) {
+    const contentToCopy = isEditingContent ? editableContent : generatedContent;
+    if (!contentToCopy) {
       alert('Please generate content first before creating a Google Doc.');
       return;
     }
@@ -1405,7 +1432,7 @@ Return ONLY the JSON object, no additional text.`;
       const docTitle = `Apollo Content - ${post.title.substring(0, 50)}${post.title.length > 50 ? '...' : ''}`;
       
       // Create new Google Doc with content
-      const documentUrl = await googleDocsService.createDocument(docTitle, generatedContent);
+      const documentUrl = await googleDocsService.createDocument(docTitle, contentToCopy);
       
       // Open the new document in a new tab
       window.open(documentUrl, '_blank');
@@ -1444,6 +1471,8 @@ Return ONLY the JSON object, no additional text.`;
    */
   const confirmClearContent = () => {
     setGeneratedContent('');
+    setEditableContent('');
+    setIsEditingContent(false);
     setMetaSeoTitle('');
     setMetaDescription('');
     setShowClearConfirmation(false);
@@ -2053,6 +2082,48 @@ Return ONLY the JSON object, no additional text.`;
               {/* Action Buttons Row */}
               {generatedContent && (
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  {/* Edit/Save Button */}
+                  <button
+                    onClick={toggleEditMode}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = isEditingContent ? '#059669' : '#d97706';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = isEditingContent ? '#10b981' : '#f59e0b';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    {isEditingContent ? (
+                      <>
+                        <Check size={14} />
+                        Save Changes
+                      </>
+                    ) : (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Edit Content
+                      </>
+                    )}
+                  </button>
+
                   <button
                     onClick={() => setShowCMSModal(true)}
                     style={{
@@ -2291,7 +2362,55 @@ Return ONLY the JSON object, no additional text.`;
                   )}
 
                   {/* Main Content */}
-                  <div dangerouslySetInnerHTML={{ __html: generatedContent }} />
+                  {/* Edit Mode Indicator */}
+                  {isEditingContent && (
+                    <div style={{
+                      marginBottom: '1rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#fffbf5',
+                      borderRadius: '0.5rem',
+                      border: '2px solid #f59e0b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                      <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#92400e' }}>
+                        ✏️ EDITING MODE - Click "Save Changes" when done
+                      </span>
+                    </div>
+                  )}
+
+                  {isEditingContent ? (
+                    <textarea
+                      ref={editableContentRef}
+                      value={editableContent}
+                      onChange={(e) => setEditableContent(e.target.value)}
+                      placeholder="Edit your content here..."
+                      style={{
+                        width: '100%',
+                        minHeight: '600px',
+                        padding: '1rem 1.25rem',
+                        border: '2px solid #f59e0b',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        backgroundColor: '#fffbf5',
+                        transition: 'all 0.2s ease',
+                        outline: 'none',
+                        resize: 'vertical',
+                        fontFamily: 'inherit',
+                        lineHeight: '1.6',
+                        color: '#374151'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#d97706'}
+                      onBlur={(e) => e.target.style.borderColor = '#f59e0b'}
+                    />
+                  ) : (
+                    <div dangerouslySetInnerHTML={{ __html: generatedContent }} />
+                  )}
                   
                   {/* Bottom Action Buttons - Duplicate for convenience */}
                   <div style={{ 
@@ -2303,6 +2422,48 @@ Return ONLY the JSON object, no additional text.`;
                     borderTop: '1px solid #e5e7eb'
                   }}>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      {/* Edit/Save Button */}
+                      <button
+                        onClick={toggleEditMode}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.5rem 1rem',
+                          backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = isEditingContent ? '#059669' : '#d97706';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = isEditingContent ? '#10b981' : '#f59e0b';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        {isEditingContent ? (
+                          <>
+                            <Check size={14} />
+                            Save Changes
+                          </>
+                        ) : (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Edit Content
+                          </>
+                        )}
+                      </button>
+
                       <button
                         onClick={() => setShowCMSModal(true)}
                         style={{
