@@ -54,7 +54,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
   const testConversationExists = async (conversationId: string) => {
     try {
       // Send a test message to see if conversation exists
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3003'}/api/chat/message`, {
+      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/chat/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,6 +99,11 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
     if (!post) return;
 
     setIsInitializing(true);
+    
+    // Add minimum 3-second animation time for better user experience
+    const startTime = Date.now();
+    const minAnimationTime = 3000; // 3 seconds
+    
     try {
       const request: StartConversationRequest = {
         post_id: post.id,
@@ -108,7 +113,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
         audience_insight: post.analysis.audience_insight
       };
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3003'}/api/chat/start-conversation`, {
+      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/chat/start-conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -121,6 +126,15 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
       }
 
       const data: StartConversationResponse = await response.json();
+      
+      // Ensure minimum animation time has passed
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minAnimationTime - elapsedTime);
+      
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+      
       setConversationId(data.conversation_id);
       setMessages([data.initial_message]);
       setConversationStage('Pain Exploration');
@@ -137,6 +151,15 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
 
     } catch (error) {
       console.error('Error starting conversation:', error);
+      
+      // Ensure minimum animation time even for fallback
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minAnimationTime - elapsedTime);
+      
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+      
       // Add fallback message
       const fallbackMessage: ChatMessage = {
         id: 'fallback-1',
@@ -145,6 +168,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
         timestamp: new Date().toISOString()
       };
       setMessages([fallbackMessage]);
+      setConversationId('fallback-conversation'); // Set fallback conversation ID
     } finally {
       setIsInitializing(false);
     }
@@ -169,17 +193,16 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
     setIsLoading(true);
 
     try {
-      const request: SendMessageRequest = {
-        conversation_id: conversationId,
-        message: inputMessage.trim()
-      };
-
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3003'}/api/chat/message`, {
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          message: inputMessage.trim()
+        }),
       });
 
       if (!response.ok) {
@@ -233,7 +256,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
   };
 
   /**
-   * Handle Enter key press in textarea
+   * Handle key down events in textarea
    * Why this matters: Provides intuitive chat UX with keyboard shortcuts, allowing Shift+Enter for new lines.
    */
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -337,7 +360,8 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
 
     // Send feedback to backend for collection
     try {
-      await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3003'}/api/chat/feedback`, {
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+      await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -642,9 +666,9 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
               ref={inputRef}
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder="Share your thoughts..."
-              disabled={isLoading || isInitializing}
+              disabled={isLoading}
               className="dig-deeper-input dig-deeper-textarea"
               rows={3}
               style={{
@@ -659,7 +683,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
             <div className="dig-deeper-action-row">
               <button
                 onClick={openFilePicker}
-                disabled={isLoading || isInitializing}
+                disabled={isLoading}
                 className="dig-deeper-attach-btn"
                 title="Attach image"
               >
@@ -669,7 +693,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
               
               <button
                 onClick={sendMessage}
-                disabled={!inputMessage.trim() || isLoading || isInitializing}
+                disabled={!inputMessage.trim() || isLoading || !conversationId}
                 className="dig-deeper-send-btn-optimized"
               >
                 <Send style={{ width: '1rem', height: '1rem', marginRight: '0.5rem' }} />

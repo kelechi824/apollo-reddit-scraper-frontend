@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, Wand2, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Wand2, FileText, AlertTriangle } from 'lucide-react';
 import { AnalyzedPost } from '../types';
 import DigDeeperModal from './DigDeeperModal';
 import ContentCreationModal from './ContentCreationModal';
@@ -26,6 +26,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   const [isDigDeeperModalOpen, setIsDigDeeperModalOpen] = useState(false);
   const [isContentCreationModalOpen, setIsContentCreationModalOpen] = useState(false);
   const [isLinkedInPostModalOpen, setIsLinkedInPostModalOpen] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   /**
    * Highlight keywords in text content
@@ -203,6 +204,31 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
     }
   };
 
+  /**
+   * Show confirmation modal for clearing results
+   * Why this matters: Provides a safety check before destructive clear action
+   */
+  const showClearConfirmation = () => {
+    setShowConfirmModal(true);
+  };
+
+  /**
+   * Clear analysis results after confirmation
+   * Why this matters: Performs the actual clearing after user confirms
+   */
+  const confirmClearResults = () => {
+    onClear();
+    setShowConfirmModal(false);
+  };
+
+  /**
+   * Cancel the clear action
+   * Why this matters: Allows users to back out of the destructive action
+   */
+  const cancelClearResults = () => {
+    setShowConfirmModal(false);
+  };
+
 
 
   if (analyzedPosts.length === 0) {
@@ -230,6 +256,42 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
   return (
     <div className="analysis-panel">
+      {/* Mobile Scroll Hint */}
+      <div className="mobile-scroll-hint" style={{ 
+        padding: '1rem',
+        backgroundColor: '#f0f9ff',
+        border: '1px solid #bfdbfe',
+        borderRadius: '0.5rem',
+        margin: '1rem 0',
+        textAlign: 'center',
+        display: 'none'
+      }}>
+        <p style={{ 
+          margin: 0,
+          fontSize: '0.875rem',
+          color: '#1e40af',
+          fontWeight: '500',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem'
+        }}>
+          <span style={{ fontSize: '1rem' }}>👇</span>
+          Scroll down to explore insights and create content
+        </p>
+      </div>
+
+      {/* Mobile-specific CSS for scroll hint */}
+      <style>
+        {`
+          @media (max-width: 768px) {
+            .mobile-scroll-hint {
+              display: block !important;
+            }
+          }
+        `}
+      </style>
+
       {/* Panel Header */}
       <div className="analysis-panel-header">
         <div style={{flex: 1}}>
@@ -239,7 +301,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           </p>
         </div>
         <button 
-          onClick={onClear}
+          onClick={showClearConfirmation}
           className="clear-results-btn"
           title="Clear analysis results"
         >
@@ -318,30 +380,59 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
               onClick={() => setActiveTab('original')}
               style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
             >
-              Post
+              <span className="tab-label-desktop">Post</span>
+              <span className="tab-label-mobile" style={{ display: 'none' }}>Post</span>
             </button>
             <button
               className={`tab-btn ${activeTab === 'pain' ? 'active' : ''}`}
               onClick={() => setActiveTab('pain')}
               style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
             >
-              Pain Point
+              <span className="tab-label-desktop">Pain Point</span>
+              <span className="tab-label-mobile" style={{ display: 'none' }}>Pain</span>
             </button>
             <button
               className={`tab-btn ${activeTab === 'content' ? 'active' : ''}`}
               onClick={() => setActiveTab('content')}
               style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
             >
-              Content Opportunity
+              <span className="tab-label-desktop">Content Opportunity</span>
+              <span className="tab-label-mobile" style={{ display: 'none' }}>Content</span>
             </button>
             <button
               className={`tab-btn ${activeTab === 'audience' ? 'active' : ''}`}
               onClick={() => setActiveTab('audience')}
               style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
             >
-              Audience Summary
+              <span className="tab-label-desktop">Audience Summary</span>
+              <span className="tab-label-mobile" style={{ display: 'none' }}>Audience</span>
             </button>
           </div>
+
+          {/* Mobile-specific CSS */}
+          <style>
+            {`
+              .content-buttons-container {
+                justify-content: flex-start;
+              }
+
+              @media (max-width: 768px) {
+                .tab-btn {
+                  font-size: 0.875rem !important;
+                  padding: 0.75rem 0.5rem !important;
+                }
+                .tab-label-desktop {
+                  display: none !important;
+                }
+                .tab-label-mobile {
+                  display: inline !important;
+                }
+                .content-buttons-container {
+                  justify-content: center;
+                }
+              }
+            `}
+          </style>
 
           {/* Tab Content */}
           <div className="tab-content">
@@ -390,7 +481,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                   {currentPost.analysis.content_opportunity}
                 </p>
                 <div style={{ marginTop: '1.5rem', borderTop: '0.0625rem solid #e5e7eb', paddingTop: '1.5rem' }}>
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem', justifyContent: window.innerWidth > 768 ? 'flex-start' : 'center' }}>
+                  <div className="content-buttons-container" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                     <button
                       onClick={() => setIsContentCreationModalOpen(true)}
                       className="apollo-btn-gradient"
@@ -421,7 +512,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
                         boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 119, 181, 0.2)',
-                        minWidth: '21.25rem',
+                        minWidth: window.innerWidth > 768 ? '15rem' : '16rem',
                         gap: '0.5rem'
                       }}
                       onMouseOver={(e) => {
@@ -494,6 +585,37 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
         onClose={() => setIsLinkedInPostModalOpen(false)}
         post={currentPost}
       />
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className={`confirmation-modal-backdrop ${showConfirmModal ? 'open' : ''}`}>
+          <div className={`confirmation-modal ${showConfirmModal ? 'open' : ''}`}>
+            <div className="confirmation-modal-header">
+              <div className="confirmation-modal-icon">
+                <AlertTriangle style={{width: '1.5rem', height: '1.5rem'}} />
+              </div>
+              <h3 className="confirmation-modal-title">Clear Analysis Results?</h3>
+              <p className="confirmation-modal-message">
+                This action will remove all current analysis insights and return you to the search form. You can find completed analyses in your History.
+              </p>
+            </div>
+            <div className="confirmation-modal-actions">
+              <button
+                onClick={cancelClearResults}
+                className="confirmation-modal-btn confirmation-modal-btn-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmClearResults}
+                className="confirmation-modal-btn confirmation-modal-btn-confirm"
+              >
+                Clear Results
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

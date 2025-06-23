@@ -939,6 +939,18 @@ footer {
   .main-layout {
     display: grid;
     grid-template-columns: 280px 1fr;
+    position: relative;
+  }
+  
+  .main-layout::before {
+    content: '';
+    position: absolute;
+    left: 280px;
+    top: 0;
+    bottom: 0;
+    width: 0.0625rem;
+    background-color: #e5e7eb;
+    z-index: 1;
   }
 }
 
@@ -964,7 +976,6 @@ footer {
     position: sticky;
     width: auto;
     height: 100vh;
-    border-right: 0.0625rem solid #e5e7eb;
     z-index: auto;
   }
 }
@@ -3478,26 +3489,31 @@ footer {
   .dig-deeper-modal {
     position: fixed;
     top: 0;
-    right: 0;
+    right: 0 !important;
     bottom: 0;
+    left: auto !important;
     width: 100%;
-    max-width: 42rem; /* 670.125rem */
+    max-width: 42rem;
     background-color: white;
     box-shadow: -0.25rem 0 1.5625rem rgba(0, 0, 0, 0.2);
     border-radius: 0;
     transform: translateX(100%);
     transition: transform 0.3s ease-out;
+    opacity: 1;
   }
   
   .dig-deeper-modal.open {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) !important;
   }
 }
 
-.dig-deeper-modal.open {
-  opacity: 1;
-  transform: translateY(0);
+/* Mobile only: slide up */
+@media (max-width: 48rem) {
+  .dig-deeper-modal.open {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Dig Deeper Modal Header - Mobile First */
@@ -3609,36 +3625,43 @@ footer {
 .dig-deeper-modal-context {
   /* Mobile: Compact context */
   margin-top: 0;
+  background-color: rgb(255, 255, 255);
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgb(229, 231, 235);
+  border-image: initial;
+  border-radius: 0.5rem;
+  padding: 1rem;
 }
 
 .dig-deeper-modal-context-title {
   /* Mobile: Smaller context title */
   font-size: 0.875rem;
   font-weight: 500;
-  color: #6b7280;
+  color: #000000;
   margin: 0 0 0.5rem 0;
 }
 
 /* Tablet and up: Larger context title */
 @media (min-width: 48.0625rem) {
   .dig-deeper-modal-context-title {
-    font-size: 1rem;
+    font-size: 0.875rem;
   }
 }
 
 .dig-deeper-modal-context-post {
   /* Mobile: Smaller post title */
+  color: var(--apollo-gray-700);
   font-size: 0.875rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 0.75rem 0;
+  font-weight: 500;
+  margin: 0px 0px 0.5rem;
   line-height: 1.4;
 }
 
 /* Tablet and up: Larger post title */
 @media (min-width: 48.0625rem) {
   .dig-deeper-modal-context-post {
-    font-size: 1rem;
+    font-size: 0.875rem;
     line-height: 1.5;
   }
 }
@@ -3660,21 +3683,21 @@ footer {
 
 .dig-deeper-modal-badge {
   /* Mobile: Compact badge */
-  background: #3b82f6;
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
   font-size: 0.75rem;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background-color: rgb(243, 244, 246);
+  color: var(--apollo-gray-500);
   font-weight: 500;
 }
 
 .dig-deeper-modal-stage {
   /* Mobile: Compact stage indicator */
-  background: #10b981;
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
   font-size: 0.75rem;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background-color: rgb(219, 234, 254);
+  color: rgb(29, 78, 216);
   font-weight: 500;
 }
 
@@ -3717,7 +3740,7 @@ footer {
 
 .dig-deeper-modal-loading-text {
   /* Mobile: Smaller loading text */
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: #6b7280;
   margin-top: 0.75rem;
 }
@@ -3725,7 +3748,7 @@ footer {
 /* Tablet and up: Larger loading text */
 @media (min-width: 48.0625rem) {
   .dig-deeper-modal-loading-text {
-    font-size: 1rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -3754,11 +3777,12 @@ footer {
 
 .dig-deeper-message-content {
   /* Mobile: Narrow content bubbles */
-  max-width: calc(100vw - 6rem);
-  padding: 0.75rem 1rem;
-  border-radius: 1rem;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   line-height: 1.5;
+  max-width: 26rem;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
@@ -3768,7 +3792,7 @@ footer {
   .dig-deeper-message-content {
     max-width: 24rem;
     padding: 1rem 1.25rem;
-    font-size: 1rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -3779,9 +3803,12 @@ footer {
 }
 
 .dig-deeper-message-content.assistant {
-  background: white;
-  color: #1f2937;
-  border: 0.0625rem solid #e5e7eb;
+  background-color: rgb(243, 244, 246);
+  color: var(--apollo-gray-900);
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgb(229, 231, 235);
+  border-image: initial;
   border-bottom-left-radius: 0.25rem;
 }
 
@@ -3921,7 +3948,7 @@ footer {
 
 .dig-deeper-typing-text {
   /* Mobile: Smaller typing text */
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: #6b7280;
   font-style: italic;
 }
@@ -3929,7 +3956,7 @@ footer {
 /* Tablet and up: Standard typing text */
 @media (min-width: 48.0625rem) {
   .dig-deeper-typing-text {
-    font-size: 1rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -4106,7 +4133,7 @@ footer {
 /* Input Hint - Mobile First */
 .dig-deeper-input-hint {
   /* Mobile: Smaller hint text */
-  font-size: 0.75rem;
+  font-size: 0.625rem;
   color: #6b7280;
   text-align: center;
   margin-top: 0.75rem;
@@ -4116,7 +4143,7 @@ footer {
 /* Tablet and up: Standard hint */
 @media (min-width: 48.0625rem) {
   .dig-deeper-input-hint {
-    font-size: 0.8125rem;
+    font-size: 0.6875rem;
     text-align: left;
     margin-top: 0.5rem;
   }
@@ -4856,6 +4883,28 @@ footer {
 }
 
 /* Brand Kit Form Enhancements */
+.brand-kit-page .brand-kit-input,
+.brand-kit-page .brand-kit-textarea,
+.brand-kit-page .brand-kit-select,
+.brand-kit-page input,
+.brand-kit-page textarea,
+.brand-kit-page select {
+  font-size: 0.875rem !important;
+}
+
+/* More specific targeting for brand kit inputs - exclude liquid syntax elements */
+.brand-kit-page input[type="text"]:not(.liquid-syntax),
+.brand-kit-page input[type="url"],
+.brand-kit-page input[type="password"]:not(.liquid-syntax),
+.brand-kit-page textarea {
+  font-size: 0.875rem !important;
+}
+
+/* Liquid syntax elements get smaller font size */
+.brand-kit-page .liquid-syntax {
+  font-size: 0.675rem !important;
+}
+
 @media (max-width: 48rem) {
   .brand-kit-input {
     font-size: 1rem !important;

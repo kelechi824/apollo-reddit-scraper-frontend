@@ -722,7 +722,8 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
       const processedUserPrompt = replaceBrandKitVariables(finalUserPrompt, brandKit);
 
       // Call the content generation API using same approach as ContentCreationModal
-      const response = await fetch('https://apollo-reddit-scraper-backend.vercel.app/api/content/generate', {
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/content/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2983,8 +2984,8 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       </div>
                                   <div style={{ fontSize: '0.8rem', lineHeight: '1.4', opacity: 0.95 }}>
                                     Your post is ready to paste in the LinkedIn composer. Just press <strong>Ctrl+V</strong> (or <strong>Cmd+V</strong> on Mac) to paste it.
-                    </div>
-                  </div>
+                                  </div>
+                                </div>
                               </div>
                               
                               {/* Progress bar */}

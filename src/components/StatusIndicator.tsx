@@ -11,7 +11,7 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({ apiUrl }) => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        const response = await fetch(`${apiUrl}/api/health`);
+        const response = await fetch(`${apiUrl.replace(/\/$/, '')}/api/health`);
         if (response.ok) {
           setStatus('connected');
         } else {

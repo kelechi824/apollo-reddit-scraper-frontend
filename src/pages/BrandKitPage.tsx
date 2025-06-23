@@ -371,7 +371,7 @@ const BrandKitPage: React.FC = () => {
 
       <div className="brand-kit-page" style={{ 
         padding: '2rem', 
-        maxWidth: '112.5rem', 
+        maxWidth: '75rem', 
         margin: '0 auto'
       }}>
       <div style={{ marginBottom: '3rem', textAlign: 'center' }}>
@@ -381,7 +381,12 @@ const BrandKitPage: React.FC = () => {
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Vertical Stack Layout */}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '2rem'
+      }}>
         {/* Pythia API Integration */}
         <div style={{ 
           border: '0.125rem solid #B8B0E8', 
@@ -412,7 +417,7 @@ const BrandKitPage: React.FC = () => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div>
-              <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+              <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.5rem', color: '#374151', fontSize: '0.9rem' }}>
                 Pythia API Key
               </label>
                              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -421,13 +426,13 @@ const BrandKitPage: React.FC = () => {
                   value={brandKit.pythiaApi.apiKey}
                   onChange={(e) => handlePythiaApiChange('apiKey', e.target.value)}
                   placeholder="Enter your Pythia API key..."
+                  className="brand-kit-input"
                   style={{
                     flex: '1',
                     minWidth: '15.625rem',
                     padding: '1rem 1.25rem',
                     border: '0.0625rem solid #e5e7eb',
                     borderRadius: '0.5rem',
-                    fontSize: '0.875rem',
                     backgroundColor: '#fafafa',
                     transition: 'all 0.2s ease',
                     outline: 'none',
@@ -561,12 +566,12 @@ const BrandKitPage: React.FC = () => {
             value={brandKit.url}
             onChange={(e) => handleChange('url', e.target.value)}
             placeholder="https://www.apollo.io"
+            className="brand-kit-input"
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
               border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
-              fontSize: '0.875rem',
               backgroundColor: '#fafafa',
               transition: 'all 0.2s ease',
               outline: 'none',
@@ -580,6 +585,35 @@ const BrandKitPage: React.FC = () => {
           </p>
         </div>
 
+        {/* Competitors */}
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
+          <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
+            Competitors
+          </label>
+          <input
+            type="text"
+            value={brandKit.competitors}
+            onChange={(e) => handleChange('competitors', e.target.value)}
+            placeholder="ZoomInfo, Outreach, Salesloft, Gong, Chili Piper..."
+            className="brand-kit-input"
+            style={{
+              width: '100%',
+              padding: '1rem 1.25rem',
+              border: '0.0625rem solid #e5e7eb',
+              borderRadius: '0.5rem',
+              backgroundColor: '#fafafa',
+              transition: 'all 0.2s ease',
+              outline: 'none',
+              fontFamily: 'inherit'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+          />
+          <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+            Available as: <code style={{ backgroundColor: '#f3f4f6', padding: '0.125rem 0.25rem', borderRadius: '0.25rem' }}>{`{{ brand_kit.competitors }}`}</code>
+          </p>
+        </div>
+
         {/* About the Brand */}
         <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
@@ -590,12 +624,12 @@ const BrandKitPage: React.FC = () => {
             onChange={(e) => handleChange('aboutBrand', e.target.value)}
             placeholder="Provide a high level description of your brand..."
             rows={4}
+            className="brand-kit-textarea"
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
               border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
-              fontSize: '0.875rem',
               backgroundColor: '#fafafa',
               transition: 'all 0.2s ease',
               outline: 'none',
@@ -620,12 +654,12 @@ const BrandKitPage: React.FC = () => {
             onChange={(e) => handleChange('idealCustomerProfile', e.target.value)}
             placeholder="Describe your ideal customer profile including demographics, pain points, and interests..."
             rows={4}
+            className="brand-kit-textarea"
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
               border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
-              fontSize: '0.875rem',
               backgroundColor: '#fafafa',
               transition: 'all 0.2s ease',
               outline: 'none',
@@ -640,35 +674,6 @@ const BrandKitPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Competitors */}
-        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
-          <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
-            Competitors
-          </label>
-          <input
-            type="text"
-            value={brandKit.competitors}
-            onChange={(e) => handleChange('competitors', e.target.value)}
-            placeholder="ZoomInfo, Outreach, Salesloft, Gong, Chili Piper..."
-            style={{
-              width: '100%',
-              padding: '1rem 1.25rem',
-              border: '0.0625rem solid #e5e7eb',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
-              backgroundColor: '#fafafa',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              fontFamily: 'inherit'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-          />
-          <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-            Available as: <code style={{ backgroundColor: '#f3f4f6', padding: '0.125rem 0.25rem', borderRadius: '0.25rem' }}>{`{{ brand_kit.competitors }}`}</code>
-          </p>
-        </div>
-
         {/* Brand Point of View */}
         <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
           <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.75rem', color: '#374151', fontSize: '0.9rem' }}>
@@ -679,12 +684,12 @@ const BrandKitPage: React.FC = () => {
             onChange={(e) => handleChange('brandPointOfView', e.target.value)}
             placeholder="Describe your brand's unique perspective and positioning in the market..."
             rows={4}
+            className="brand-kit-textarea"
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
               border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
-              fontSize: '0.875rem',
               backgroundColor: '#fafafa',
               transition: 'all 0.2s ease',
               outline: 'none',
@@ -709,12 +714,12 @@ const BrandKitPage: React.FC = () => {
             onChange={(e) => handleChange('authorPersona', e.target.value)}
             placeholder="Describe the ideal author persona including qualifications, expertise, and understanding of audience..."
             rows={4}
+            className="brand-kit-textarea"
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
               border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
-              fontSize: '0.875rem',
               backgroundColor: '#fafafa',
               transition: 'all 0.2s ease',
               outline: 'none',
@@ -739,12 +744,12 @@ const BrandKitPage: React.FC = () => {
             onChange={(e) => handleChange('toneOfVoice', e.target.value)}
             placeholder="Describe the tone of voice of your brand..."
             rows={3}
+            className="brand-kit-textarea"
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
               border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
-              fontSize: '0.875rem',
               backgroundColor: '#fafafa',
               transition: 'all 0.2s ease',
               outline: 'none',
@@ -767,12 +772,12 @@ const BrandKitPage: React.FC = () => {
           <select
             value={brandKit.headerCaseType}
             onChange={(e) => handleChange('headerCaseType', e.target.value as BrandKit['headerCaseType'])}
+            className="brand-kit-select"
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
               border: '0.0625rem solid #e5e7eb',
               borderRadius: '0.5rem',
-              fontSize: '0.875rem',
               backgroundColor: '#fafafa',
               transition: 'all 0.2s ease',
               outline: 'none',
@@ -1006,144 +1011,173 @@ const BrandKitPage: React.FC = () => {
           </p>
 
           {/* Add new variable */}
-          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
-            <input
-              type="text"
-              value={newVariableName}
-              onChange={(e) => setNewVariableName(e.target.value)}
-              placeholder="Variable name"
-              style={{
-                flex: '1',
-                padding: '1rem 1.25rem',
-                border: '0.0625rem solid #e5e7eb',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
-                backgroundColor: '#fafafa',
-                transition: 'all 0.2s ease',
-                outline: 'none',
-                fontFamily: 'inherit'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-            />
-            <input
-              type="text"
-              value={newVariableValue}
-              readOnly
-              placeholder="Liquid syntax will appear here..."
-              style={{
-                flex: '2',
-                padding: '1rem 1.25rem',
-                border: '0.0625rem solid #e5e7eb',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
-                backgroundColor: '#f9fafb',
-                color: '#6b7280',
-                cursor: 'default',
-                fontFamily: 'monospace',
-                transition: 'all 0.2s ease',
-                outline: 'none'
-              }}
-            />
-            <button
-              onClick={addCustomVariable}
-              style={{
-                padding: '1rem',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2563eb'}
-              onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3b82f6'}
-            >
-              <Plus size={16} />
-            </button>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            gap: '0.75rem', 
+            marginBottom: '1rem'
+          }}>
+            {/* Mobile: Stack inputs vertically */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                value={newVariableName}
+                onChange={(e) => setNewVariableName(e.target.value)}
+                placeholder="Variable name"
+                className="brand-kit-input"
+                style={{
+                  flex: '1',
+                  minWidth: '200px',
+                  padding: '0.75rem 1rem',
+                  border: '0.0625rem solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  backgroundColor: '#fafafa',
+                  transition: 'all 0.2s ease',
+                  outline: 'none',
+                  fontFamily: 'inherit'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+              />
+              <button
+                onClick={addCustomVariable}
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  transition: 'all 0.2s ease',
+                  flexShrink: 0
+                }}
+                onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2563eb'}
+                onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3b82f6'}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+                         {/* Liquid syntax preview */}
+             {newVariableName && (
+               <input
+                 type="text"
+                 value={newVariableValue}
+                 readOnly
+                 placeholder="Liquid syntax will appear here..."
+                 className="brand-kit-input liquid-syntax"
+                 style={{
+                   width: '100%',
+                   padding: '0.75rem 1rem',
+                   border: '0.0625rem solid #e5e7eb',
+                   borderRadius: '0.5rem',
+                   backgroundColor: '#f9fafb',
+                   color: '#6b7280',
+                   cursor: 'default',
+                   fontFamily: 'monospace',
+                   transition: 'all 0.2s ease',
+                   outline: 'none'
+                 }}
+               />
+             )}
           </div>
 
           {/* Display existing variables */}
           {Object.entries(brandKit.customVariables).map(([key, value]) => (
-            <div key={key} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
-              {editingVariable === key ? (
-                <input
-                  type="text"
-                  value={editingVariableName}
-                  onChange={(e) => setEditingVariableName(e.target.value)}
-                  onBlur={() => saveEditedVariable(key)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      saveEditedVariable(key);
-                    } else if (e.key === 'Escape') {
-                      cancelEditingVariable();
-                    }
-                  }}
-                  placeholder="Variable name"
-                  autoFocus
+            <div key={key} style={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              gap: '0.5rem', 
+              marginBottom: '1rem',
+              padding: '0.75rem',
+              border: '0.0625rem solid #e5e7eb',
+              borderRadius: '0.5rem',
+              backgroundColor: '#fafafa'
+            }}>
+              {/* Variable name and delete button row */}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {editingVariable === key ? (
+                  <input
+                    type="text"
+                    value={editingVariableName}
+                    onChange={(e) => setEditingVariableName(e.target.value)}
+                    onBlur={() => saveEditedVariable(key)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        saveEditedVariable(key);
+                      } else if (e.key === 'Escape') {
+                        cancelEditingVariable();
+                      }
+                    }}
+                    placeholder="Variable name"
+                    autoFocus
+                    className="brand-kit-input"
+                    style={{
+                      flex: '1',
+                      padding: '0.5rem 0.75rem',
+                      border: '0.125rem solid #3b82f6',
+                      borderRadius: '0.25rem',
+                      backgroundColor: 'white',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                ) : (
+                  <div
+                    onClick={() => startEditingVariable(key)}
+                    style={{
+                      flex: '1',
+                      padding: '0.5rem 0.75rem',
+                      border: '0.0625rem solid #e5e7eb',
+                      borderRadius: '0.25rem',
+                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      fontFamily: 'inherit',
+                      fontSize: '0.875rem'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.borderColor = '#d1d5db')}
+                    onMouseOut={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
+                  >
+                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </div>
+                )}
+                <button
+                  onClick={() => removeCustomVariable(key)}
                   style={{
-                    flex: '1',
-                    padding: '0.5rem 0.75rem',
-                    border: '0.125rem solid #3b82f6',
+                    padding: '0.5rem',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
                     borderRadius: '0.25rem',
-                    fontSize: '0.875rem',
-                    backgroundColor: 'white',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              ) : (
-                <div
-                  onClick={() => startEditingVariable(key)}
-                  style={{
-                    flex: '1',
-                    padding: '0.5rem 0.75rem',
-                    border: '0.0625rem solid #e5e7eb',
-                    borderRadius: '0.25rem',
-                    fontSize: '0.875rem',
-                    backgroundColor: '#fafafa',
                     cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
                     transition: 'all 0.2s ease',
-                    fontFamily: 'inherit'
+                    flexShrink: 0
                   }}
-                  onMouseOver={(e) => (e.currentTarget.style.borderColor = '#d1d5db')}
-                  onMouseOut={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
+                  onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#dc2626'}
+                  onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#ef4444'}
                 >
-                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </div>
-              )}
-              <code style={{ 
-                flex: '2', 
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              
+              {/* Liquid syntax display */}
+              <code className="liquid-syntax" style={{ 
+                display: 'block',
                 padding: '0.5rem 0.75rem', 
                 backgroundColor: '#f3f4f6', 
                 borderRadius: '0.25rem',
-                fontSize: '0.75rem',
                 fontFamily: 'monospace',
                 color: '#6b7280',
-                border: '0.0625rem solid #e5e7eb'
+                border: '0.0625rem solid #e5e7eb',
+                wordBreak: 'break-all',
+                whiteSpace: 'pre-wrap'
               }}>
                 {value}
               </code>
-              <button
-                onClick={() => removeCustomVariable(key)}
-                style={{
-                  padding: '0.5rem',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.25rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#dc2626'}
-                onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#ef4444'}
-              >
-                <Trash2 size={14} />
-              </button>
             </div>
           ))}
 
