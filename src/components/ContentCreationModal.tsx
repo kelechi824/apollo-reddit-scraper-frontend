@@ -1992,7 +1992,6 @@ Return ONLY the JSON object, no additional text.`;
           <div className="content-modal-layout" style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
             {/* Left Panel - Prompts */}
             <div className="content-modal-panel" style={{ 
-              flex: 1, 
               padding: '1.5rem', 
               overflowY: 'auto',
               borderRight: '0.0625rem solid #e5e7eb'
@@ -2215,12 +2214,11 @@ Return ONLY the JSON object, no additional text.`;
             {/* Right Panel - Generated Content */}
             <div ref={rightPanelRef} className="content-modal-panel" style={{ 
               position: 'relative',
-              flex: 1,
               padding: '1.5rem',
               overflowY: 'auto'
             }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0, marginBottom: '1rem' }}>Generated Content</h3>
+                <h3 className="mobile-only-heading" style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0, marginBottom: '1rem' }}>Generated Content</h3>
                 
                 {/* Clear Button - Centered */}
                 {generatedContent && (
