@@ -1966,7 +1966,7 @@ Return ONLY the JSON object, no additional text.`;
           >
             <div>
               <h2 style={{ fontWeight: '600', margin: 0, color: '#111827' }}>
-                Create Content with AI
+                Create Content With AI
               </h2>
               <p style={{ color: '#6b7280' }}>
                 Generate AEO-optimized content from Reddit insights using Apollo's Brand Kit

@@ -493,7 +493,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                       }}
                     >
                       <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
-                      Create Content with AI
+                      Create Content With AI
                     </button>
                     
                     <button
