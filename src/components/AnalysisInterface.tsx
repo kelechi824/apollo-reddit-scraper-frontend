@@ -24,7 +24,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
   const analysisMessages = [
     'Deploying Agent...',
     'Scraping Reddit...',
-    'Reading Subreddits...',
+    'Reading subreddit...',
     'Generating insights...',
     'Almost done...'
   ];
@@ -208,7 +208,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
                 }}
                 onBlur={handleKeywordBlur}
                 onKeyDown={handleKeyDown}
-                placeholder="e.g., leads"
+                placeholder="e.g., apollo"
                 className="apollo-input"
                 disabled={isAnalyzing}
               />
