@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Wand2, Clock, CheckCircle, Copy, Check, ChevronDown, Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { AnalyzedPost, BrandKit, ContentCreationRequest } from '../types';
 
 interface LinkedInPostModalProps {
@@ -142,7 +143,18 @@ const LinkedInVariablesMenu: React.FC<{
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 1.5rem 1.5rem 1.5rem' }}>
-        {filteredVariables.length > 0 ? (
+        {!brandKit ? (
+          <div style={{ 
+            padding: '2rem', 
+            textAlign: 'center', 
+            color: '#6b7280' 
+          }}>
+            Please configure your Brand Kit first in the{' '}
+            <Link to="/brand-kit" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+              Brand Kit page
+            </Link>
+          </div>
+        ) : filteredVariables.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {filteredVariables.map((variable) => (
               <div
@@ -620,7 +632,10 @@ Return as a JSON array of 3 completely different LinkedIn posts.`;
    * Why this matters: Creates viral LinkedIn content using either style mimicry or custom prompts with variation support
    */
   const generateLinkedInPost = async () => {
-    if (!brandKit) return;
+    if (!brandKit) {
+      alert('Please configure your Brand Kit first in the Brand Kit page.');
+      return;
+    }
     
     setIsGenerating(true);
     setGenerationStep(0);
@@ -1786,27 +1801,37 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       justifyContent: 'center',
                       marginBottom: '2rem'
                     }}>
-                      <button
-                        onClick={generateLinkedInPost}
-                        disabled={isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim()}
-                        className="apollo-btn-gradient"
-                        style={{
-                          opacity: isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim() ? 0.6 : 1,
-                          cursor: isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim() ? 'not-allowed' : 'pointer'
-                        }}
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Clock className="animate-spin" style={{width: '1rem', height: '1rem', marginRight: '0.5rem'}} />
-                            {getMimicryMessages()[generationStep]}
-                          </>
-                        ) : (
-                          <>
-                            <Wand2 size={16} style={{marginRight: '0.5rem'}} />
-                            Generate LinkedIn Post (Mimicry Mode)
-                          </>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <button
+                          onClick={generateLinkedInPost}
+                          disabled={isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim()}
+                          className="apollo-btn-gradient"
+                          style={{
+                            opacity: isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim() ? 0.6 : 1,
+                            cursor: isGenerating || !brandKit || !useExampleStyle || !examplePostStyle.trim() ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {isGenerating ? (
+                            <>
+                              <Clock className="animate-spin" style={{width: '1rem', height: '1rem', marginRight: '0.5rem'}} />
+                              {getMimicryMessages()[generationStep]}
+                            </>
+                          ) : (
+                            <>
+                              <Wand2 size={16} style={{marginRight: '0.5rem'}} />
+                              Generate LinkedIn Post (Mimicry Mode)
+                            </>
+                          )}
+                        </button>
+                        {!brandKit && (
+                          <p style={{ color: '#ef4444', fontWeight: '500', fontSize: '0.875rem', margin: 0 }}>
+                            Please configure your Brand Kit first in the{' '}
+                            <Link to="/brand-kit" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline', fontWeight: '600' }}>
+                              Brand Kit page
+                            </Link>
+                          </p>
                         )}
-                      </button>
+                      </div>
                     </div>
                   </>
                 )}
@@ -2033,6 +2058,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                 {showAdvancedPrompts && !useExampleStyle && (
                   <div style={{ 
                     display: 'flex', 
+                    flexDirection: 'column',
                     alignItems: 'center', 
                     justifyContent: 'center',
                     marginBottom: '2rem',
@@ -2062,6 +2088,15 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                         </>
                       )}
                     </button>
+                    {!brandKit && (
+                      <p style={{ color: '#ef4444', fontWeight: '500', fontSize: '0.875rem', margin: '1rem 0 0 0', textAlign: 'center' }}>
+                        Configure{' '}
+                        <Link to="/brand-kit" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline', fontWeight: '600' }}>
+                          Brand Kit
+                        </Link>
+                        {' '}to generate post
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -2175,7 +2210,7 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                         >
                           {isGenerating ? (
                             <>
-                              <Clock className="animate-spin" style={{width: '10.25rem', height: '10.25rem'}} />
+                              <Clock className="animate-spin" style={{width: '14px', height: '14px'}} />
                               {useExampleStyle ? getMimicryMessages()[generationStep] : getAdvancedMessages()[generationStep]}
                             </>
                           ) : (
@@ -2649,6 +2684,14 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
                       <p style={{ margin: 0 }}>
                         Configure your settings and click "Generate LinkedIn Post" to create viral thought leadership content
                       </p>
+                      {!brandKit && (
+                        <p style={{ marginTop: '1rem', color: '#ef4444', fontWeight: '500', margin: '1rem 0 0 0' }}>
+                          Please configure your Brand Kit first in the{' '}
+                          <Link to="/brand-kit" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline', fontWeight: '600' }}>
+                            Brand Kit page
+                          </Link>
+                        </p>
+                      )}
                           </div>
                   </div>
                 )}
