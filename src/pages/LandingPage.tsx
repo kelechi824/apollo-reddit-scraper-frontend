@@ -92,20 +92,10 @@ const LandingPage: React.FC = () => {
             <Link to="/" className="apollo-logo-header">
               <img src="/Apollo_logo_transparent.png" alt="Apollo Logo" />
             </Link>
-            
-            {/* Header Navigation - Show on desktop */}
-            <nav className="header-navigation">
-              <a href="#" className="header-nav-item">Platform</a>
-              <a href="#" className="header-nav-item">Roles</a>
-              <a href="#" className="header-nav-item">Resources</a>
-              <a href="#" className="header-nav-item">Pricing</a>
-            </nav>
           </div>
           
           {/* Header Actions */}
           <div className="header-actions">
-            <a href="#" className="header-demo-link desktop-only">Get a demo</a>
-            <a href="#" className="header-login-btn desktop-only">Log in</a>
             <a href="#" className="header-signup-btn">Sign up for free</a>
             
             {/* Mobile Hamburger Menu Button - Right aligned on mobile */}
@@ -133,22 +123,6 @@ const LandingPage: React.FC = () => {
             {/* Landing page mobile menu content */}
             <div className="landing-mobile-menu">
               <div className="nav-section">
-                <a href="#" className="apollo-nav-item" onClick={closeMobileMenu}>
-                  <span>Platform</span>
-                  <ChevronRight className="nav-arrow" size={20} />
-                </a>
-                <a href="#" className="apollo-nav-item" onClick={closeMobileMenu}>
-                  <span>Roles</span>
-                  <ChevronRight className="nav-arrow" size={20} />
-                </a>
-                <a href="#" className="apollo-nav-item" onClick={closeMobileMenu}>
-                  <span>Resources</span>
-                  <ChevronRight className="nav-arrow" size={20} />
-                </a>
-                <a href="#" className="apollo-nav-item" onClick={closeMobileMenu}>
-                  <span>Pricing</span>
-                </a>
-                
                 {/* Start Free Analysis Button in Mobile Menu */}
                 <div style={{ textAlign: 'center', margin: '1rem 0' }}>
                   <Link 
@@ -182,10 +156,6 @@ const LandingPage: React.FC = () => {
                   Start free analysis
                 </Link>
                 </div>
-              </div>
-              <div className="mobile-menu-actions">
-                <a href="#" className="apollo-mobile-login-btn" onClick={closeMobileMenu}>Log in</a>
-                <a href="#" className="apollo-mobile-demo-btn" onClick={closeMobileMenu}>Get a demo</a>
               </div>
             </div>
           </div>

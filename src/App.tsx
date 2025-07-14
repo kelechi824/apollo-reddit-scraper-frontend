@@ -65,20 +65,10 @@ const AppLayout: React.FC = () => {
             <Link to="/" className="apollo-logo-header">
               <img src="/Apollo_logo_transparent.png" alt="Apollo Logo" />
             </Link>
-            
-            {/* Header Navigation - Show on desktop */}
-            <nav className="header-navigation">
-              <button className="header-nav-item">Platform</button>
-              <button className="header-nav-item">Roles</button>
-              <button className="header-nav-item">Resources</button>
-              <button className="header-nav-item">Pricing</button>
-            </nav>
           </div>
           
           {/* Header Actions */}
           <div className="header-actions">
-            <button className="header-demo-link desktop-only">Get a demo</button>
-            <button className="header-login-btn desktop-only">Log in</button>
             <button className="header-signup-btn">Sign up for free</button>
             
             {/* Mobile Hamburger Menu Button - Right aligned on mobile */}
