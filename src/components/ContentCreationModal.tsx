@@ -271,6 +271,16 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
   const [editableContent, setEditableContent] = useState('');
   const [showGeneratedContentModal, setShowGeneratedContentModal] = useState(false);
   
+  // Custom CMS Demo States
+  const [showCustomCMSForm, setShowCustomCMSForm] = useState<boolean>(false);
+  const [isPublishing, setIsPublishing] = useState<boolean>(false);
+  const [publishResult, setPublishResult] = useState<any>(null);
+  const [customCMSConfig, setCustomCMSConfig] = useState({
+    api_endpoint: 'https://api.buttercms.com/v2',
+    api_key: 'demo-api-key-12345',
+    cms_type: 'Butter CMS'
+  });
+  
   const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   const userPromptRef = useRef<HTMLTextAreaElement>(null);
   const variablesMenuRef = useRef<HTMLDivElement>(null);
@@ -1624,6 +1634,64 @@ Return ONLY the JSON object, no additional text.`;
   };
 
   /**
+   * Publish content to custom CMS (demo)
+   * Why this matters: Demonstrates how content can be published to any CMS via API
+   */
+  const publishToCustomCMS = async (status: 'draft' | 'published' = 'draft') => {
+    if (!generatedContent || !metaSeoTitle) {
+      alert('Please generate content first');
+      return;
+    }
+
+    setIsPublishing(true);
+    setPublishResult(null);
+
+    try {
+      console.log('📰 Publishing to CMS:', customCMSConfig);
+
+      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/content/publish-to-cms`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: metaSeoTitle,
+          content: generatedContent,
+          meta_title: metaSeoTitle,
+          meta_description: metaDescription,
+          api_endpoint: customCMSConfig.api_endpoint,
+          api_key: customCMSConfig.api_key,
+          cms_type: customCMSConfig.cms_type,
+          status: status
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to publish content');
+      }
+
+      const data = await response.json();
+      
+      setPublishResult({
+        success: true,
+        ...data.publication,
+        demo_mode: data.demo_mode
+      });
+
+      console.log('✅ Publish successful:', data);
+
+    } catch (error) {
+      console.error('Publication error:', error);
+      setPublishResult({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  /**
    * Scroll to top of the modal
    * Why this matters: Helps users navigate back to top of long articles
    */
@@ -1756,8 +1824,13 @@ Return ONLY the JSON object, no additional text.`;
                     boxShadow: '0 0.0625 0.1875rem rgba(0, 0, 0, 0.05)'
                   }}
                   onClick={() => {
-                    setShowComingSoonMessage(cms.name);
-                    setTimeout(() => setShowComingSoonMessage(null), 3000);
+                    if (cms.name === 'Custom') {
+                      setShowCustomCMSForm(true);
+                      setShowCMSModal(false);
+                    } else {
+                      setShowComingSoonMessage(cms.name);
+                      setTimeout(() => setShowComingSoonMessage(null), 3000);
+                    }
                   }}
                   onMouseOver={(e) => {
                     e.currentTarget.style.backgroundColor = '#f9fafb';
@@ -1883,7 +1956,215 @@ Return ONLY the JSON object, no additional text.`;
     );
   };
 
+  /**
+   * Custom CMS Form Modal - Demo Integration
+   * Why this matters: Allows configuration and testing of custom CMS publishing
+   */
+  const CustomCMSForm = () => {
+    if (!showCustomCMSForm) return null;
 
+    return (
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}
+      >
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '0.75rem',
+          padding: '2rem',
+          maxWidth: '31.25rem',
+          width: '90%',
+          maxHeight: '80vh',
+          overflowY: 'auto'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
+              🧈 Custom CMS Integration (Demo)
+            </h3>
+            <button
+              onClick={() => {
+                setShowCustomCMSForm(false);
+                setPublishResult(null);
+              }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {!publishResult ? (
+            <>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                  CMS Type
+                </label>
+                <input
+                  type="text"
+                  value={customCMSConfig.cms_type}
+                  onChange={(e) => setCustomCMSConfig({...customCMSConfig, cms_type: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '0.0625rem solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem'
+                  }}
+                  placeholder="e.g., Butter CMS, WordPress, Custom"
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                  API Endpoint
+                </label>
+                <input
+                  type="text"
+                  value={customCMSConfig.api_endpoint}
+                  onChange={(e) => setCustomCMSConfig({...customCMSConfig, api_endpoint: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '0.0625rem solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem'
+                  }}
+                  placeholder="https://api.buttercms.com/v2"
+                />
+              </div>
+
+              <div style={{ marginBottom: '2rem' }}>
+                <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                  API Key
+                </label>
+                <input
+                  type="text"
+                  value={customCMSConfig.api_key}
+                  onChange={(e) => setCustomCMSConfig({...customCMSConfig, api_key: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '0.0625rem solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem'
+                  }}
+                  placeholder="demo-api-key-12345"
+                />
+              </div>
+
+              <div style={{ 
+                display: 'flex', 
+                gap: '1rem',
+                justifyContent: 'flex-end'
+              }}>
+                <button
+                  onClick={() => publishToCustomCMS('draft')}
+                  disabled={isPublishing}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontWeight: '500',
+                    cursor: isPublishing ? 'not-allowed' : 'pointer',
+                    opacity: isPublishing ? 0.6 : 1
+                  }}
+                >
+                  {isPublishing ? 'Publishing...' : 'Save as Draft'}
+                </button>
+                
+                <button
+                  onClick={() => publishToCustomCMS('published')}
+                  disabled={isPublishing}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontWeight: '500',
+                    cursor: isPublishing ? 'not-allowed' : 'pointer',
+                    opacity: isPublishing ? 0.6 : 1
+                  }}
+                >
+                  {isPublishing ? 'Publishing...' : 'Publish Live'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center' }}>
+              {publishResult.success ? (
+                <>
+                  <div style={{ color: '#10b981', fontSize: '2rem', marginBottom: '1rem' }}>✅</div>
+                  <h4 style={{ color: '#111827', marginBottom: '1rem' }}>
+                    Content Published Successfully!
+                  </h4>
+                  {publishResult.demo_mode && (
+                    <div style={{ 
+                      backgroundColor: '#fef3c7', 
+                      border: '0.0625rem solid #f59e0b',
+                      borderRadius: '0.5rem',
+                      padding: '0.75rem',
+                      marginBottom: '1rem',
+                      fontSize: '0.875rem',
+                      color: '#92400e'
+                    }}>
+                      🧪 Demo Mode: This is a simulation of the actual publishing process
+                    </div>
+                  )}
+                  <div style={{ textAlign: 'left', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <p><strong>CMS:</strong> {publishResult.cms_type}</p>
+                    <p><strong>Status:</strong> {publishResult.status}</p>
+                    <p><strong>URL:</strong> <a href={publishResult.url} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>{publishResult.url}</a></p>
+                    <p><strong>Post ID:</strong> {publishResult.post_id}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ color: '#ef4444', fontSize: '2rem', marginBottom: '1rem' }}>❌</div>
+                  <h4 style={{ color: '#111827', marginBottom: '1rem' }}>
+                    Publication Failed
+                  </h4>
+                  <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                    {publishResult.error}
+                  </p>
+                </>
+              )}
+              
+              <button
+                onClick={() => {
+                  setShowCustomCMSForm(false);
+                  setPublishResult(null);
+                }}
+                style={{
+                  marginTop: '1.5rem',
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   if (!isOpen) return null;
 
@@ -3262,6 +3543,12 @@ Return ONLY the JSON object, no additional text.`;
           </div>
         </div>
       )}
+
+      {/* Render CMS Modal */}
+      <CMSModal />
+
+      {/* Render Custom CMS Form */}
+      <CustomCMSForm />
     </>
   );
 };
