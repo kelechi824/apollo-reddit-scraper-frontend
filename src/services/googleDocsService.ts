@@ -4,17 +4,7 @@
  * for seamless content publishing workflow using Google Identity Services (GIS).
  */
 
-interface GoogleAuthResponse {
-  access_token: string;
-  expires_in: number;
-  scope: string;
-  token_type: string;
-}
-
-interface GoogleDocsRequest {
-  title: string;
-  content: string;
-}
+// Removed unused interfaces - GoogleAuthResponse and GoogleDocsRequest
 
 // Declare Google Identity Services types
 declare global {

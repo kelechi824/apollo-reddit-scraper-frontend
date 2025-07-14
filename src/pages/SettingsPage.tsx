@@ -29,6 +29,7 @@ const SettingsPage: React.FC = () => {
     if (savedSettings) {
       setSettings({ ...settings, ...JSON.parse(savedSettings) });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**

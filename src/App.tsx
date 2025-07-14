@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import './App.css';
 import Navigation from './components/Navigation';
@@ -68,18 +68,18 @@ const AppLayout: React.FC = () => {
             
             {/* Header Navigation - Show on desktop */}
             <nav className="header-navigation">
-              <a href="#" className="header-nav-item">Platform</a>
-              <a href="#" className="header-nav-item">Roles</a>
-              <a href="#" className="header-nav-item">Resources</a>
-              <a href="#" className="header-nav-item">Pricing</a>
+              <button className="header-nav-item">Platform</button>
+              <button className="header-nav-item">Roles</button>
+              <button className="header-nav-item">Resources</button>
+              <button className="header-nav-item">Pricing</button>
             </nav>
           </div>
           
           {/* Header Actions */}
           <div className="header-actions">
-            <a href="#" className="header-demo-link desktop-only">Get a demo</a>
-            <a href="#" className="header-login-btn desktop-only">Log in</a>
-            <a href="#" className="header-signup-btn">Sign up for free</a>
+            <button className="header-demo-link desktop-only">Get a demo</button>
+            <button className="header-login-btn desktop-only">Log in</button>
+            <button className="header-signup-btn">Sign up for free</button>
             
             {/* Mobile Hamburger Menu Button - Right aligned on mobile */}
             <button 
