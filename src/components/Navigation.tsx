@@ -11,7 +11,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
     <nav className="navigation">
       <div className="nav-menu">
         <div className="nav-section">
-          <div className="nav-section-title">Platform</div>
+          <div className="nav-section-title">Tools</div>
           <NavLink 
             to="/app" 
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
