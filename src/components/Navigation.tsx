@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Clock, Settings, BarChart3, BookOpen } from 'lucide-react';
+import { Clock, Settings, BarChart3, BookOpen, FileText } from 'lucide-react';
 
 interface NavigationProps {
   onItemClick?: () => void;
@@ -19,6 +19,15 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
           >
             <BarChart3 className="nav-icon" />
             Analysis
+          </NavLink>
+          
+          <NavLink 
+            to="/playbooks-creator" 
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onItemClick}
+          >
+            <FileText className="nav-icon" />
+            Playbooks Creator
           </NavLink>
           
           <NavLink 
