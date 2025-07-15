@@ -1,18 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PlaybooksInterface from '../components/PlaybooksInterface';
-
+import PlaybookGenerationModal from '../components/PlaybookGenerationModal';
 
 const PlaybooksPage: React.FC = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedJobTitle, setSelectedJobTitle] = useState('');
+  const [markdownData, setMarkdownData] = useState('');
 
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
 
   /**
-   * Handle playbook generation trigger - Temporarily disabled
-   * Why this matters: Placeholder for future modal integration.
+   * Handle playbook generation trigger
+   * Why this matters: Opens the PlaybookGenerationModal with the processed data to complete the playbook creation workflow.
    */
   const handlePlaybookGenerate = (jobTitle: string, markdown: string) => {
-    // TODO: Re-enable when PlaybookGenerationModal is available
-    console.log('Playbook generation requested for:', jobTitle);
+    setSelectedJobTitle(jobTitle);
+    setMarkdownData(markdown);
+    setIsModalOpen(true);
+  };
+
+  /**
+   * Handle closing the playbook generation modal
+   * Why this matters: Resets modal state when user closes the modal.
+   */
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedJobTitle('');
+    setMarkdownData('');
   };
 
   return (
@@ -29,17 +43,20 @@ const PlaybooksPage: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          {/* Playbook Interface */}
-          <PlaybooksInterface
-            apiUrl={apiUrl}
-            onPlaybookGenerate={handlePlaybookGenerate}
-          />
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PlaybooksInterface
+          apiUrl={apiUrl}
+          onPlaybookGenerate={handlePlaybookGenerate}
+        />
       </div>
 
-      {/* Playbook Generation Modal - Temporarily removed */}
+      {/* Playbook Generation Modal */}
+      <PlaybookGenerationModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        jobTitle={selectedJobTitle}
+        markdownData={markdownData}
+      />
     </div>
   );
 };
