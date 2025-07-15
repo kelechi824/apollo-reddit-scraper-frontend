@@ -1,33 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import PlaybooksInterface from '../components/PlaybooksInterface';
-import PlaybookGenerationModal from '../components/PlaybookGenerationModal';
 
 
 const PlaybooksPage: React.FC = () => {
-  const [showPlaybookModal, setShowPlaybookModal] = useState(false);
-  const [selectedJobTitle, setSelectedJobTitle] = useState<string>('');
-  const [markdownData, setMarkdownData] = useState<string>('');
 
-  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
 
   /**
-   * Handle playbook generation trigger
-   * Why this matters: Opens the modal with the processed job title and markdown data.
+   * Handle playbook generation trigger - Temporarily disabled
+   * Why this matters: Placeholder for future modal integration.
    */
   const handlePlaybookGenerate = (jobTitle: string, markdown: string) => {
-    setSelectedJobTitle(jobTitle);
-    setMarkdownData(markdown);
-    setShowPlaybookModal(true);
-  };
-
-  /**
-   * Handle modal close
-   * Why this matters: Closes the modal and resets the data.
-   */
-  const handleModalClose = () => {
-    setShowPlaybookModal(false);
-    setSelectedJobTitle('');
-    setMarkdownData('');
+    // TODO: Re-enable when PlaybookGenerationModal is available
+    console.log('Playbook generation requested for:', jobTitle);
   };
 
   return (
@@ -54,15 +39,7 @@ const PlaybooksPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Playbook Generation Modal */}
-      {showPlaybookModal && (
-        <PlaybookGenerationModal
-          isOpen={showPlaybookModal}
-          onClose={handleModalClose}
-          jobTitle={selectedJobTitle}
-          markdownData={markdownData}
-        />
-      )}
+      {/* Playbook Generation Modal - Temporarily removed */}
     </div>
   );
 };
