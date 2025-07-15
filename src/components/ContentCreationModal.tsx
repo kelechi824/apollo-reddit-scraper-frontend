@@ -88,11 +88,14 @@ const VariablesMenu: React.FC<{
       style={{
         position: 'fixed',
         top: variablesButtonPosition.top,
+        left: variablesButtonPosition.left,
         backgroundColor: 'white',
         border: '0.0625rem solid #e5e7eb',
         borderRadius: '0.75rem',
         boxShadow: '0 1.5625rem 3.125rem -0.75rem rgba(0, 0, 0, 0.25)',
         zIndex: 10000,
+        width: '25rem',
+        maxHeight: '37.5rem',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column'

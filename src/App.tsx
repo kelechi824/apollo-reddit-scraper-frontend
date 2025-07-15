@@ -5,6 +5,7 @@ import './App.css';
 import Navigation from './components/Navigation';
 import LandingPage from './pages/LandingPage';
 import AppPage from './pages/AppPage';
+import PlaybooksPage from './pages/PlaybooksPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import BrandKitPage from './pages/BrandKitPage';
@@ -107,6 +108,7 @@ const AppLayout: React.FC = () => {
         <div className="page-content">
           <Routes>
             <Route path="/app" element={<AppPage />} />
+            <Route path="/playbooks-creator" element={<PlaybooksPage />} />
             <Route path="/brand-kit" element={<BrandKitPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
