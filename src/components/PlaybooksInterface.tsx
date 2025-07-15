@@ -293,7 +293,7 @@ const PlaybooksInterface: React.FC<PlaybooksInterfaceProps> = ({ apiUrl, onPlayb
     }, 50); // Update every 50ms for smooth animation
 
     try {
-      const response = await fetch(`${apiUrl}/api/playbooks/convert-to-markdown`, {
+      const response = await fetch(`${apiUrl.replace(/\/$/, '')}/api/playbooks/convert-to-markdown`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
