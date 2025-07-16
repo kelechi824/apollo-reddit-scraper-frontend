@@ -1271,6 +1271,17 @@ RETURN ONLY THE JSON OBJECT NOW.`;
     // Remove numbered analysis points at the end
     cleaned = cleaned.replace(/\n\s*\d+\.\s+[A-Z][^<\n]*[\s\S]*$/i, '');
     
+    // Format email templates better - add line breaks after sentences in template sections
+    cleaned = cleaned.replace(/(Template \d+:.*?<\/p>|<p>.*?Template.*?<\/p>)/gi, (match) => {
+      // Add line breaks after periods followed by space and capital letter (sentence boundaries)
+      return match.replace(/\.\s+([A-Z])/g, '.<br><br>$1');
+    });
+    
+    // Add line breaks after common email elements
+    cleaned = cleaned.replace(/(Subject:.*?)([A-Z][a-z])/g, '$1<br><br>$2');
+    cleaned = cleaned.replace(/(Hi \{\{.*?\}\},)\s*([A-Z])/g, '$1<br><br>$2');
+    cleaned = cleaned.replace(/(Best regards,|Best,|Sincerely,)\s*([A-Z\[])/g, '$1<br><br>$2');
+    
     // If content starts with HTML, ensure it starts with a proper tag
     if (cleaned.includes('<') && !cleaned.trim().startsWith('<')) {
       const htmlStart = cleaned.indexOf('<');
@@ -2027,13 +2038,22 @@ RETURN ONLY THE JSON OBJECT NOW.`;
             </button>
           </div>
 
-          {/* Content */}
-          <div className="content-modal-layout" style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+          {          /* Content */}
+          <div className="content-modal-layout" style={{ 
+            flex: 1, 
+            overflow: 'hidden', 
+            display: 'flex',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
             {/* Left Panel - Prompts */}
             <div className="content-modal-panel" style={{ 
               padding: '1.5rem', 
               overflowY: 'auto',
-              borderRight: '0.0625rem solid #e5e7eb'
+              borderRight: '0.0625rem solid #e5e7eb',
+              width: '50%',
+              minWidth: '0',
+              boxSizing: 'border-box'
             }}
             >
               <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem', color: '#374151' }}>
@@ -2111,7 +2131,10 @@ RETURN ONLY THE JSON OBJECT NOW.`;
                     resize: 'vertical',
                     fontFamily: 'inherit',
                     lineHeight: '1.5',
-                    color: '#374151'
+                    color: '#374151',
+                    whiteSpace: 'pre-wrap',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
                   onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -2189,7 +2212,10 @@ RETURN ONLY THE JSON OBJECT NOW.`;
                     resize: 'vertical',
                     fontFamily: 'inherit',
                     lineHeight: '1.5',
-                    color: '#374151'
+                    color: '#374151',
+                    whiteSpace: 'pre-wrap',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
                   onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -2281,7 +2307,13 @@ RETURN ONLY THE JSON OBJECT NOW.`;
             <div ref={rightPanelRef} className="content-modal-panel" style={{ 
               position: 'relative',
               padding: '1.5rem',
-              overflowY: 'auto'
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              width: '50%',
+              minWidth: '0',
+              boxSizing: 'border-box'
             }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 className="mobile-only-heading" style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0, marginBottom: '1rem' }}>Generated Playbook</h3>
@@ -2531,9 +2563,9 @@ RETURN ONLY THE JSON OBJECT NOW.`;
                     {showCopiedMessage && (
                       <div style={{
                         position: 'absolute',
-                        top: '3rem',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
+                        top: '50%',
+                        left: '100%',
+                        transform: 'translate(0.5rem, -50%)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.375rem',
@@ -2562,7 +2594,11 @@ RETURN ONLY THE JSON OBJECT NOW.`;
                   padding: '2rem',
                   minHeight: '25rem',
                   backgroundColor: 'white',
-                  boxShadow: '0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.1)'
+                  boxShadow: '0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.1)',
+                  overflowX: 'auto',
+                  overflowY: 'visible',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word'
                 }}>
                   {/* Meta SEO Fields - Show at the top */}
                   {(metaSeoTitle || metaDescription) && (
@@ -2590,9 +2626,9 @@ RETURN ONLY THE JSON OBJECT NOW.`;
                           {showMetaTitleCopied && (
                             <div style={{
                               position: 'absolute',
-                              top: '2rem',
-                              left: '50%',
-                              transform: 'translateX(-50%)',
+                              top: '50%',
+                              left: '100%',
+                              transform: 'translate(0.5rem, -50%)',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '0.375rem',
@@ -2635,9 +2671,9 @@ RETURN ONLY THE JSON OBJECT NOW.`;
                           {showMetaDescCopied && (
                             <div style={{
                               position: 'absolute',
-                              top: '2rem',
-                              left: '50%',
-                              transform: 'translateX(-50%)',
+                              top: '50%',
+                              left: '100%',
+                              transform: 'translate(0.5rem, -50%)',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '0.375rem',
@@ -2702,7 +2738,10 @@ RETURN ONLY THE JSON OBJECT NOW.`;
                         resize: 'vertical',
                         fontFamily: 'inherit',
                         lineHeight: '1.6',
-                        color: '#374151'
+                        color: '#374151',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        overflowWrap: 'break-word'
                       }}
                       onFocus={(e) => e.target.style.borderColor = '#d97706'}
                       onBlur={(e) => e.target.style.borderColor = '#f59e0b'}
@@ -2889,31 +2928,58 @@ RETURN ONLY THE JSON OBJECT NOW.`;
                         Google Docs
                       </button>
 
-                      <button
-                        onClick={copyToClipboard}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1rem',
-                          backgroundColor: '#6b7280',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875rem',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          minHeight: '2.75rem',
-                          minWidth: '7.5rem',
-                          justifyContent: 'center'
-                        }}
-                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
-                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
-                      >
-                        <Copy size={14} />
-                        Copy
-                      </button>
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          onClick={copyToClipboard}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.75rem 1rem',
+                            backgroundColor: '#6b7280',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            minHeight: '2.75rem',
+                            minWidth: '7.5rem',
+                            justifyContent: 'center'
+                          }}
+                          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
+                          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
+                        >
+                          <Copy size={14} />
+                          Copy
+                        </button>
+                        
+                        {/* Copied message */}
+                        {showCopiedMessage && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '100%',
+                            transform: 'translate(0.5rem, -50%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                            padding: '0.5rem 0.75rem',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                            zIndex: 1000
+                          }}>
+                            <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                            Copied!
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Clear Button - Full width on mobile */}
