@@ -810,15 +810,16 @@ Make intent obvious in both markup and layout:
 - Use semantic HTML like definition lists, tables, and other semantic HTML elements to enhance structure
 
 CONTENT STRUCTURE REQUIREMENTS:
-1. Create an H1 title in question format that directly addresses the target audience's pain point
-2. Use H2 subheadings as questions that AI engines can easily extract and answer
-3. Provide direct, definitive answers immediately after each question
-4. Structure content for maximum AI extractability using:
-   - Clear data tables with specific metrics
+1. Start with H1 class headline in question format addressing the target audience's pain point
+2. Follow with strong introduction paragraph, then immediately include "When is the Best Time to Email [TARGET PROSPECT]?" section with timing table
+3. Use H2 subheadings as questions that AI engines can easily extract and answer
+4. Include ALL mandatory sections in the specified order: timing, subject lines, creative insights, email length, templates, follow-up, avoidance, personalization, implementation, takeaways, methodology
+5. Structure content for maximum AI extractability using:
+   - Clear data tables with specific metrics (especially for timing and email length)
+   - Complete email templates (minimum 2)
    - Numbered lists for processes/steps
    - Bullet points for key insights
-   - Code blocks for templates/examples
-   - Blockquotes for important quotes or examples
+   - Actionable implementation guidance
 
 OPTIMIZATION FOR AI ANSWER ENGINES:
 - Write headlines that match how users search ("When should...", "What are...", "How do...")
@@ -844,11 +845,12 @@ MARKDOWN FORMATTING:
 - Bold important metrics and key terms
 
 TARGET AUDIENCE FOCUS:
-- Write for Sales Executives, SDRs, and Account Executives (AEs) who need to reach [TARGET PROSPECT TYPE]
-- Address their specific pain points and challenges in prospecting and outreach
-- Provide actionable steps they can implement immediately in their sales process
-- Use terminology and examples relevant to B2B sales roles
-- Focus on metrics that matter to sales performance (open rates, response rates, conversion rates)
+- Write for Sales Executives, SDRs, and Account Executives (AEs) who need to email [TARGET PROSPECTS]
+- Address their specific pain points and challenges in email prospecting and outreach
+- Provide actionable email strategies they can implement immediately in their sales process
+- Use terminology and examples relevant to B2B email sales
+- Focus on email metrics that matter to sales performance (open rates, response rates, reply rates, meeting conversions)
+- Emphasize timing insights, subject line optimization, and email personalization strategies
 
 ATTRIBUTION EXAMPLES:
 ✅ GOOD: "According to Apollo's analysis of millions of email interactions, [TARGET PROSPECTS] engage most..."
@@ -863,26 +865,26 @@ CONTENT VALIDATION:
 Before finalizing, ask yourself:
 1. Does every statistic come directly from the provided data? (NO FABRICATED NUMBERS!)
 2. Have I avoided creating fake specific statistics like "Apollo analyzed 50,000 emails" or similar fabricated data points?
-3. Could a competitor easily replicate this content without access to our proprietary data?
-4. Are the insights specific and actionable for the target audience?
-5. Can AI engines easily extract and cite key information?
-6. Does each section provide a complete answer to its headline question?
-7. Is Apollo clearly established as the authoritative source without over-branding?
-8. Can content creators easily cite this with proper attribution?
-9. Are the recommendations immediately implementable by sales professionals?
-10. Does the content address real pain points in sales outreach and prospecting?
-11. Have I used general attribution terms instead of specific fabricated numbers?
+3. Have I included ALL mandatory sections: H1 headline, introduction, timing section with table, subject lines, creative insights, email length with table, templates (minimum 2), follow-up, avoidance, personalization, implementation, takeaways, and methodology?
+4. Does the timing section include a detailed table and summary of insights?
+5. Are there at least 2 complete email templates in the templates section?
+6. Are the insights specific and actionable for email outreach?
+7. Can AI engines easily extract and cite key email timing and strategy information?
+8. Does each section provide a complete answer to its headline question?
+9. Is Apollo clearly established as the authoritative source without over-branding?
+10. Are the recommendations immediately implementable by sales professionals?
+11. Does the content address real pain points in email prospecting and outreach?
+12. Have I used general attribution terms instead of specific fabricated numbers?
 
 OUTPUT FORMAT:
-- Return clean markdown format
-- Start with H1 title in question format
-- Follow with brief summary paragraph containing key data point
-- Structure remaining content as question-based H2 sections
-- Before "Data Methodology" section, YOU MUST include a nice summary of the data and the insights that the reader can take away
-- End with data methodology section that clearly attributes Apollo and Pythia
+- Return clean HTML format (not markdown)
+- Start with H1 class headline in question format
+- Follow the MANDATORY CONTENT STRUCTURE exactly as specified above
+- Include all required sections in the specified order
+- End with Data Methodology section that clearly attributes Apollo and Pythia
 
 DATA METHODOLOGY TEMPLATE:
-"This analysis is based on Apollo's proprietary sales intelligence data analyzed through Pythia. The research draws from extensive B2B interaction data to identify optimal strategies for [TARGET AUDIENCE] reaching [TARGET PROSPECTS]. Pythia's machine learning analysis of real sales communications provides the insights and patterns highlighted in this playbook."
+"This analysis is based on Apollo's proprietary sales intelligence data analyzed through Pythia. The research draws from extensive B2B interaction data to identify optimal email strategies for reaching ${jobTitle}s. Pythia's machine learning analysis of real sales communications provides the timing insights, subject line patterns, and engagement data highlighted in this playbook."
 
 IMPORTANT: The current year is ${currentYear}. When referencing "current year," "this year," or discussing recent trends, always use ${currentYear}. Do not reference ${currentYear - 1} or earlier years as current.
 
@@ -894,39 +896,67 @@ Remember: The goal is to become the canonical source that AI engines cite when u
 
 **Processed Data:**
 ${markdownData}
-**Content Requirements (remember we are in 2025):**
-1. Create an H1 title that directly addresses the pain point in question format
-2. Write comprehensive content that provides definitive answers
-3. Include practical examples and actionable insights
-4. Use semantic HTML structure with proper heading hierarchy
-5. Include relevant internal linking opportunities
-6. Optimize for AI-powered search engines (ChatGPT, Perplexity, Gemini)
-7. Ensure content is non-promotional and genuinely helpful
-8. Include data points, statistics, or specific examples where relevant
-9. Use {{ brand_kit.ideal_customer_profile }} to inject customer testimonials only one time within the body of the content where appropriate
-10. Promote Apollo at the end of the article using our  {{ brand_kit.cta_text }}  {{ brand_kit.cta_destination }}. Open the CTA destination in a new tab (i.e., target_blank).
-11. DO NOT use emdashes (—) in the content
-12. AVOID AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..." - use natural, human-like language instead
-13. The content must contain at least 2 sample email templates that are relevant to the data. When you say things like "Pythia's analysis identified two high-performing templates for CRO engagement", you MUST provide 2 sample templates.
-14. The content must contain a H2 section about "Don'ts" that is a list of things not to do or avoid.
-15. Use tables to display data (like best times to send emails) in a clear and concise manner.
-16. Before "Data Methodology" section, YOU MUST include a nice summary of the data and the insights that the reader can take away.
-17. Always end SEO Title with "| Apollo" (No character limit restrictions on SEO Titles)
 
-**CRITICAL OUTPUT FORMAT: Respond with a JSON object containing exactly three fields:**
+**MANDATORY CONTENT STRUCTURE (remember we are in 2025):**
 
-{
-  "content": "HTML content here",
-  "metaSeoTitle": "SEO title",
-  "metaDescription": "Meta description (150-160 characters)"
-}
+1. **H1 Headline**: Start with an H1 class headline that directly addresses the pain point in question format
 
-**Requirements for each field:**
-- content: Clean HTML content without markdown code blocks or explanatory text
-- metaSeoTitle: Optimized for search engines, 50-60 characters, includes primary keyword
-- metaDescription: Compelling description that encourages clicks, 150-160 characters, includes primary keyword and value proposition
+2. **Strong Introduction**: Write a compelling introduction paragraph followed immediately by:
 
-Return ONLY the JSON object, no additional text.`;
+3. **"When is the Best Time to Email ${jobTitle}?"** section with:
+   - A detailed table showing optimal email timing data
+   - Summary of timing insights below the table
+
+4. **REQUIRED SECTIONS (in this order):**
+   - "What Subject Lines Drive the Highest Engagement with ${jobTitle}?"
+   - Creative insight section like "Why Do ${jobTitle} Open Emails at 3 AM on Saturday?" (base this on actual data insights)
+   - "What Is the Optimal Email Length for ${jobTitle}?" with "Optimal Email Length by Outreach Stage" table
+   - "What are the Most Effective Email Templates for ${jobTitle} Outreach?" (must include at least 2 complete email templates)
+   - "How Should [TARGET AUDIENCE] Follow Up with ${jobTitle}?"
+   - "What Should You Avoid When Emailing ${jobTitle}?"
+   - "What Personalization Elements Matter Most to ${jobTitle}?"
+   - "How Can [TARGET AUDIENCE] Implement This ${jobTitle} Email Strategy?" (provide immediate actions and long-term strategy)
+   - "Key Takeaways and Summary"
+   - "Data Methodology"
+
+**Content Quality Requirements:**
+1. Use semantic HTML structure with proper heading hierarchy (H1 → H2 → H3)
+2. Include practical examples and actionable insights throughout
+3. Optimize for AI-powered search engines (ChatGPT, Perplexity, Gemini)
+4. Ensure content is non-promotional and genuinely helpful
+5. Include specific data points, statistics, and examples from the provided data
+6. Use {{ brand_kit.ideal_customer_profile }} to inject customer testimonials only once within the body content where appropriate
+7. Promote Apollo at the end using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }} (open in new tab)
+8. DO NOT use emdashes (—) in the content
+9. AVOID AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..."
+10. Use natural, human-like language throughout
+11. Use tables to display all data clearly and professionally
+12. Generate SEO Title within 70 characters total INCLUDING "| Apollo" suffix - create concise, complete titles that capture the core value
+
+**CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED**
+
+Your response must be a single line JSON object with three fields: content, metaSeoTitle, metaDescription
+
+ABSOLUTE REQUIREMENTS:
+- Start your response with opening brace and end with closing brace
+- NO text before the JSON
+- NO text after the JSON  
+- NO markdown code blocks
+- NO explanations like "Here is your JSON:"
+- ALL HTML must be in the "content" field as properly escaped JSON string
+- CRITICAL: Escape ALL quotes with backslashes (\" not "), escape newlines as \\n, escape tabs as \\t
+- CRITICAL: Do NOT include literal newlines or unescaped quotes in JSON strings - this breaks parsing
+- metaSeoTitle MUST be 70 characters or less INCLUDING "| Apollo" suffix (generate concise, complete titles)
+- metaDescription MUST be 150-160 characters
+
+EXAMPLES OF WRONG FORMAT:
+- Here is your JSON: [JSON object]
+- [JSON object wrapped in markdown code blocks]
+- Any explanatory text before or after the JSON
+
+CORRECT FORMAT: Pure JSON object starting with opening brace, ending with closing brace, no other text.
+
+RETURN ONLY THE JSON OBJECT NOW.`;
 
     setSystemPrompt(systemPromptTemplate);
     setUserPrompt(userPromptTemplate);
@@ -1016,36 +1046,127 @@ Return ONLY the JSON object, no additional text.`;
   };
 
   /**
+   * Extract fields from malformed JSON using regex patterns
+   * Why this matters: Handles cases where AI generates JSON with unescaped characters that break JSON.parse()
+   */
+  const extractFieldsFromMalformedJSON = (responseText: string): { content: string; metaSeoTitle: string; metaDescription: string } => {
+    console.log('🔧 Attempting field extraction from malformed JSON');
+    
+    let content = '';
+    let metaSeoTitle = '';
+    let metaDescription = '';
+    
+    try {
+      // Extract content field - look for "content": and find the value until the next field
+      const contentMatch = responseText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"(?:metaSeoTitle|metaDescription)"/);
+      if (contentMatch) {
+        content = contentMatch[1]
+          .replace(/\\"/g, '"')  // Unescape quotes
+          .replace(/\\n/g, '\n') // Unescape newlines
+          .replace(/\\t/g, '\t') // Unescape tabs
+          .replace(/\\\\/g, '\\'); // Unescape backslashes
+        console.log('✅ Extracted content field');
+      }
+      
+      // Extract metaSeoTitle field
+      const titleMatch = responseText.match(/"metaSeoTitle"\s*:\s*"([^"]*?)"/);
+      if (titleMatch) {
+        metaSeoTitle = titleMatch[1];
+        console.log('✅ Extracted metaSeoTitle field:', metaSeoTitle);
+      }
+      
+      // Extract metaDescription field
+      const descMatch = responseText.match(/"metaDescription"\s*:\s*"([^"]*?)"/);
+      if (descMatch) {
+        metaDescription = descMatch[1];
+        console.log('✅ Extracted metaDescription field:', metaDescription);
+      }
+      
+    } catch (error) {
+      console.log('❌ Field extraction failed:', error);
+    }
+    
+    return { content, metaSeoTitle, metaDescription };
+  };
+
+  /**
    * Parse AI response and extract JSON fields
    * Why this matters: Properly extracts content, metaSeoTitle, and metaDescription from AI JSON response.
    */
   const parseAIResponse = (responseText: string): { content: string; metaSeoTitle: string; metaDescription: string } => {
+    // Add detailed logging for debugging
+    console.log('🔍 Raw AI Response Length:', responseText.length);
+    console.log('🔍 Raw AI Response Preview:', responseText.substring(0, 200) + '...');
+    console.log('🔍 Raw AI Response End:', '...' + responseText.substring(responseText.length - 200));
+    
     try {
       // Clean the response text first
       let cleanedResponse = responseText.trim();
+      
+      // Remove any markdown code blocks that might be wrapping the JSON
+      cleanedResponse = cleanedResponse.replace(/^```json\s*/i, '');
+      cleanedResponse = cleanedResponse.replace(/\s*```$/i, '');
+      cleanedResponse = cleanedResponse.replace(/^```\s*/i, '');
+      
+      console.log('🔍 Cleaned Response Length:', cleanedResponse.length);
+      console.log('🔍 Cleaned Response Preview:', cleanedResponse.substring(0, 200) + '...');
       
       // First, try to parse the entire response as JSON
       let parsed;
       try {
         parsed = JSON.parse(cleanedResponse);
-      } catch {
-        // If that fails, try to extract JSON with a more aggressive approach
-        const jsonMatches = cleanedResponse.match(/\{[^{}]*"content"[^{}]*"metaSeoTitle"[^{}]*"metaDescription"[^{}]*\}/g) ||
-                           cleanedResponse.match(/\{[^{}]*"metaSeoTitle"[^{}]*"metaDescription"[^{}]*"content"[^{}]*\}/g) ||
-                           cleanedResponse.match(/\{[\s\S]*?\}/g);
+        console.log('✅ Successfully parsed entire response as JSON');
+      } catch (parseError) {
+        console.log('❌ Failed to parse entire response as JSON:', parseError);
         
-        if (jsonMatches && jsonMatches.length > 0) {
-          // Try the longest match first (most likely to be complete)
-          const sortedMatches = jsonMatches.sort((a, b) => b.length - a.length);
+        // Try to find JSON object boundaries more carefully
+        let jsonStart = cleanedResponse.indexOf('{');
+        let jsonEnd = cleanedResponse.lastIndexOf('}');
+        
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+          const potentialJson = cleanedResponse.substring(jsonStart, jsonEnd + 1);
+          console.log('🔍 Extracted potential JSON:', potentialJson.substring(0, 200) + '...');
           
-          for (const match of sortedMatches) {
-            try {
-              parsed = JSON.parse(match);
-              if (parsed && typeof parsed === 'object' && (parsed.content || parsed.metaSeoTitle || parsed.metaDescription)) {
-                break;
+          try {
+            parsed = JSON.parse(potentialJson);
+            console.log('✅ Successfully parsed extracted JSON');
+          } catch (extractError) {
+            console.log('❌ Failed to parse extracted JSON:', extractError);
+            
+            // Try more aggressive pattern matching
+            const jsonMatches = cleanedResponse.match(/\{[^{}]*"content"[^{}]*"metaSeoTitle"[^{}]*"metaDescription"[^{}]*\}/g) ||
+                               cleanedResponse.match(/\{[^{}]*"metaSeoTitle"[^{}]*"metaDescription"[^{}]*"content"[^{}]*\}/g) ||
+                               cleanedResponse.match(/\{[\s\S]*?\}/g);
+            
+            console.log('🔍 Pattern matches found:', jsonMatches?.length || 0);
+            
+            if (jsonMatches && jsonMatches.length > 0) {
+              // Try the longest match first (most likely to be complete)
+              const sortedMatches = jsonMatches.sort((a, b) => b.length - a.length);
+              
+              for (let i = 0; i < sortedMatches.length; i++) {
+                const match = sortedMatches[i];
+                console.log(`🔍 Trying match ${i + 1}:`, match.substring(0, 100) + '...');
+                
+                try {
+                  parsed = JSON.parse(match);
+                  if (parsed && typeof parsed === 'object' && (parsed.content || parsed.metaSeoTitle || parsed.metaDescription)) {
+                    console.log('✅ Successfully parsed match', i + 1);
+                    break;
+                  }
+                } catch (matchError) {
+                  console.log(`❌ Failed to parse match ${i + 1}:`, matchError);
+                  
+                  // Try individual field extraction as final fallback
+                  const extractedFields = extractFieldsFromMalformedJSON(cleanedResponse);
+                  if (extractedFields.content || extractedFields.metaSeoTitle || extractedFields.metaDescription) {
+                    console.log('✅ Successfully extracted fields from malformed JSON');
+                    parsed = extractedFields;
+                    break;
+                  }
+                  continue;
+                }
               }
-            } catch {
-              continue;
             }
           }
         }
@@ -1057,22 +1178,36 @@ Return ONLY the JSON object, no additional text.`;
         const hasTitle = parsed.metaSeoTitle && typeof parsed.metaSeoTitle === 'string';
         const hasDescription = parsed.metaDescription && typeof parsed.metaDescription === 'string';
         
+        console.log('🔍 Parsed object structure:', {
+          hasContent,
+          hasTitle,
+          hasDescription,
+          keys: Object.keys(parsed)
+        });
+        
         if (hasContent || hasTitle || hasDescription) {
           console.log('✅ Successfully parsed JSON response:', {
             hasContent,
             hasTitle,
-            hasDescription
+            hasDescription,
+            contentLength: hasContent ? parsed.content.length : 0,
+            titleLength: hasTitle ? parsed.metaSeoTitle.length : 0,
+            descLength: hasDescription ? parsed.metaDescription.length : 0
           });
           
           return {
             content: hasContent ? cleanAIContent(parsed.content) : cleanAIContent(responseText),
-            metaSeoTitle: hasTitle ? parsed.metaSeoTitle.substring(0, 60) : '', // Limit to 60 chars
+            metaSeoTitle: hasTitle ? parsed.metaSeoTitle : '', // Let AI generate proper length titles
             metaDescription: hasDescription ? parsed.metaDescription.substring(0, 160) : '' // Limit to 160 chars
           };
+        } else {
+          console.log('❌ Parsed object missing required fields');
         }
+      } else {
+        console.log('❌ Failed to get valid parsed object');
       }
     } catch (error) {
-      console.log('❌ Failed to parse as JSON:', error);
+      console.log('❌ Unexpected error in parseAIResponse:', error);
     }
 
     console.log('⚠️ Falling back to legacy content parsing');
@@ -1086,16 +1221,21 @@ Return ONLY the JSON object, no additional text.`;
     const descMatch = responseText.match(/"metaDescription"\s*:\s*"([^"]+)"/);
     
     if (titleMatch) {
-      extractedTitle = titleMatch[1].substring(0, 60);
+      extractedTitle = titleMatch[1]; // Let AI generate proper length titles
+      console.log('🔍 Extracted title via regex:', extractedTitle);
     }
     
     if (descMatch) {
       extractedDescription = descMatch[1].substring(0, 160);
+      console.log('🔍 Extracted description via regex:', extractedDescription);
     }
     
     // Fallback to legacy content cleaning
+    const cleanedContent = cleanAIContent(responseText);
+    console.log('🔍 Cleaned content length:', cleanedContent.length);
+    
     return {
-      content: cleanAIContent(responseText),
+      content: cleanedContent,
       metaSeoTitle: extractedTitle,
       metaDescription: extractedDescription
     };
@@ -1585,6 +1725,196 @@ Return ONLY the JSON object, no additional text.`;
   };
 
   /**
+   * Open HTML content in new window for developer review
+   * Why this matters: Allows developers to inspect the raw HTML output for debugging and integration.
+   */
+  const openInHTML = () => {
+    const contentToOpen = isEditingContent ? editableContent : generatedPlaybook;
+    if (!contentToOpen) {
+      alert('No content to display. Please generate a playbook first.');
+      return;
+    }
+
+    // Create a simple HTML page showing the raw HTML source
+    const rawHtmlDisplay = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw HTML Source - ${metaSeoTitle || `${jobTitle} Playbook`}</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        
+        .header {
+            background-color: #2d2d30;
+            padding: 20px;
+            margin: -20px -20px 20px -20px;
+            border-bottom: 3px solid #007acc;
+        }
+        
+        .header h1 {
+            color: #4ec9b0;
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        
+        .header p {
+            color: #9cdcfe;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .meta-info {
+            background-color: #252526;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .meta-info h3 {
+            color: #f59e0b;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        
+        .meta-field {
+            margin: 8px 0;
+            color: #d4d4d4;
+            font-size: 13px;
+        }
+        
+        .meta-label {
+            color: #4fc1ff;
+            font-weight: bold;
+        }
+        
+        .code-container {
+            background-color: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 5px;
+            position: relative;
+        }
+        
+        .code-header {
+            background-color: #2d2d30;
+            padding: 10px 15px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-title {
+            color: #cccccc;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .copy-btn {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: inherit;
+        }
+        
+        .copy-btn:hover {
+            background-color: #1177bb;
+        }
+        
+        .code-content {
+            padding: 20px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .html-code {
+            color: #d4d4d4;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        /* HTML syntax highlighting */
+        .html-tag { color: #569cd6; }
+        .html-attr { color: #92c5f7; }
+        .html-value { color: #ce9178; }
+        .html-text { color: #d4d4d4; }
+        
+        
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Raw HTML Source Code</h1>
+        <p><strong>Playbook:</strong> ${jobTitle} Outreach Strategy</p>
+        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+    </div>
+    
+    ${metaSeoTitle || metaDescription ? `
+    <div class="meta-info">
+        <h3>📋 Meta Information</h3>
+        ${metaSeoTitle ? `<div class="meta-field"><span class="meta-label">SEO Title:</span> ${metaSeoTitle}</div>` : ''}
+        ${metaDescription ? `<div class="meta-field"><span class="meta-label">Description:</span> ${metaDescription}</div>` : ''}
+         </div>
+     ` : ''}
+     
+     <div class="code-container">
+        <div class="code-header">
+            <span class="code-title">HTML Source Code</span>
+            <button class="copy-btn" onclick="copyHtmlCode()">📋 Copy HTML</button>
+        </div>
+        <div class="code-content">
+            <pre class="html-code" id="htmlCode">${contentToOpen.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+        </div>
+    </div>
+    
+    <script>
+        function copyHtmlCode() {
+            const htmlCode = \`${contentToOpen.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
+            navigator.clipboard.writeText(htmlCode).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.backgroundColor = '#10b981';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.backgroundColor = '#0e639c';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy HTML. Please select and copy manually.');
+            });
+        }
+    </script>
+</body>
+</html>`;
+
+    // Open in new window
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      newWindow.document.write(rawHtmlDisplay);
+      newWindow.document.close();
+    } else {
+      alert('Please allow popups to view the HTML source code.');
+    }
+  };
+
+  /**
    * Toggle edit mode for generated playbook
    * Why this matters: Allows users to edit the generated playbook before using it.
    */
@@ -2050,6 +2380,43 @@ Return ONLY the JSON object, no additional text.`;
                     )}
                   </button>
 
+                  {/* Open in HTML Button */}
+                  <button
+                    onClick={openInHTML}
+                    className="content-modal-btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#7c3aed',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      minHeight: '2.75rem', // Touch-friendly
+                      minWidth: '7.5rem',
+                      justifyContent: 'center'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#6d28d9';
+                      e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#7c3aed';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m6 16 6-12 6 12H6Z"/>
+                      <path d="m8 12 8 0"/>
+                    </svg>
+                    Open in HTML
+                  </button>
+
                   <button
                     onClick={() => setShowCMSModal(true)}
                     className="content-modal-btn"
@@ -2404,6 +2771,42 @@ Return ONLY the JSON object, no additional text.`;
                             Edit Playbook
                           </>
                         )}
+                      </button>
+
+                      {/* Open in HTML Button */}
+                      <button
+                        onClick={openInHTML}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          backgroundColor: '#7c3aed',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          minHeight: '2.75rem',
+                          minWidth: '7.5rem',
+                          justifyContent: 'center'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#6d28d9';
+                          e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#7c3aed';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m6 16 6-12 6 12H6Z"/>
+                          <path d="m8 12 8 0"/>
+                        </svg>
+                        Open in HTML
                       </button>
 
                       <button
