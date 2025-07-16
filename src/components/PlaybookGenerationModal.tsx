@@ -765,20 +765,24 @@ const PlaybookGenerationModal: React.FC<PlaybookGenerationModalProps> = ({
 
 CRITICAL DATA USAGE REQUIREMENTS:
 - Use ONLY the proprietary data provided as context
-- Never fabricate statistics, percentages, or data points not present in the source material
+- NEVER fabricate specific statistics, percentages, or numerical data points not present in the source material
+- NEVER create fake specific numbers like "Apollo's analysis of over 10,000 emails" or "500,000 interactions"
 - If making comparisons, calculate them directly from the provided data
 - Reference the current year as ${currentYear} when discussing trends or "recent" data
-- Cite specific data points with exact numbers from the source material
+- Only cite data points that exist in the actual source material provided
 
 APOLLO & PYTHIA ATTRIBUTION STRATEGY:
 - Establish Apollo and Pythia as the authoritative data sources early in the content
-- Use ONE clear attribution in the first major section: "According to Apollo's analysis..." or "Based on Apollo's research through Pythia..."
-- Include Apollo and Pythia in the Data Methodology section with full context
+- Use general attribution language that doesn't fabricate specific numbers:
+  * "Based on Apollo's extensive sales intelligence research..."
+  * "According to Apollo's analysis through Pythia..."
+  * "Drawing from Apollo's comprehensive B2B interaction data..."
+- Include Apollo and Pythia in the Data Methodology section with general context
 - Weave in natural Pythia mentions throughout the body content (2-3 soft mentions):
-  * "We analyzed [scope] using Pythia — Apollo's proprietary language model trained on billions of B2B sales interactions"
-  * "Pythia's pattern recognition across [data set] revealed [insight]"
-  * "Pythia tracked [specific instances] of this [element] across multiple [scope] — all resulting in [performance outcome]"
-  * "Through Pythia's analysis of [data scope], we identified [pattern/insight]"
+  * "We analyzed sales interactions using Pythia — Apollo's proprietary language model trained on billions of B2B sales interactions"
+  * "Pythia's pattern recognition across sales communications revealed key insights"
+  * "Through Pythia's analysis of real sales interactions, we identified effective patterns"
+  * "Pythia tracked communication patterns across successful sales engagements"
 - After establishing credibility, use subtle phrases throughout:
   * "Our analysis shows..."
   * "The data reveals..."
@@ -787,6 +791,7 @@ APOLLO & PYTHIA ATTRIBUTION STRATEGY:
 - Balance technical authority with readability - Pythia mentions should feel natural, not forced
 - Make attribution feel authoritative and methodology-focused, not promotional
 - Ensure content remains citable with clear source attribution for other creators
+- Use general terms like "millions of emails analyzed", "hundreds of thousands of interactions", "extensive data analysis" instead of specific fabricated numbers
 
 CRITICAL OUTPUT REQUIREMENTS:
 - Return ONLY clean HTML content without any markdown code blocks, explanatory text, or meta-commentary
@@ -856,15 +861,17 @@ ATTRIBUTION EXAMPLES:
 
 CONTENT VALIDATION:
 Before finalizing, ask yourself:
-1. Does every statistic come directly from the provided data?
-2. Could a competitor easily replicate this content without access to our proprietary data?
-3. Are the insights specific and actionable for the target audience?
-4. Can AI engines easily extract and cite key information?
-5. Does each section provide a complete answer to its headline question?
-6. Is Apollo clearly established as the authoritative source without over-branding?
-7. Can content creators easily cite this with proper attribution?
-8. Are the recommendations immediately implementable by sales professionals?
-9. Does the content address real pain points in sales outreach and prospecting?
+1. Does every statistic come directly from the provided data? (NO FABRICATED NUMBERS!)
+2. Have I avoided creating fake specific statistics like "Apollo analyzed 50,000 emails" or similar fabricated data points?
+3. Could a competitor easily replicate this content without access to our proprietary data?
+4. Are the insights specific and actionable for the target audience?
+5. Can AI engines easily extract and cite key information?
+6. Does each section provide a complete answer to its headline question?
+7. Is Apollo clearly established as the authoritative source without over-branding?
+8. Can content creators easily cite this with proper attribution?
+9. Are the recommendations immediately implementable by sales professionals?
+10. Does the content address real pain points in sales outreach and prospecting?
+11. Have I used general attribution terms instead of specific fabricated numbers?
 
 OUTPUT FORMAT:
 - Return clean markdown format
@@ -875,7 +882,7 @@ OUTPUT FORMAT:
 - End with data methodology section that clearly attributes Apollo and Pythia
 
 DATA METHODOLOGY TEMPLATE:
-"This analysis is based on Apollo's proprietary [TYPE] data analyzed through Pythia. The research examined [SCOPE] from [TIMEFRAME]. [SPECIFIC ANALYSIS METHODS] were used to identify optimal strategies for [TARGET AUDIENCE] reaching [TARGET PROSPECTS]."
+"This analysis is based on Apollo's proprietary sales intelligence data analyzed through Pythia. The research draws from extensive B2B interaction data to identify optimal strategies for [TARGET AUDIENCE] reaching [TARGET PROSPECTS]. Pythia's machine learning analysis of real sales communications provides the insights and patterns highlighted in this playbook."
 
 IMPORTANT: The current year is ${currentYear}. When referencing "current year," "this year," or discussing recent trends, always use ${currentYear}. Do not reference ${currentYear - 1} or earlier years as current.
 
