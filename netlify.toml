@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = "build"
+
+[build.environment]
+  REACT_APP_API_URL = "https://apollo-reddit-scraper-backend.vercel.app"
+  REACT_APP_APP_NAME = "Apollo Reddit Scraper"
+  CI = "false"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 
