@@ -956,7 +956,105 @@ EXAMPLES OF WRONG FORMAT:
 
 CORRECT FORMAT: Pure JSON object starting with opening brace, ending with closing brace, no other text.
 
-RETURN ONLY THE JSON OBJECT NOW.`;
+RETURN ONLY THE JSON OBJECT NOW.
+
+EXAMPLE OF CONTENT:
+
+How Do You Successfully Email VP of Sales in 2025?
+
+Reaching VP of Sales requires precise timing and messaging that respects their busy schedules. Based on Apollo's extensive sales intelligence research analyzed through Pythia, we've identified optimal engagement patterns that maximize response rates from VPs of Sales. This comprehensive playbook provides data-driven strategies for successful outreach.
+
+When is the Best Time to Email VP of Sales?
+Day	Time	Open Rate
+Sunday	1:00 AM	18.62%
+Wednesday	3:00 AM	18.34%
+Wednesday	1:00 AM	17.64%
+
+Our analysis reveals that VP of Sales are most responsive during off-hours, particularly early morning hours midweek. This pattern suggests they often review emails during quiet periods before their day begins.
+
+What Subject Lines Drive the Highest Engagement with VP of Sales?
+
+Through Pythia's analysis of successful email campaigns, these subject line approaches showed highest engagement:
+
+Direct value propositions (e.g., "Stop wasting time in Powerpoint")
+Company-specific references (e.g., "Growth at {{company}}")
+Team productivity focuses (e.g., "Help your team perfect their pitch")
+Why Do VP of Sales Open Emails at 3 AM on Wednesday?
+
+Our data shows a unique pattern where VPs of Sales demonstrate highest engagement between 1-3 AM on Wednesdays, with an 18.34% open rate. This timing coincides with their early morning review sessions before the day's meetings begin.
+
+What Is the Optimal Email Length for VP of Sales?
+Outreach Stage	Recommended Length	Key Elements
+Initial Contact	4-5 short paragraphs	Value proposition, credibility, clear CTA
+Follow-up	2-3 paragraphs	Previous context, specific ask
+What are the Most Effective Email Templates for VP of Sales Outreach?
+Template 1: Value-First Approach
+Subject: Accelerating growth at {{company}}
+
+Hi {{first_name}},
+
+I noticed {{company}}'s recent expansion and wanted to share how we're helping similar sales organizations scale their revenue operations.
+
+Three quick points relevant to your team:
+- Automated prospecting workflows increasing team efficiency by 40%
+- AI-powered lead scoring identifying highest-potential opportunities
+- Integrated sales intelligence reducing research time by 60%
+
+Would you be open to a 15-minute discussion about how these approaches could support your growth targets?
+
+Best regards,
+{{sender_name}}
+
+Template 2: Peer Insight Approach
+Subject: Sales productivity insights from your peers
+
+Hi {{first_name}},
+
+I've been working with several VP of Sales in {{industry}} who faced similar challenges scaling their teams efficiently.
+
+Specifically, they were looking to:
+- Reduce time spent on non-selling activities
+- Improve prospecting accuracy
+- Accelerate deal velocity
+
+I'd love to share how they solved these challenges. Would you be open to a brief conversation?
+
+Best,
+{{sender_name}}
+
+How Should Sales Teams Follow Up with VP of Sales?
+
+Based on Apollo's analysis through Pythia, successful follow-up strategies include:
+
+Wait 3-4 business days between touches
+Reference specific company initiatives or news
+Provide new value in each communication
+Limit follow-ups to 3-4 attempts per sequence
+What Should You Avoid When Emailing VP of Sales?
+Generic pitches without company context
+Long, unfocused messages
+Multiple calls to action
+Aggressive or presumptive language
+What Personalization Elements Matter Most to VP of Sales?
+Company growth initiatives
+Recent leadership changes
+Industry-specific challenges
+Peer company insights
+How Can Sales Teams Implement This VP of Sales Email Strategy?
+Audit current timing patterns against optimal windows
+Revise templates to match successful formats
+Implement personalization at scale
+Monitor and adjust based on engagement metrics
+Key Takeaways and Summary
+Early morning outreach (1-3 AM) shows highest engagement
+Value-focused subject lines drive better open rates
+Personalization based on company context is crucial
+Brief, focused messages perform best
+Data Methodology
+
+This analysis is based on Apollo's proprietary sales intelligence data analyzed through Pythia. The research draws from extensive B2B interaction data to identify optimal email strategies for reaching VP of Sales. Pythia's machine learning analysis of real sales communications provides the timing insights, subject line patterns, and engagement data highlighted in this playbook.
+
+Ready to implement these strategies? Try Apollo free to access our complete suite of sales intelligence and engagement tools.`;
 
     setSystemPrompt(systemPromptTemplate);
     setUserPrompt(userPromptTemplate);
