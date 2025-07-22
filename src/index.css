@@ -5427,6 +5427,14 @@ html {
 
 /* ===== END TASK 4.3: PERFORMANCE AND LOADING OPTIMIZATION ===== */
 
+/* ===== CONCURRENT PROCESSING ENHANCEMENTS ===== */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===== END CONCURRENT PROCESSING ENHANCEMENTS ===== */
+
 /* ===== TASK 5.1: CROSS-DEVICE TESTING AND OPTIMIZATION ===== */
 
 /* Device-Specific Breakpoints for Testing */
