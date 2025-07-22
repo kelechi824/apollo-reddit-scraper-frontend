@@ -353,7 +353,7 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
                   }}>
                     {isCurrentStage('firecrawl') ? 
                       '🔍 Currently analyzing competitor websites...' : 
-                      'Waiting for competitor analysis to begin...'}
+                      'Scraping the top 3 search results on Google...'}
                   </div>
                 )}
               </div>
@@ -433,8 +433,8 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
                     padding: '1rem'
                   }}>
                     {isCurrentStage('deep_research') ? 
-                      '🧠 Performing comprehensive deep research (3-5 minutes)...' : 
-                      'Waiting for deep research to begin...'}
+                      '🧠 Performing comprehensive deep research...' : 
+                      'Performing deep research...'}
                   </div>
                 )}
               </div>
@@ -520,7 +520,7 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
                   }}>
                     {isCurrentStage('gap_analysis') ? 
                       '📊 Analyzing content gaps with GPT-4.1 nano...' : 
-                      'Waiting for gap analysis to begin...'}
+                      'Conducting content gap analysis for opportunities...'}
                   </div>
                 )}
               </div>
@@ -599,7 +599,7 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
                   }}>
                     {isCurrentStage('content_generation') ? 
                       '✨ Generating article with Claude Sonnet 4...' : 
-                      'Waiting for content generation to begin...'}
+                      'Gathering insights from Step 1, 2, and 3 to generate content...'}
                   </div>
                 )}
               </div>
