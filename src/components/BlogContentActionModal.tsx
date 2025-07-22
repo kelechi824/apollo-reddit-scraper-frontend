@@ -401,6 +401,57 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
         font-weight: 600;
         color: #111827;
       }
+
+      .generated-content-display table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.5rem 0;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .generated-content-display thead {
+        background-color: #f9fafb;
+      }
+
+      .generated-content-display th {
+        padding: 0.875rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #374151;
+        border-bottom: 2px solid #e5e7eb;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .generated-content-display td {
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #f3f4f6;
+        color: #6b7280;
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }
+
+      .generated-content-display tbody tr:hover {
+        background-color: #f9fafb;
+      }
+
+      .generated-content-display tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .generated-content-display th:first-child,
+      .generated-content-display td:first-child {
+        padding-left: 1.25rem;
+      }
+
+      .generated-content-display th:last-child,
+      .generated-content-display td:last-child {
+        padding-right: 1.25rem;
+      }
     `;
     document.head.appendChild(style);
     
@@ -474,7 +525,7 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
 
   /**
    * Clean AI-generated content by removing unwanted commentary and formatting
-   * Why this matters: Ensures clean HTML output by stripping AI meta-commentary and markdown formatting.
+   * Why this matters: Ensures clean HTML output by stripping AI meta-commentary and converting markdown to HTML.
    */
   const cleanAIContent = (content: string): string => {
     let cleaned = content;
@@ -493,6 +544,54 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
     cleaned = cleaned.replace(/```html\s*/gi, '');
     cleaned = cleaned.replace(/```\s*/g, '');
     
+    // Convert markdown headers to HTML headers
+    // Why this matters: AI sometimes returns markdown instead of HTML despite instructions
+    cleaned = cleaned.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    cleaned = cleaned.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    cleaned = cleaned.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    
+    // Convert markdown bold and italic to HTML
+    cleaned = cleaned.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    cleaned = cleaned.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    
+    // Convert markdown lists to HTML lists
+    // Handle unordered lists (- or *)
+    cleaned = cleaned.replace(/(?:^|\n)([*-]\s+.+(?:\n[*-]\s+.+)*)/gm, (match) => {
+      const items = match.trim().split('\n').map(line => {
+        const item = line.replace(/^[*-]\s+/, '').trim();
+        return `  <li>${item}</li>`;
+      }).join('\n');
+      return `<ul>\n${items}\n</ul>`;
+    });
+    
+    // Handle ordered lists (1. 2. etc.)
+    cleaned = cleaned.replace(/(?:^|\n)(\d+\.\s+.+(?:\n\d+\.\s+.+)*)/gm, (match) => {
+      const items = match.trim().split('\n').map(line => {
+        const item = line.replace(/^\d+\.\s+/, '').trim();
+        return `  <li>${item}</li>`;
+      }).join('\n');
+      return `<ol>\n${items}\n</ol>`;
+    });
+    
+    // Convert remaining plain text paragraphs to HTML paragraphs
+    // Split by double newlines and wrap non-HTML content in <p> tags
+    const lines = cleaned.split(/\n\s*\n/);
+    cleaned = lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return '';
+      
+      // Skip if already HTML (contains < and >)
+      if (trimmed.includes('<') && trimmed.includes('>')) {
+        return trimmed;
+      }
+      
+      // Skip if it's just a single word or very short
+      if (trimmed.length < 3) return trimmed;
+      
+      // Wrap in paragraph tags
+      return `<p>${trimmed}</p>`;
+    }).join('\n\n');
+    
     // Remove explanatory text at the end (typically starts with patterns like "This content structure:")
     cleaned = cleaned.replace(/\n\s*This content structure:[\s\S]*$/i, '');
     cleaned = cleaned.replace(/\n\s*Would you like me to[\s\S]*$/i, '');
@@ -502,6 +601,17 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
     // Remove numbered analysis points at the end
     cleaned = cleaned.replace(/\n\s*\d+\.\s+[A-Z][^<\n]*[\s\S]*$/i, '');
     
+    // Format email templates better - add line breaks after sentences in template sections
+    cleaned = cleaned.replace(/(Template \d+:.*?<\/p>|<p>.*?Template.*?<\/p>)/gi, (match) => {
+      // Add line breaks after periods followed by space and capital letter (sentence boundaries)
+      return match.replace(/\.\s+([A-Z])/g, '.<br><br>$1');
+    });
+    
+    // Add line breaks after common email elements
+    cleaned = cleaned.replace(/(Subject:.*?)([A-Z][a-z])/g, '$1<br><br>$2');
+    cleaned = cleaned.replace(/(Hi \{\{.*?\}\},)\s*([A-Z])/g, '$1<br><br>$2');
+    cleaned = cleaned.replace(/(Best regards,|Best,|Sincerely,)\s*([A-Z\[])/g, '$1<br><br>$2');
+    
     // If content starts with HTML, ensure it starts with a proper tag
     if (cleaned.includes('<') && !cleaned.trim().startsWith('<')) {
       const htmlStart = cleaned.indexOf('<');
@@ -510,8 +620,8 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       }
     }
     
-    // Trim whitespace
-    cleaned = cleaned.trim();
+    // Trim whitespace and clean up extra newlines
+    cleaned = cleaned.trim().replace(/\n{3,}/g, '\n\n');
     
     return cleaned;
   };
@@ -624,7 +734,7 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
           
           return {
             content: hasContent ? cleanAIContent(parsed.content) : cleanAIContent(responseText),
-            metaSeoTitle: hasTitle ? parsed.metaSeoTitle.substring(0, 70) : '', // Limit to 70 chars including Apollo suffix
+            metaSeoTitle: hasTitle ? parsed.metaSeoTitle : '', // Let AI generate proper length titles
             metaDescription: hasDescription ? parsed.metaDescription.substring(0, 160) : '' // Limit to 160 chars
           };
         } else {
@@ -648,7 +758,7 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
     const descMatch = responseText.match(/"metaDescription"\s*:\s*"([^"]+)"/);
     
     if (titleMatch) {
-      extractedTitle = titleMatch[1].substring(0, 70); // Limit to 70 chars including Apollo suffix
+      extractedTitle = titleMatch[1]; // Let AI generate proper length titles
       console.log('🔍 Extracted title via regex:', extractedTitle);
     }
     
@@ -671,28 +781,40 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
   // Initialize content from keywordRow when modal opens
   useEffect(() => {
     if (isOpen && keywordRow) {
-      // Set content directly from keywordRow (already processed HTML)
-      const content = keywordRow.output || '';
-      setGeneratedContent(content);
-      setEditableContent(content);
-      setIsEditingContent(false);
+      // Load saved data first
+      loadSavedData();
       
-      console.log('📊 Initializing BlogContentActionModal for keyword:', keywordRow.keyword);
-      
-      // Generate AI-powered meta fields from keyword and content
-      // Why this matters: Creates dynamic, contextually relevant meta fields instead of templates
-      console.log('🚀 Starting AI meta field generation...');
-      generateAIMetaFields(keywordRow.keyword, content).then(metaFields => {
-        console.log('✅ Generated AI meta fields:', metaFields);
-        setMetaSeoTitle(metaFields.metaSeoTitle);
-        setMetaDescription(metaFields.metaDescription);
-      }).catch(error => {
-        console.error('❌ Failed to generate AI meta fields - falling back to templates:', error);
-        console.error('❌ Error details:', error.message || error);
-        // Use simple fallbacks if AI generation fails
-        setMetaSeoTitle(generateFallbackTitle(keywordRow.keyword));
-        setMetaDescription(generateFallbackDescription(keywordRow.keyword));
-      });
+      // Set content directly from keywordRow (already processed HTML) only if no saved content
+      const savedContent = localStorage.getItem(`apollo_blog_content_draft_${keywordRow.id}`);
+      if (!savedContent) {
+        const content = keywordRow.output || '';
+        setGeneratedContent(content);
+        setEditableContent(content);
+        setIsEditingContent(false);
+        
+        console.log('📊 Initializing BlogContentActionModal for keyword:', keywordRow.keyword);
+        
+        // Generate AI-powered meta fields from keyword and content
+        // Why this matters: Creates dynamic, contextually relevant meta fields instead of templates
+        console.log('🚀 Starting AI meta field generation...');
+        generateAIMetaFields(keywordRow.keyword, content).then(metaFields => {
+          console.log('✅ Generated AI meta fields:', metaFields);
+          setMetaSeoTitle(metaFields.metaSeoTitle);
+          setMetaDescription(metaFields.metaDescription);
+          // Auto-save the generated meta fields
+          autoSaveContent(content, metaFields.metaSeoTitle, metaFields.metaDescription);
+        }).catch(error => {
+          console.error('❌ Failed to generate AI meta fields - falling back to templates:', error);
+          console.error('❌ Error details:', error.message || error);
+          // Use simple fallbacks if AI generation fails
+          const fallbackTitle = generateFallbackTitle(keywordRow.keyword);
+          const fallbackDescription = generateFallbackDescription(keywordRow.keyword);
+          setMetaSeoTitle(fallbackTitle);
+          setMetaDescription(fallbackDescription);
+          // Auto-save the fallback meta fields
+          autoSaveContent(content, fallbackTitle, fallbackDescription);
+        });
+      }
       
       // Load brand kit
       const loadBrandKit = () => {
@@ -711,10 +833,146 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
 
       loadBrandKit();
       
-      // Generate prompts based on keyword
-      generateInitialPrompts();
+      // Generate prompts based on keyword only if no saved prompts
+      const savedPrompts = localStorage.getItem(`apollo_blog_prompts_draft_${keywordRow.id}`);
+      if (!savedPrompts) {
+        generateInitialPrompts();
+      }
     }
   }, [isOpen, keywordRow]);
+
+  /**
+   * Load saved auto-save data from localStorage
+   * Why this matters: Restores user's work when reopening the modal
+   */
+  const loadSavedData = () => {
+    if (!keywordRow) return;
+    
+    try {
+      // Load saved prompts
+      const savedPrompts = localStorage.getItem(`apollo_blog_prompts_draft_${keywordRow.id}`);
+      if (savedPrompts) {
+        const parsedPrompts = JSON.parse(savedPrompts);
+        setSystemPrompt(parsedPrompts.systemPrompt || '');
+        setUserPrompt(parsedPrompts.userPrompt || '');
+        console.log('✅ Loaded saved prompts for keyword:', keywordRow.keyword);
+      }
+      
+      // Load saved content and meta fields
+      const savedContent = localStorage.getItem(`apollo_blog_content_draft_${keywordRow.id}`);
+      if (savedContent) {
+        const parsedContent = JSON.parse(savedContent);
+        setGeneratedContent(parsedContent.content || '');
+        setEditableContent(parsedContent.content || '');
+        setMetaSeoTitle(parsedContent.metaSeoTitle || '');
+        setMetaDescription(parsedContent.metaDescription || '');
+        console.log('✅ Loaded saved content for keyword:', keywordRow.keyword);
+      }
+      
+    } catch (error) {
+      console.error('Error loading saved data:', error);
+    }
+  };
+
+  /**
+   * Auto-save prompts with debouncing
+   * Why this matters: Saves user's prompt changes automatically without overwhelming localStorage
+   */
+  const autoSavePrompts = () => {
+    if (!keywordRow || !hasUserInput) return;
+    
+    // Clear existing timeout
+    if (autoSaveTimeout) {
+      clearTimeout(autoSaveTimeout);
+    }
+    
+    setAutoSaveStatus('saving');
+    
+    // Set new timeout for debounced saving
+    const timeout = setTimeout(() => {
+      try {
+        const promptsData = {
+          systemPrompt,
+          userPrompt,
+          lastModified: new Date().toISOString()
+        };
+        
+        localStorage.setItem(`apollo_blog_prompts_draft_${keywordRow.id}`, JSON.stringify(promptsData));
+        setAutoSaveStatus('saved');
+        
+        // Clear saved status after 2 seconds
+        setTimeout(() => setAutoSaveStatus(''), 2000);
+        
+        console.log('💾 Auto-saved prompts for keyword:', keywordRow.keyword);
+        
+      } catch (error) {
+        console.error('Error auto-saving prompts:', error);
+        setAutoSaveStatus('');
+      }
+    }, 1000); // 1 second debounce
+    
+    setAutoSaveTimeout(timeout);
+  };
+
+  /**
+   * Auto-save content and meta fields immediately
+   * Why this matters: Preserves generated content without delay since it's less frequent than prompt changes
+   */
+  const autoSaveContent = (content: string, title: string, description: string) => {
+    if (!keywordRow) return;
+    
+    try {
+      const contentData = {
+        content,
+        metaSeoTitle: title,
+        metaDescription: description,
+        lastModified: new Date().toISOString()
+      };
+      
+      localStorage.setItem(`apollo_blog_content_draft_${keywordRow.id}`, JSON.stringify(contentData));
+      console.log('💾 Auto-saved content for keyword:', keywordRow.keyword);
+      
+    } catch (error) {
+      console.error('Error auto-saving content:', error);
+    }
+  };
+
+  /**
+   * Clear auto-save data for this keyword
+   * Why this matters: Cleans up localStorage when user explicitly clears content
+   */
+  const clearAutoSaveData = () => {
+    if (!keywordRow) return;
+    
+    try {
+      localStorage.removeItem(`apollo_blog_prompts_draft_${keywordRow.id}`);
+      localStorage.removeItem(`apollo_blog_content_draft_${keywordRow.id}`);
+      console.log('🗑️ Cleared auto-save data for keyword:', keywordRow.keyword);
+    } catch (error) {
+      console.error('Error clearing auto-save data:', error);
+    }
+  };
+
+  // Auto-save prompts when they change
+  useEffect(() => {
+    autoSavePrompts();
+  }, [systemPrompt, userPrompt]);
+
+  // Auto-save content when it changes
+  useEffect(() => {
+    if (generatedContent || metaSeoTitle || metaDescription) {
+      autoSaveContent(generatedContent, metaSeoTitle, metaDescription);
+    }
+  }, [generatedContent, metaSeoTitle, metaDescription]);
+
+  // Cleanup auto-save timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+      }
+    };
+  }, [autoSaveTimeout]);
 
   /**
    * Generate dynamic AI-powered meta fields using Claude
@@ -814,14 +1072,8 @@ Respond with JSON:
    */
   const generateFallbackTitle = (keyword: string): string => {
     const cleanKeyword = keyword.trim();
-    const suffix = " Guide 2025 | Apollo";
-    const maxLength = 70 - suffix.length;
-    
-    if (cleanKeyword.length <= maxLength) {
-      return `${cleanKeyword.charAt(0).toUpperCase() + cleanKeyword.slice(1)}${suffix}`;
-    } else {
-      return `${cleanKeyword.substring(0, maxLength - 3)}...${suffix}`;
-    }
+    const suffix = " - Complete Guide | Apollo";
+    return `${cleanKeyword.charAt(0).toUpperCase() + cleanKeyword.slice(1)}${suffix}`;
   };
 
   /**
@@ -829,7 +1081,7 @@ Respond with JSON:
    * Why this matters: Provides a backup when AI service is unavailable
    */
   const generateFallbackDescription = (keyword: string): string => {
-    return `Discover expert insights and proven strategies for ${keyword}. Comprehensive guide with actionable advice from Apollo.`;
+    return `Comprehensive guide to ${keyword} with expert insights and proven strategies. Learn data-driven approaches to drive results with Apollo.`;
   };
 
   /**
@@ -846,70 +1098,187 @@ Respond with JSON:
    */
   const generateInitialPrompts = () => {
     const currentYear = new Date().getFullYear();
-    const systemPromptTemplate = `You are a world-class SEO, AEO, and LLM SEO content marketer for Apollo with knowledge on how to create and optimize content that gets cited and visibility on platforms like Google, AI Overviews, AI Mode, ChatGPT, Perplexity, Gemini, and AI IDE tools like Cursor, Windsurf, GitHub Copilot, and Claude. Write clear, actionable, and insightful content that reflects Apollo's innovative, data-driven, and customer-focused ethos. Maintain a confident, helpful tone that positions Apollo as the go-to solution for modern sales and marketing teams seeking efficiency and growth.
+    const systemPromptTemplate = `You are a world-class SEO, AEO, and LLM SEO content marketer for Apollo with deep expertise in creating comprehensive, AI-optimized articles that rank highly and get cited by AI answer engines (ChatGPT, Perplexity, Gemini, Claude, etc.). Your specialty is transforming content briefs into definitive resources that become the go-to sources for specific topics.
+
+CRITICAL CONTENT PHILOSOPHY:
+Your goal is to create content that becomes the definitive, comprehensive resource on the topic - the content that other creators reference and that AI engines cite as authoritative.
+
+CONTENT COVERAGE REQUIREMENTS:
+- Address ALL aspects of the topic comprehensively
+- Include practical, actionable guidance that readers can implement
+- Provide genuine value that advances knowledge in the space
+- Cover both current best practices AND emerging trends
+- Include specific examples, metrics, and concrete details
+
+AEO (ANSWER ENGINE OPTIMIZATION) PRINCIPLES:
+- Structure for extractability with clear, self-contained insights
+- Use semantic HTML and proper heading hierarchy (<h1> → <h2> → <h3>)
+- Format data in proper <table> and <ul>/<ol> structures for easy AI parsing
+- Include specific examples, metrics, and concrete details
+- Write headlines that match search intent ("How to...", "What is...", "Best ways to...")
+- Place the most important answer in the first paragraph under each heading
+
+FORMATTING REQUIREMENTS:
+1. **Proper HTML Structure:**
+   - Use <h1> for main title, <h2> for major sections, <h3> for subsections
+   - Format all lists with proper <ul>, <ol>, and <li> tags
+   - Use <table> elements for any comparative data, features, or structured information
+   - Include <p> tags for all paragraphs
+   - Use <strong> for emphasis and key concepts
+   - Format links as: <a href="URL" target="_blank">anchor text</a>
+
+2. **Tables and Structured Data:**
+   - When presenting comparisons, features, pricing, or any structured data, ALWAYS use HTML tables
+   - Include proper <thead>, <tbody>, <th>, and <td> elements
+   - Use tables for: feature comparisons, pricing tiers, pros/cons, statistics, timelines, etc.
+   - Example format:
+   <table>
+     <thead>
+       <tr><th>Feature</th><th>Benefit</th><th>Implementation</th></tr>
+     </thead>
+     <tbody>
+       <tr><td>Data Enrichment</td><td>270M+ contacts</td><td>API integration</td></tr>
+     </tbody>
+   </table>
+
+3. **Brand Kit Variable Integration:**
+   - MUST process and include brand kit variables naturally throughout content
+   - Use {{ brand_kit.ideal_customer_profile }} for testimonials and customer examples
+   - Include {{ brand_kit.competitors }} when discussing competitive landscape
+   - Reference {{ brand_kit.brand_point_of_view }} in strategic sections
+   - End with strong CTA using {{ brand_kit.cta_text }} and {{ brand_kit.cta_destination }}
+   - Apply {{ brand_kit.tone_of_voice }} consistently throughout
+   - Follow {{ brand_kit.writing_rules }} for style and approach
 
 IMPORTANT: The current year is ${currentYear}. When referencing "current year," "this year," or discussing recent trends, always use ${currentYear}. Do not reference 2024 or earlier years as current.
 
 CRITICAL OUTPUT REQUIREMENTS:
 - Return ONLY clean HTML content without any markdown code blocks, explanatory text, or meta-commentary
-- DO NOT include phrases like "Here's the content:" or HTML code block markers or closing explanations
-- DO NOT provide analysis or explanations about the content structure after the HTML
+- DO NOT include phrases like "Here's the content:" or HTML code block markers
 - Start directly with the HTML content and end with the closing HTML tag
 - No markdown formatting, no code block indicators, no explanatory paragraphs
 
-Always remember to make headlines and sub-headlines in question format and provide direct answers to questions immediately.
+CONTENT STRUCTURE REQUIREMENTS:
+1. **Compelling H1 Headline** (question format when appropriate)
+2. **Authority-Establishing Introduction** (preview value and set expectations)
+3. **Comprehensive Sections** with proper H2/H3 hierarchy
+4. **Tables for Structured Data** (comparisons, features, statistics)
+5. **Practical Implementation Guidance** with step-by-step processes
+6. **Real-World Examples** and case studies (using brand kit data)
+7. **Strong Conclusion** with clear next steps and CTA
 
-Make intent obvious in both markup and layout:
-- Use consistent terminology and clean heading hierarchies (H1 → H2 → H3)
-- Use semantic elements where possible. Callouts, glossary terms, nav sections with clear class names or ARIA labels
-- Use semantic HTML like definition lists, tables, and other semantic HTML elements to enhance structure
+BRAND INTEGRATION GUIDELINES:
+- Lead with value and insights, not promotional content
+- Use brand context to enhance credibility and expertise
+- Include specific outcomes and metrics where relevant
+- Position brand solutions naturally within comprehensive guidance
+- Focus on helping readers achieve their goals first
 
-LLMs favor the first or clearest explanation of a concept. If you're early, your version may become the default. If not, aim to be the most definitive.
+Remember: Create the definitive resource that makes other content feel incomplete by comparison. Every section should provide genuine value and actionable insights.`;
 
-Content Creation Guidelines:
-- Identify low-competition, high-opportunity topics where you can become the source
-- Find gaps where competitors are shallow or absent
-- Share original data, benchmarks, customer stories, or insights that are hard to copy
-- Go beyond surface-level coverage
-- Include metrics, code blocks, tables, lists, quotes, and diagrams
-- Use precise, consistent terminology. Fuzzy synonyms weaken embeddings
-- Write for extraction. Short, self-contained insights are more likely to be cited
-- Aim to be the canonical source in your niche
-
-The litmus test: Ask yourself, "Could a competitor easily replicate this tomorrow?" If the answer is yes, dig deeper.`;
-
-    const userPromptTemplate = `Based on this keyword, create comprehensive AEO-optimized content for ${currentYear}:
+    const userPromptTemplate = `Based on this keyword and brand context, create comprehensive AEO-optimized content for ${currentYear}:
 
 **Target Keyword:** ${keywordRow.keyword}
 
-**Content Requirements (remember we are in ${currentYear}):**
-1. Create an H1 title that directly addresses the keyword in question format
-2. Write comprehensive content that provides definitive answers
-3. Include practical examples and actionable insights
-4. Use semantic HTML structure with proper heading hierarchy
-5. Include relevant internal linking opportunities
-6. Optimize for AI-powered search engines (ChatGPT, Perplexity, Gemini)
-7. Ensure content is non-promotional and genuinely helpful
-8. Include data points, statistics, or specific examples where relevant
-9. Use {{ brand_kit.ideal_customer_profile }} to inject customer testimonials only one time within the body of the content where appropriate
-10. Promote Apollo at the end of the article using our {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }}. Open the CTA destination in a new tab (i.e., target_blank).
-11. DO NOT use emdashes (—) in the content
-12. AVOID AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..." - use natural, human-like language instead
+**CRITICAL CONTENT REQUIREMENTS:**
+
+1. **HTML Structure & Formatting:**
+   - Create an H1 title that directly addresses the keyword (use question format when appropriate)
+   - Use proper heading hierarchy with H2 for major sections, H3 for subsections
+   - Format ALL lists with proper <ul>/<ol> and <li> tags
+   - Create HTML tables for ANY structured data (features, comparisons, statistics, timelines)
+   - Use <p> tags for all paragraphs, <strong> for emphasis
+
+2. **Required Tables/Structured Data:**
+   - Include at least 2-3 HTML tables presenting relevant information such as:
+     * Feature comparisons or capability matrices
+     * Implementation timelines or process steps
+     * Statistics or performance metrics
+     * Pricing or value comparisons
+     * Best practices checklist
+   - Format tables with proper <thead>, <tbody>, <th>, and <td> elements
+
+3. **Brand Kit Variable Integration (MANDATORY):**
+   - Use {{ brand_kit.ideal_customer_profile }} to include customer testimonials or examples (at least once)
+   - Reference {{ brand_kit.competitors }} when discussing market landscape
+   - Apply {{ brand_kit.brand_point_of_view }} in strategic sections
+   - Follow {{ brand_kit.tone_of_voice }} throughout the content
+   - Implement {{ brand_kit.writing_rules }} for style consistency
+   - End with compelling CTA using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }} (target="_blank")
+
+4. **Content Depth & Value:**
+   - Provide comprehensive coverage that serves as the definitive resource
+   - Include practical, actionable guidance with specific examples
+   - Address both current best practices and emerging trends for ${currentYear}
+   - Cover implementation strategies with step-by-step processes
+   - Include relevant metrics, benchmarks, and data points
+
+5. **AEO Optimization:**
+   - Structure content for AI answer engine extraction
+   - Use semantic HTML elements appropriately
+   - Include self-contained insights that can be cited independently
+   - Write clear, precise language that AI can easily understand
+   - Format for both deep reading and quick reference
+
+6. **Technical Requirements:**
+   - Do NOT use emdashes (—) in the content
+   - Avoid AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..."
+   - Use natural, human-like language throughout
+   - Include inline links to relevant external resources: <a href="URL" target="_blank">anchor text</a>
+
+**Content Quality Requirements:**
+1. Use semantic HTML structure with proper heading hierarchy (H1 → H2 → H3)
+2. Include practical examples and actionable insights throughout
+3. Optimize for AI-powered search engines (ChatGPT, Perplexity, Gemini)
+4. Ensure content is non-promotional and genuinely helpful
+5. Include specific data points, statistics, and examples from the provided data
+6. Use {{ brand_kit.ideal_customer_profile }} to inject customer testimonials only once within the body content where appropriate
+7. Promote Apollo at the end using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }} (open in new tab)
+8. DO NOT use emdashes (—) in the content
+9. AVOID AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..."
+10. Use natural, human-like language throughout
+11. Use tables to display all data clearly and professionally
+12. Generate SEO Title within 70 characters total INCLUDING "| Apollo" suffix - create concise, complete titles that capture the core value
 
 **CRITICAL OUTPUT FORMAT: Respond with a JSON object containing exactly three fields:**
 
 {
-  "content": "HTML content here",
-  "metaSeoTitle": "SEO title (50-60 characters)",
-  "metaDescription": "Meta description (150-160 characters)"
+  "content": "Complete HTML article with proper structure, tables, and brand kit variables processed",
+  "metaSeoTitle": "SEO-optimized title (50-60 characters including | Apollo)",
+  "metaDescription": "Compelling meta description (150-160 characters) that avoids formulaic phrases"
 }
 
-**Requirements for each field:**
-- content: Clean HTML content without markdown code blocks or explanatory text
-- metaSeoTitle: Optimized for search engines, 50-60 characters, includes primary keyword
-- metaDescription: Compelling description that encourages clicks, 150-160 characters, includes primary keyword and value proposition
+**CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED**
 
-Return ONLY the JSON object, no additional text.`;
+Your response must be a single line JSON object with three fields: content, metaSeoTitle, metaDescription
+
+ABSOLUTE REQUIREMENTS:
+- Start your response with opening brace and end with closing brace
+- NO text before the JSON
+- NO text after the JSON  
+- NO markdown code blocks
+- NO explanations like "Here is your JSON:"
+- ALL HTML must be in the "content" field as properly escaped JSON string
+- CRITICAL: Escape ALL quotes with backslashes (\\" not "), escape newlines as \\n, escape tabs as \\t
+- CRITICAL: Do NOT include literal newlines or unescaped quotes in JSON strings - this breaks parsing
+- metaSeoTitle MUST be 70 characters or less INCLUDING "| Apollo" suffix (generate concise, complete titles)
+- metaDescription MUST be 150-160 characters
+
+EXAMPLES OF WRONG FORMAT:
+- Here is your JSON: [JSON object]
+- [JSON object wrapped in markdown code blocks]
+- Any explanatory text before or after the JSON
+
+CORRECT FORMAT: Pure JSON object starting with opening brace, ending with closing brace, no other text.
+
+**Quality Standards:**
+- Content should be comprehensive enough to serve as the definitive resource on ${keywordRow.keyword}
+- All brand kit variables must be properly processed and integrated
+- Tables must be included for structured data presentation
+- HTML formatting must be clean and semantic
+- Focus on providing genuine value and actionable insights
+
+Return ONLY the JSON object with the three required fields. No additional text or explanations.`;
 
     setSystemPrompt(systemPromptTemplate);
     setUserPrompt(userPromptTemplate);
@@ -1244,6 +1613,8 @@ Return ONLY the JSON object, no additional text.`;
     if (isEditingContent) {
       // Save the edited content
       setGeneratedContent(editableContent);
+      // Auto-save the edited content
+      autoSaveContent(editableContent, metaSeoTitle, metaDescription);
       // Update the original keyword row if callback provided
       if (onContentUpdate) {
         onContentUpdate(keywordRow.id, editableContent);
@@ -1271,13 +1642,23 @@ Return ONLY the JSON object, no additional text.`;
       const processedSystemPrompt = processLiquidVariables(systemPrompt, brandKit);
       const processedUserPrompt = processLiquidVariables(userPrompt, brandKit);
 
+      // Create proper post_context structure that the backend expects
+      const postContext = {
+        title: `${keywordRow.keyword} - Comprehensive Guide`,
+        content: keywordRow.output || '',
+        pain_point: `Content creation and optimization for ${keywordRow.keyword}`,
+        content_opportunity: `Create comprehensive, AEO-optimized content for ${keywordRow.keyword} that outranks competitors`,
+        audience_summary: brandKit.idealCustomerProfile || 'Business professionals seeking solutions'
+      };
+
       const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/content/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          keyword: keywordRow.keyword,
+          post_context: postContext,
+          brand_kit: brandKit,
           system_prompt: processedSystemPrompt,
           user_prompt: processedUserPrompt
         }),
@@ -1289,14 +1670,29 @@ Return ONLY the JSON object, no additional text.`;
 
       const data = await response.json();
       
+      // Handle the response - it might be a single content string or array
+      let contentResult = '';
+      if (data.content) {
+        if (Array.isArray(data.content)) {
+          contentResult = data.content[0] || '';
+        } else {
+          contentResult = data.content;
+        }
+      } else if (data.variations && Array.isArray(data.variations)) {
+        contentResult = data.variations[0] || '';
+      }
+      
       // Parse the AI response to extract all fields
-      const parsedResponse = parseAIResponse(data.content);
+      const parsedResponse = parseAIResponse(contentResult);
       
       setGeneratedContent(parsedResponse.content);
       setEditableContent(parsedResponse.content);
       setIsEditingContent(false);
       setMetaSeoTitle(parsedResponse.metaSeoTitle);
       setMetaDescription(parsedResponse.metaDescription);
+
+      // Auto-save the newly generated content
+      autoSaveContent(parsedResponse.content, parsedResponse.metaSeoTitle, parsedResponse.metaDescription);
 
       // Update the original keyword row if callback provided
       if (onContentUpdate) {
@@ -1305,7 +1701,53 @@ Return ONLY the JSON object, no additional text.`;
 
     } catch (error) {
       console.error('Error generating content:', error);
-      alert('Failed to generate content. Please try again.');
+      
+      // Fallback content
+      const fallbackContent = `
+        <h1>${keywordRow.keyword.charAt(0).toUpperCase() + keywordRow.keyword.slice(1)} Guide</h1>
+        
+        <h2>Executive Summary</h2>
+        <p>This comprehensive guide provides expert insights and proven strategies for ${keywordRow.keyword}, leveraging Apollo's data-driven approach to sales and marketing.</p>
+        
+        <h2>Key Challenges</h2>
+        <p>Understanding the critical challenges around ${keywordRow.keyword} that modern businesses face and how to address them effectively.</p>
+        
+        <h2>Strategic Framework</h2>
+        <p>Core strategies and best practices for ${keywordRow.keyword}:</p>
+        <ul>
+          <li>Data-driven insights and analytics</li>
+          <li>Proven methodologies and tactics</li>
+          <li>Implementation roadmaps</li>
+          <li>Performance measurement</li>
+        </ul>
+        
+        <h2>Implementation Strategy</h2>
+        <p>Step-by-step approach to implementing effective ${keywordRow.keyword} strategies within your organization.</p>
+        
+        <h2>Success Metrics</h2>
+        <p>Key performance indicators and metrics to track success and ROI for your ${keywordRow.keyword} initiatives.</p>
+        
+        <p><strong>Ready to implement these strategies?</strong> <a href="${brandKit?.ctaDestination || 'https://apollo.io'}" target="_blank">${brandKit?.ctaText || 'Get started with Apollo'}</a></p>
+      `;
+      
+      // Use parseAIResponse for fallback content too
+      const parsedFallback = parseAIResponse(fallbackContent);
+      const fallbackMetaTitle = `${keywordRow.keyword.charAt(0).toUpperCase() + keywordRow.keyword.slice(1)} - Complete Guide | Apollo`;
+      const fallbackMetaDescription = `Comprehensive guide to ${keywordRow.keyword} with expert insights and proven strategies. Learn data-driven approaches to drive results with Apollo.`;
+      
+      setGeneratedContent(parsedFallback.content);
+      setEditableContent(parsedFallback.content);
+      setIsEditingContent(false);
+      setMetaSeoTitle(fallbackMetaTitle);
+      setMetaDescription(fallbackMetaDescription);
+
+      // Auto-save the fallback content
+      autoSaveContent(parsedFallback.content, fallbackMetaTitle, fallbackMetaDescription);
+
+      // Update the original keyword row if callback provided
+      if (onContentUpdate) {
+        onContentUpdate(keywordRow.id, parsedFallback.content);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -1430,6 +1872,8 @@ Return ONLY the JSON object, no additional text.`;
     setMetaSeoTitle('');
     setMetaDescription('');
     setShowClearConfirmation(false);
+    // Clear auto-save data
+    clearAutoSaveData();
     if (onContentUpdate) {
       onContentUpdate(keywordRow.id, '');
     }
@@ -2078,7 +2522,17 @@ Return ONLY the JSON object, no additional text.`;
                     <textarea
                       ref={editableContentRef}
                       value={editableContent}
-                      onChange={(e) => setEditableContent(e.target.value)}
+                      onChange={(e) => {
+                        setEditableContent(e.target.value);
+                        // Auto-save edited content with debouncing
+                        if (autoSaveTimeout) {
+                          clearTimeout(autoSaveTimeout);
+                        }
+                        const timeout = setTimeout(() => {
+                          autoSaveContent(e.target.value, metaSeoTitle, metaDescription);
+                        }, 1000);
+                        setAutoSaveTimeout(timeout);
+                      }}
                       placeholder="Edit your content here..."
                       style={{
                         width: '100%',
