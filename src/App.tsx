@@ -9,6 +9,7 @@ import PlaybooksPage from './pages/PlaybooksPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import BrandKitPage from './pages/BrandKitPage';
+import BlogCreatorPage from './pages/BlogCreatorPage';
 
 const AppLayout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -109,6 +110,7 @@ const AppLayout: React.FC = () => {
           <Routes>
             <Route path="/app" element={<AppPage />} />
             <Route path="/playbooks-creator" element={<PlaybooksPage />} />
+            <Route path="/blog-creator" element={<BlogCreatorPage />} />
             <Route path="/brand-kit" element={<BrandKitPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
