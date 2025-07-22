@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Upload, MoreHorizontal, FileText, ExternalLink, Copy, RefreshCw, Trash2, X, AlertTriangle, Globe, Brain, BarChart3, Sparkles, Clock, CheckCircle } from 'lucide-react';
 import BlogContentActionModal from '../components/BlogContentActionModal';
+import BackendDetailsPopup from '../components/BackendDetailsPopup';
 
 
 // Define interfaces for our data structure
@@ -21,6 +22,43 @@ interface KeywordRow {
     aeo_optimized: boolean;
   };
   generationResult?: any; // Complete API response for debugging/analysis
+  
+  // Enhanced backend workflow details for popup display
+  workflowDetails?: {
+    firecrawl?: {
+      urls_analyzed: string[];
+      competitor_titles: string[];
+      key_topics: string[];
+      content_structure_insights: string[];
+      search_metadata: any;
+    };
+    deepResearch?: {
+      key_insights: string[];
+      market_trends: string[];
+      audience_needs: string[];
+      content_gaps: string[];
+      research_confidence: number;
+      sources_analyzed: number;
+      model_used: string;
+    };
+    gapAnalysis?: {
+      identified_gaps: string[];
+      competitive_coverage: string;
+      recommended_angle: string;
+      gap_scores: any;
+      seo_suggestions: string[];
+    };
+    contentGeneration?: {
+      processing_steps: string[];
+      brand_variables_processed: number;
+      citations_count: number;
+      quality_score: number;
+      model_pipeline: string[];
+    };
+    currentStage?: string;
+    retryCount?: number;
+    canResume?: boolean;
+  };
 }
 
 interface CSVUploadResult {
@@ -28,6 +66,158 @@ interface CSVUploadResult {
   totalProcessed: number;
   errors: string[];
 }
+
+/**
+ * Extract detailed workflow information from backend workflowState
+ * Why this matters: Transforms backend completedStages data into frontend-friendly format for popup display
+ */
+const extractWorkflowDetails = (workflowState: any): KeywordRow['workflowDetails'] => {
+  console.log(`🔧 Extracting workflow details from workflowState:`, workflowState);
+  
+  const { completedStages, currentStage, retryCount, canResume } = workflowState;
+  
+  const workflowDetails: KeywordRow['workflowDetails'] = {
+    currentStage,
+    retryCount,
+    canResume
+  };
+
+  console.log(`📋 CompletedStages keys: ${Object.keys(completedStages || {})}`, completedStages);
+
+  // Extract Firecrawl data
+  if (completedStages?.firecrawl) {
+    console.log(`🌐 Processing Firecrawl data:`, completedStages.firecrawl);
+    const firecrawl = completedStages.firecrawl;
+    workflowDetails.firecrawl = {
+      urls_analyzed: firecrawl.top_results?.map((r: any) => r.url) || [],
+      competitor_titles: firecrawl.top_results?.map((r: any) => r.title) || [],
+      key_topics: firecrawl.top_results?.flatMap((r: any) => r.key_topics || []) || [],
+      content_structure_insights: firecrawl.top_results?.map((r: any) => 
+        `${r.content_structure?.numbered_lists || 0} lists, ${r.content_structure?.bullet_points || 0} bullets, ${r.word_count || 0} words`
+      ) || [],
+      search_metadata: firecrawl.search_metadata
+    };
+    console.log(`✅ Extracted Firecrawl data:`, workflowDetails.firecrawl);
+  } else {
+    console.log(`❌ No Firecrawl data found in completedStages`);
+  }
+
+  // Extract Deep Research data
+  if (completedStages?.deep_research) {
+    console.log(`🧠 Processing Deep Research data:`, completedStages.deep_research);
+    const deepResearch = completedStages.deep_research;
+    workflowDetails.deepResearch = {
+      key_insights: deepResearch.research_findings?.key_insights || [],
+      market_trends: deepResearch.research_findings?.market_trends || [],
+      audience_needs: deepResearch.research_findings?.audience_needs || [],
+      content_gaps: deepResearch.research_findings?.content_gaps || [],
+      research_confidence: deepResearch.research_depth?.confidence_score || 0,
+      sources_analyzed: deepResearch.research_depth?.sources_analyzed || 0,
+      model_used: deepResearch.research_metadata?.model_used || 'Unknown'
+    };
+    console.log(`✅ Extracted Deep Research data:`, workflowDetails.deepResearch);
+  } else {
+    console.log(`❌ No Deep Research data found in completedStages`);
+  }
+
+  // Extract Gap Analysis data
+  if (completedStages?.gap_analysis) {
+    console.log(`📊 Processing Gap Analysis data:`, completedStages.gap_analysis);
+    const gapAnalysis = completedStages.gap_analysis;
+    workflowDetails.gapAnalysis = {
+      identified_gaps: gapAnalysis.analysis_summary?.identified_gaps || [],
+      competitive_coverage: gapAnalysis.analysis_summary?.competitive_coverage || '',
+      recommended_angle: gapAnalysis.analysis_summary?.recommended_content_angle || '',
+      gap_scores: gapAnalysis.gap_score || {},
+      seo_suggestions: gapAnalysis.content_strategy?.seo_optimization_suggestions || []
+    };
+    console.log(`✅ Extracted Gap Analysis data:`, workflowDetails.gapAnalysis);
+  } else {
+    console.log(`❌ No Gap Analysis data found in completedStages`);
+  }
+
+  // Extract Content Generation data (if available)
+  if (completedStages?.content_generation) {
+    console.log(`✨ Processing Content Generation data:`, completedStages.content_generation);
+    workflowDetails.contentGeneration = {
+      processing_steps: completedStages.content_generation.processing_steps || [],
+      brand_variables_processed: 0, // Will be set from metadata
+      citations_count: 0, // Will be set from metadata  
+      quality_score: 0, // Will be set from metadata
+      model_pipeline: ['Claude Sonnet 4'] // Basic info
+    };
+    console.log(`✅ Extracted Content Generation data:`, workflowDetails.contentGeneration);
+  } else {
+    console.log(`❌ No Content Generation data found in completedStages`);
+  }
+
+  console.log(`🎯 Final extracted workflowDetails:`, workflowDetails);
+  return workflowDetails;
+};
+
+/**
+ * Extract workflow details from final result for completed jobs
+ * Why this matters: Fallback method to get workflow data when polling has completed
+ */
+const extractWorkflowDetailsFromResult = (result: any): KeywordRow['workflowDetails'] => {
+  if (!result?.workflow_data) return undefined;
+
+  const { workflow_data } = result;
+  const workflowDetails: KeywordRow['workflowDetails'] = {
+    currentStage: 'completed'
+  };
+
+  // Extract from workflow_data structure
+  if (workflow_data.firecrawl_analysis) {
+    const firecrawl = workflow_data.firecrawl_analysis;
+    workflowDetails.firecrawl = {
+      urls_analyzed: firecrawl.top_results?.map((r: any) => r.url) || [],
+      competitor_titles: firecrawl.top_results?.map((r: any) => r.title) || [],
+      key_topics: firecrawl.top_results?.flatMap((r: any) => r.key_topics || []) || [],
+      content_structure_insights: firecrawl.top_results?.map((r: any) => 
+        `${r.content_structure?.numbered_lists || 0} lists, ${r.content_structure?.bullet_points || 0} bullets, ${r.word_count || 0} words`
+      ) || [],
+      search_metadata: firecrawl.search_metadata
+    };
+  }
+
+  if (workflow_data.deep_research) {
+    const deepResearch = workflow_data.deep_research;
+    workflowDetails.deepResearch = {
+      key_insights: deepResearch.research_findings?.key_insights || [],
+      market_trends: deepResearch.research_findings?.market_trends || [],
+      audience_needs: deepResearch.research_findings?.audience_needs || [],
+      content_gaps: deepResearch.research_findings?.content_gaps || [],
+      research_confidence: deepResearch.research_depth?.confidence_score || 0,
+      sources_analyzed: deepResearch.research_depth?.sources_analyzed || 0,
+      model_used: deepResearch.research_metadata?.model_used || 'Unknown'
+    };
+  }
+
+  if (workflow_data.gap_analysis) {
+    const gapAnalysis = workflow_data.gap_analysis;
+    workflowDetails.gapAnalysis = {
+      identified_gaps: gapAnalysis.analysis_summary?.identified_gaps || [],
+      competitive_coverage: gapAnalysis.analysis_summary?.competitive_coverage || '',
+      recommended_angle: gapAnalysis.analysis_summary?.recommended_content_angle || '',
+      gap_scores: gapAnalysis.gap_score || {},
+      seo_suggestions: gapAnalysis.content_strategy?.seo_optimization_suggestions || []
+    };
+  }
+
+  // Extract content generation details
+  if (result.generation_metadata) {
+    workflowDetails.contentGeneration = {
+      processing_steps: result.generation_metadata.processing_steps || [],
+      brand_variables_processed: result.metadata?.brand_variables_processed || 0,
+      citations_count: result.metadata?.citations_included ? 1 : 0,
+      quality_score: result.generation_metadata.content_quality_score || 0,
+      model_pipeline: result.generation_metadata.model_pipeline || []
+    };
+  }
+
+  return workflowDetails;
+};
 
 const BlogCreatorPage: React.FC = () => {
   const [keywords, setKeywords] = useState<KeywordRow[]>([]);
@@ -43,6 +233,29 @@ const BlogCreatorPage: React.FC = () => {
   // Blog Content Action Modal state
   const [showContentActionModal, setShowContentActionModal] = useState(false);
   const [selectedKeywordForActions, setSelectedKeywordForActions] = useState<KeywordRow | null>(null);
+
+  // Backend Details Popup state
+  const [popupState, setPopupState] = useState<{
+    isVisible: boolean;
+    keywordId: string | null;
+    position: { x: number; y: number };
+  }>({
+    isVisible: false,
+    keywordId: null,
+    position: { x: 0, y: 0 }
+  });
+  
+  // Popup hide timeout for better hover experience
+  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
+    };
+  }, [hideTimeout]);
   // New state for enhanced concurrent processing tracking
   const [concurrentExecutions, setConcurrentExecutions] = useState<Set<string>>(new Set());
   const [bulkExecutionStatus, setBulkExecutionStatus] = useState<{
@@ -458,19 +671,33 @@ const BlogCreatorPage: React.FC = () => {
           }
 
           const statusData = await statusResponse.json();
-          const { status, progress, message, result, error } = statusData.data;
-          console.log(`📊 Job ${jobId} status:`, { status, message, progress });
+          const { status, progress, message, result, error, workflowState } = statusData.data;
+          console.log(`📊 Job ${jobId} status:`, { status, message, progress, workflowState });
 
-          // Update progress message
+          // Extract detailed workflow data from completedStages if available
+          const workflowDetails = workflowState ? extractWorkflowDetails(workflowState) : undefined;
+          
+          // Debug logging to see what data we're getting
+          if (workflowState) {
+            console.log(`🔍 WorkflowState received for ${keywordId}:`, workflowState);
+            console.log(`📊 Extracted workflowDetails:`, workflowDetails);
+          }
+
+          // Update progress message and workflow details
           setKeywords(prev => prev.map(k => 
             k.id === keywordId 
-              ? { ...k, progress: message }
+              ? { 
+                  ...k, 
+                  progress: message,
+                  ...(workflowDetails && { workflowDetails }) // Only add if we have details
+                }
               : k
           ));
 
           if (status === 'completed') {
             clearInterval(pollInterval);
-            // Update with final result
+            // Update with final result and enhanced workflow details
+            const finalWorkflowDetails = workflowDetails || extractWorkflowDetailsFromResult(result);
             setKeywords(prev => prev.map(k => 
               k.id === keywordId 
                 ? { 
@@ -479,7 +706,8 @@ const BlogCreatorPage: React.FC = () => {
                     progress: '✅ Content generation complete!',
                     output: result.content || '',
                     metadata: result.metadata,
-                    generationResult: result
+                    generationResult: result,
+                    ...(finalWorkflowDetails && { workflowDetails: finalWorkflowDetails })
                   }
                 : k
             ));
@@ -492,7 +720,8 @@ const BlogCreatorPage: React.FC = () => {
                     ...k, 
                     status: 'error',
                     progress: `❌ Generation failed: ${error}`,
-                    output: ''
+                    output: '',
+                    ...(workflowDetails && { workflowDetails }) // Keep partial workflow details even on error
                   }
                 : k
             ));
@@ -562,11 +791,11 @@ const BlogCreatorPage: React.FC = () => {
    */
   const retryKeyword = async (keywordId: string) => {
     // Reset keyword status to pending and clear error
-    setKeywords(prev => prev.map(k => 
-      k.id === keywordId 
-        ? { ...k, status: 'pending', progress: '', output: '' }
-        : k
-    ));
+          setKeywords(prev => prev.map(k => 
+        k.id === keywordId 
+          ? { ...k, status: 'pending', progress: '', output: '' } // Clear workflow details on retry by omitting the property
+          : k
+      ));
 
     // Execute the keyword again
     await executeKeyword(keywordId);
@@ -581,16 +810,16 @@ const BlogCreatorPage: React.FC = () => {
     let keywordsToExecute: KeywordRow[] = [];
     
     if (selectedRows.size > 0) {
-      // Execute selected pending/error keywords (up to 3)
+      // Execute selected pending/error keywords (up to 5)
       keywordsToExecute = keywords
         .filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error'))
-        .slice(0, 3);
-    } else {
-      // Execute first 3 pending keywords if none selected
-      keywordsToExecute = keywords
-        .filter(k => k.status === 'pending')
-        .slice(0, 3);
-    }
+        .slice(0, 5);
+          } else {
+        // Execute first 5 pending keywords if none selected
+        keywordsToExecute = keywords
+          .filter(k => k.status === 'pending')
+          .slice(0, 5);
+      }
 
     if (keywordsToExecute.length === 0) return;
     
@@ -631,7 +860,7 @@ const BlogCreatorPage: React.FC = () => {
 
     const selectedKeywords = keywords
       .filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error'))
-      .slice(0, 3); // Limit to 3 concurrent executions
+      .slice(0, 5); // Limit to 5 concurrent executions
 
     if (selectedKeywords.length === 0) return;
 
@@ -704,6 +933,89 @@ const BlogCreatorPage: React.FC = () => {
     }
   };
 
+  /**
+   * Show backend details popup on hover or touch
+   * Why this matters: Provides detailed backend insight when users hover over progress indicators (desktop) or tap them (mobile)
+   */
+  const showBackendPopup = (keywordId: string, event: React.MouseEvent | React.TouchEvent) => {
+    // Clear any pending hide timeout
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const popupWidth = 650; // Match the popup width
+    const windowWidth = window.innerWidth;
+    
+    // Smart positioning: check if there's enough space on the right
+    const spaceOnRight = windowWidth - rect.right;
+    const spaceOnLeft = rect.left;
+    
+    let x: number;
+    if (spaceOnRight >= popupWidth + 40) {
+      // Enough space on the right - position to the right
+      x = rect.right + 10;
+    } else if (spaceOnLeft >= popupWidth + 40) {
+      // Not enough space on right, but enough on left - position to the left
+      x = rect.left - popupWidth - 10;
+    } else {
+      // Not enough space on either side - center it over the table
+      x = Math.max(20, (windowWidth - popupWidth) / 2);
+    }
+
+    setPopupState({
+      isVisible: true,
+      keywordId,
+      position: {
+        x,
+        y: rect.top + rect.height / 2
+      }
+    });
+  };
+
+  /**
+   * Hide backend details popup with delay
+   * Why this matters: Adds delay to prevent accidental dismissal when moving mouse between trigger and popup
+   */
+  const hideBackendPopup = () => {
+    // Clear any existing timeout
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+    }
+
+    // Set new timeout to hide popup after 300ms delay
+    const timeout = setTimeout(() => {
+      setPopupState(prev => ({ ...prev, isVisible: false }));
+      setHideTimeout(null);
+    }, 300);
+
+    setHideTimeout(timeout);
+  };
+
+  /**
+   * Keep popup visible when hovering over the popup itself
+   * Why this matters: Cancels hide timeout when user hovers over popup, allowing interaction
+   */
+  const keepPopupVisible = () => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+  };
+
+  /**
+   * Hide popup immediately (for mobile tap outside)
+   * Why this matters: Provides immediate dismissal for mobile overlay taps
+   */
+  const hidePopupImmediately = () => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+    setPopupState(prev => ({ ...prev, isVisible: false }));
+  };
+
   return (
     <>
       {/* Auto-save status indicator */}
@@ -768,7 +1080,7 @@ const BlogCreatorPage: React.FC = () => {
                  alignItems: 'center',
                  background: '#F67318',
                  borderRadius: '1rem',
-                 padding: '0.75rem 1.25rem',
+                 padding: '0.5rem 1rem',
                  color: 'white',
                  fontWeight: '600',
                  fontSize: '0.875rem',
@@ -798,7 +1110,7 @@ const BlogCreatorPage: React.FC = () => {
                  alignItems: 'center',
                  background: '#3BB591',
                  borderRadius: '1rem',
-                 padding: '0.75rem 1.25rem',
+                 padding: '0.5rem 1rem',
                  color: 'white',
                  fontWeight: '600',
                  fontSize: '0.875rem',
@@ -828,7 +1140,7 @@ const BlogCreatorPage: React.FC = () => {
                  alignItems: 'center',
                  background: '#7D3DED',
                  borderRadius: '1rem',
-                 padding: '0.75rem 1.25rem',
+                 padding: '0.5rem 1rem',
                  color: 'white',
                  fontWeight: '600',
                  fontSize: '0.875rem',
@@ -858,7 +1170,7 @@ const BlogCreatorPage: React.FC = () => {
                  alignItems: 'center',
                  background: '#EBF212',
                  borderRadius: '1rem',
-                 padding: '0.75rem 1.25rem',
+                 padding: '0.5rem 1rem',
                  color: 'black',
                  fontWeight: '600',
                  fontSize: '0.875rem',
@@ -947,7 +1259,7 @@ const BlogCreatorPage: React.FC = () => {
                       }}
                     >
                       <Play size={16} />
-                      Execute Selected ({Math.min(keywords.filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error')).length, 3)})
+                      Execute Selected ({Math.min(keywords.filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error')).length, 5)})
                     </button>
                   ) : (
                     <button
@@ -957,7 +1269,7 @@ const BlogCreatorPage: React.FC = () => {
                       style={{ opacity: keywords.filter(k => k.status === 'pending').length === 0 ? 0.5 : 1 }}
                     >
                       <Play size={16} />
-                      Execute 3 Rows
+                      Execute 5 Rows
                     </button>
                   )}
 
@@ -968,7 +1280,7 @@ const BlogCreatorPage: React.FC = () => {
                       className="apollo-btn-secondary"
                     >
                       <Play size={16} />
-                      Execute Next 3 Pending
+                      Execute Next 5 Pending
                     </button>
                   )}
                   
@@ -1018,7 +1330,7 @@ const BlogCreatorPage: React.FC = () => {
                     <span>
                       {selectedRows.size} row{selectedRows.size > 1 ? 's' : ''} selected • 
                       {keywords.filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error')).length} ready to execute/retry • 
-                      Max 3 concurrent executions
+                      Max 5 concurrent executions
                     </span>
                   ) : (
                     <span>
@@ -1061,12 +1373,19 @@ const BlogCreatorPage: React.FC = () => {
                           id="compact-csv-upload"
                         />
                         <button
-                          className="apollo-btn-secondary"
                           style={{ 
                             padding: '0.25rem 0.5rem',
                             fontSize: '0.75rem',
                             textTransform: 'none',
-                            fontWeight: '500'
+                            fontWeight: '500',
+                            backgroundColor: '#EBF212',
+                            color: '#000000',
+                            border: 'none',
+                            borderRadius: '0.375rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
                           }}
                           title="Upload CSV file"
                         >
@@ -1198,16 +1517,26 @@ const BlogCreatorPage: React.FC = () => {
                           
                           {/* Enhanced progress indicator for running keywords with concurrent processing indicator */}
                           {keyword.status === 'running' && (
-                            <div style={{ 
-                              fontSize: '0.75rem', 
-                              color: '#6b7280', 
-                              width: '100%',
-                              maxWidth: '250px',
-                              wordWrap: 'break-word',
-                              whiteSpace: 'normal',
-                              lineHeight: '1.3',
-                              marginTop: '0.25rem'
-                            }}>
+                            <div 
+                              style={{ 
+                                fontSize: '0.75rem', 
+                                color: '#6b7280', 
+                                width: '100%',
+                                maxWidth: '250px',
+                                wordWrap: 'break-word',
+                                whiteSpace: 'normal',
+                                lineHeight: '1.3',
+                                marginTop: '0.25rem',
+                                cursor: 'pointer',
+                                padding: '0.25rem',
+                                borderRadius: '0.25rem',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => showBackendPopup(keyword.id, e)}
+                              onMouseLeave={hideBackendPopup}
+                              onClick={(e) => showBackendPopup(keyword.id, e)} // Mobile tap support
+                              title="Hover/tap for detailed backend progress"
+                            >
                               {concurrentExecutions.size > 1 && (
                                 <div style={{ 
                                   display: 'inline-flex', 
@@ -1230,16 +1559,26 @@ const BlogCreatorPage: React.FC = () => {
                           
                           {/* Error message for failed keywords */}
                           {keyword.status === 'error' && (
-                            <div style={{ 
-                              fontSize: '0.75rem', 
-                              color: '#dc2626', 
-                              width: '100%',
-                              maxWidth: '250px',
-                              wordWrap: 'break-word',
-                              whiteSpace: 'normal',
-                              lineHeight: '1.3',
-                              marginTop: '0.25rem'
-                            }}>
+                            <div 
+                              style={{ 
+                                fontSize: '0.75rem', 
+                                color: '#dc2626', 
+                                width: '100%',
+                                maxWidth: '250px',
+                                wordWrap: 'break-word',
+                                whiteSpace: 'normal',
+                                lineHeight: '1.3',
+                                marginTop: '0.25rem',
+                                cursor: 'pointer',
+                                padding: '0.25rem',
+                                borderRadius: '0.25rem',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => showBackendPopup(keyword.id, e)}
+                              onMouseLeave={hideBackendPopup}
+                              onClick={(e) => showBackendPopup(keyword.id, e)} // Mobile tap support
+                              title="Hover/tap for detailed error information"
+                            >
                               {keyword.progress}
                             </div>
                           )}
@@ -1250,18 +1589,57 @@ const BlogCreatorPage: React.FC = () => {
                       <td style={{ padding: '1rem 1.5rem' }}>
                         <div style={{ maxWidth: '200px' }}>
                           {keyword.status === 'completed' ? (
-                            <div style={{ fontSize: '0.875rem', color: '#1f2937' }}>
+                            <div 
+                              style={{ 
+                                fontSize: '0.875rem', 
+                                color: '#1f2937',
+                                cursor: 'pointer',
+                                padding: '0.25rem',
+                                borderRadius: '0.25rem',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => showBackendPopup(keyword.id, e)}
+                              onMouseLeave={hideBackendPopup}
+                              onClick={(e) => showBackendPopup(keyword.id, e)} // Mobile tap support
+                              title="Hover/tap for detailed generation results"
+                            >
                               <div style={{ marginBottom: '0.25rem', fontWeight: '500' }}>Article Generated</div>
                               <div style={{ fontSize: '0.75rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {keyword.output.split('\n')[0].replace('# ', '')}
                               </div>
                             </div>
                           ) : keyword.status === 'error' ? (
-                            <div style={{ fontSize: '0.875rem', color: '#dc2626' }}>
+                            <div 
+                              style={{ 
+                                fontSize: '0.875rem', 
+                                color: '#dc2626',
+                                cursor: 'pointer',
+                                padding: '0.25rem',
+                                borderRadius: '0.25rem',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => showBackendPopup(keyword.id, e)}
+                              onMouseLeave={hideBackendPopup}
+                              onClick={(e) => showBackendPopup(keyword.id, e)} // Mobile tap support
+                              title="Hover/tap for error details"
+                            >
                               Generation failed
                             </div>
                           ) : keyword.status === 'running' ? (
-                            <div style={{ fontSize: '0.875rem', color: '#2563eb' }}>
+                            <div 
+                              style={{ 
+                                fontSize: '0.875rem', 
+                                color: '#2563eb',
+                                cursor: 'pointer',
+                                padding: '0.25rem',
+                                borderRadius: '0.25rem',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => showBackendPopup(keyword.id, e)}
+                              onMouseLeave={hideBackendPopup}
+                              onClick={(e) => showBackendPopup(keyword.id, e)} // Mobile tap support
+                              title="Hover/tap for live progress details"
+                            >
                               Processing...
                             </div>
                           ) : (
@@ -1284,7 +1662,6 @@ const BlogCreatorPage: React.FC = () => {
                                 fontSize: '0.875rem'
                               }}
                             >
-                              <MoreHorizontal size={14} />
                               Actions
                             </button>
                           </div>
@@ -1593,6 +1970,24 @@ const BlogCreatorPage: React.FC = () => {
             onStatusUpdate={handleStatusUpdate}
           />
         )}
+
+        {/* Backend Details Popup */}
+        {popupState.keywordId && (() => {
+          const selectedKeyword = keywords.find(k => k.id === popupState.keywordId);
+          const workflowDetails = selectedKeyword?.workflowDetails;
+          
+          return (
+            <BackendDetailsPopup
+              workflowDetails={workflowDetails || {}} // Provide empty object fallback
+              status={selectedKeyword?.status || 'pending'}
+              isVisible={popupState.isVisible}
+              position={popupState.position}
+              onMouseEnter={keepPopupVisible}
+              onMouseLeave={hideBackendPopup}
+              onMobileClose={hidePopupImmediately}
+            />
+          );
+        })()}
       </div>
     </div>
     </>
