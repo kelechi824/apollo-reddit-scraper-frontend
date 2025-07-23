@@ -635,8 +635,8 @@ const BlogCreatorPage: React.FC = () => {
       console.log(`🔗 Backend URL: ${backendUrl}`);
       console.log(`📦 Request payload:`, { keyword: keyword.keyword, content_length: 'medium', brand_kit: brandKit });
 
-      // Start async content generation
-      const response = await fetch(`${backendUrl}/api/blog-creator/generate-content-async`, {
+      // Start synchronous content generation (no polling needed)
+      const response = await fetch(`${backendUrl}/api/blog-creator/generate-content`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -653,109 +653,30 @@ const BlogCreatorPage: React.FC = () => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error(`❌ API Error response:`, errorData);
-        throw new Error(errorData.error || 'Failed to start content generation');
+        throw new Error(errorData.error || 'Failed to generate content');
       }
 
       const responseData = await response.json();
-      const { jobId } = responseData;
-      console.log(`✅ Job started successfully with ID: ${jobId}`);
+      const { data: result } = responseData;
+      console.log(`✅ Content generation completed successfully for keyword: ${keyword.keyword}`);
 
-      // Poll for progress updates
-      console.log(`🔄 Starting polling for job ${jobId}`);
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusResponse = await fetch(`${backendUrl}/api/blog-creator/job-status/${jobId}`);
-          if (!statusResponse.ok) {
-            console.error(`❌ Status polling failed: ${statusResponse.status} ${statusResponse.statusText}`);
-            throw new Error('Failed to get job status');
-          }
-
-          const statusData = await statusResponse.json();
-          const { status, progress, message, result, error, workflowState } = statusData.data;
-          console.log(`📊 Job ${jobId} status:`, { status, message, progress, workflowState });
-
-          // Extract detailed workflow data from completedStages if available
-          const workflowDetails = workflowState ? extractWorkflowDetails(workflowState) : undefined;
-          
-          // Debug logging to see what data we're getting
-          if (workflowState) {
-            console.log(`🔍 WorkflowState received for ${keywordId}:`, workflowState);
-            console.log(`📊 Extracted workflowDetails:`, workflowDetails);
-          }
-
-          // Update progress message and workflow details
-          setKeywords(prev => prev.map(k => 
-            k.id === keywordId 
-              ? { 
-                  ...k, 
-                  progress: message,
-                  ...(workflowDetails && { workflowDetails }) // Only add if we have details
-                }
-              : k
-          ));
-
-          if (status === 'completed') {
-            clearInterval(pollInterval);
-            // Update with final result and enhanced workflow details
-            const finalWorkflowDetails = workflowDetails || extractWorkflowDetailsFromResult(result);
-            setKeywords(prev => prev.map(k => 
-              k.id === keywordId 
-                ? { 
-                    ...k, 
-                    status: 'completed',
-                    progress: '✅ Content generation complete!',
-                    output: result.content || '',
-                    metadata: result.metadata,
-                    generationResult: result,
-                    ...(finalWorkflowDetails && { workflowDetails: finalWorkflowDetails })
-                  }
-                : k
-            ));
-          } else if (status === 'error') {
-            clearInterval(pollInterval);
-            // Update with error
-            setKeywords(prev => prev.map(k => 
-              k.id === keywordId 
-                ? { 
-                    ...k, 
-                    status: 'error',
-                    progress: `❌ Generation failed: ${error}`,
-                    output: '',
-                    ...(workflowDetails && { workflowDetails }) // Keep partial workflow details even on error
-                  }
-                : k
-            ));
-          }
-        } catch (pollError) {
-          console.error('Failed to poll job status:', pollError);
-          clearInterval(pollInterval);
-          setKeywords(prev => prev.map(k => 
-            k.id === keywordId 
-              ? { 
-                  ...k, 
-                  status: 'error',
-                  progress: '❌ Failed to get generation status',
-                  output: ''
-                }
-              : k
-          ));
-        }
-      }, 2000); // Poll every 2 seconds
-
-      // Set timeout to prevent infinite polling (10 minutes max)
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        setKeywords(prev => prev.map(k => 
-          k.id === keywordId && k.status === 'running'
-            ? { 
-                ...k, 
-                status: 'error',
-                progress: '❌ Generation timed out after 10 minutes',
-                output: ''
-              }
-            : k
-        ));
-      }, 600000); // 10 minutes
+      // Process the result directly (no polling needed)
+      console.log(`📊 Processing completed result for keyword: ${keyword.keyword}`);
+      // Process the completed result directly (no polling needed in synchronous approach)
+      const finalWorkflowDetails = extractWorkflowDetailsFromResult(result);
+      setKeywords(prev => prev.map(k => 
+        k.id === keywordId 
+          ? { 
+              ...k, 
+              status: 'completed',
+              progress: '✅ Content generation complete!',
+              output: result.content || '',
+              metadata: result.metadata,
+              generationResult: result,
+              ...(finalWorkflowDetails && { workflowDetails: finalWorkflowDetails })
+            }
+          : k
+      ));
 
     } catch (error) {
       // Handle API failures with error status
