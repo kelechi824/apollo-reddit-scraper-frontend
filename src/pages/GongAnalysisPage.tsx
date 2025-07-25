@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import GongAnalysisInterface from '../components/GongAnalysisInterface';
 import GongAnalysisResultPanel from '../components/GongAnalysisResultPanel';
 import { GongFetchCallsWithDetailsResponse } from '../types';
+import { FEATURE_FLAGS } from '../utils/featureFlags';
 
 const GongAnalysisPage: React.FC = () => {
   const [currentResults, setCurrentResults] = useState<GongFetchCallsWithDetailsResponse | null>(null);
@@ -60,6 +61,7 @@ const GongAnalysisPage: React.FC = () => {
             calls={currentResults.calls}
             totalFound={currentResults.total_found}
             onClear={handleClearResults}
+            showFullConversationTab={FEATURE_FLAGS.showGongFullConversationTab}
           />
         ) : (
           <div className="results-empty">

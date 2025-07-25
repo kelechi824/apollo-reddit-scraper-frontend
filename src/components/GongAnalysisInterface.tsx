@@ -114,6 +114,7 @@ const GongAnalysisInterface: React.FC<GongAnalysisInterfaceProps> = ({ apiUrl, o
           
           if (detailsResponse.ok) {
             const detailsData = await detailsResponse.json();
+            console.log(`🔍 Conversation details for call ${call.id}:`, detailsData.data);
             callsWithDetails.push({
               ...call,
               conversationDetails: detailsData.data
@@ -194,7 +195,7 @@ const GongAnalysisInterface: React.FC<GongAnalysisInterfaceProps> = ({ apiUrl, o
         {/* Limit Selection */}
         <div className="form-group">
           <label htmlFor="limit" className="form-label">
-            Number of Calls to Fetch
+            Number of Calls to Analyze
           </label>
           <select
             id="limit"

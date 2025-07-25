@@ -1,22 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor } from 'lucide-react';
-
-interface FeatureFlags {
-  showCRO: boolean;
-  showGongAnalysis: boolean;
-  showLandingPageAnalyzer: boolean;
-  showBlogCreator: boolean;
-  showPlaybooksCreator: boolean;
-  showBrandKit: boolean;
-}
+import { FEATURE_FLAGS, FeatureFlags } from '../utils/featureFlags';
 
 interface NavigationProps {
   onItemClick?: () => void;
-  featureFlags?: FeatureFlags;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ onItemClick, featureFlags }) => {
+const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
   return (
     <nav className="navigation">
       <div className="nav-menu">
@@ -49,7 +40,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick, featureFlags }) =>
             Blog Creator
           </NavLink>
           
-          {featureFlags?.showCRO && (
+          {FEATURE_FLAGS.showCRO && (
             <NavLink 
               to="/cro" 
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}

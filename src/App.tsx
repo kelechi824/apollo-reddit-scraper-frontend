@@ -13,25 +13,7 @@ import BrandKitPage from './pages/BrandKitPage';
 import BlogCreatorPage from './pages/BlogCreatorPage';
 import GongAnalysisPage from './pages/GongAnalysisPage';
 import LandingPageAnalyzer from './pages/LandingPageAnalyzer';
-
-// Feature flags configuration - centralized control for feature visibility
-interface FeatureFlags {
-  showCRO: boolean;
-  showGongAnalysis: boolean;
-  showLandingPageAnalyzer: boolean;
-  showBlogCreator: boolean;
-  showPlaybooksCreator: boolean;
-  showBrandKit: boolean;
-}
-
-const FEATURE_FLAGS: FeatureFlags = {
-  showCRO: false, // Hide CRO for production
-  showGongAnalysis: true,
-  showLandingPageAnalyzer: true,
-  showBlogCreator: true,
-  showPlaybooksCreator: true,
-  showBrandKit: true,
-};
+import { FEATURE_FLAGS, FeatureFlags } from './utils/featureFlags';
 
 const AppLayout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -117,7 +99,7 @@ const AppLayout: React.FC = () => {
             className={`mobile-menu-content ${isClosing ? 'closing' : ''}`} 
             onClick={(e) => e.stopPropagation()}
           >
-            <Navigation onItemClick={closeMobileMenu} featureFlags={FEATURE_FLAGS} />
+            <Navigation onItemClick={closeMobileMenu} />
           </div>
         </div>
       )}
@@ -125,7 +107,7 @@ const AppLayout: React.FC = () => {
       {/* Main Layout */}
       <div className="main-layout">
         {/* Left Navigation */}
-        <Navigation featureFlags={FEATURE_FLAGS} />
+        <Navigation />
 
         {/* Page Content */}
         <div className="page-content">
