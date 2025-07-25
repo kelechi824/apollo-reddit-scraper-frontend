@@ -273,3 +273,261 @@ export const SUBREDDIT_OPTIONS = [
 ] as const;
 
 export type SubredditOption = typeof SUBREDDIT_OPTIONS[number]; 
+
+// Brand Kit and Chat Types
+export interface BrandKitVariable {
+  id: string;
+  name: string;
+  value: string;
+  category: 'company' | 'product' | 'messaging' | 'contact';
+}
+
+export interface ChatHistoryEntry {
+  id: string;
+  conversation_id: string;
+  title: string;
+  created_at: string;
+  message_count: number;
+}
+
+// CRO Types (matching backend)
+export interface PageTextContent {
+  title: string;
+  headings: string[];
+  bodyText: string;
+  buttonTexts: string[];
+  links: string[];
+  metaDescription?: string;
+}
+
+export interface ExtractedPainPoint {
+  id: string;
+  text: string;
+  category: 'manual_tasks' | 'data_quality' | 'deliverability' | 'compliance' | 'integration' | 'cost' | 'other';
+  emotionalTrigger: 'frustration' | 'anxiety' | 'excitement' | 'relief' | 'fear' | 'neutral';
+  frequency: number;
+  confidence: number;
+  callId: string;
+  speakerId: string;
+  timestamp?: number;
+}
+
+export interface CustomerPhrase {
+  id: string;
+  phrase: string;
+  frequency: number;
+  category: string;
+  context: 'early_call' | 'mid_call' | 'late_call' | 'objection' | 'excitement';
+  callIds: string[];
+}
+
+export interface CopyAnalysisResult {
+  id: string;
+  url: string;
+  pageContent: PageTextContent;
+  painPointAlignment: {
+    painPoint: ExtractedPainPoint;
+    relevanceScore: number;
+    recommendations: string[];
+  }[];
+  customerLanguageGaps: {
+    missingPhrase: CustomerPhrase;
+    suggestedPlacement: string;
+    impact: 'high' | 'medium' | 'low';
+  }[];
+  overallScore: number;
+  keyRecommendations: string[];
+  timestamp: string;
+}
+
+export interface CROAnalysisResponse {
+  success: boolean;
+  analysis: CopyAnalysisResult;
+  screenshot?: {
+    id: string;
+    pageTitle: string;
+    viewport: { width: number; height: number };
+    timestamp: string;
+  };
+  message: string;
+}
+
+// Simple Gong Fetch Types (for fetching calls without analysis)
+export interface GongCall {
+  id: string;
+  title: string;
+  started: string;
+  duration?: number;
+  primaryUserId: string;
+  direction: 'Inbound' | 'Outbound' | 'Conference' | 'Unknown';
+  system?: string;
+  scope?: string;
+  media?: string;
+  url?: string;
+  participants?: any[];
+  scheduled?: string;
+  workspaceId?: string;
+  meetingUrl?: string;
+  calendarEventId?: string;
+}
+
+export interface GongFetchCallsRequest {
+  daysBack: number;
+  limit: number;
+}
+
+export interface GongFetchCallsResponse {
+  success: boolean;
+  calls: GongCall[];
+  total_found: number;
+  message: string;
+}
+
+// Conversation Details Types (for fetching full call insights)
+export interface GongCallHighlights {
+  brief: string;
+  callId: string;
+  callOutcome: string | null;
+  highlights: any[];
+  keyPoints: Array<{
+    text: string;
+  }>;
+  topics: Array<{
+    name: string;
+    duration: number;
+  }>;
+  trackers: Array<{
+    name: string;
+    count: number;
+  }>;
+  speakers: any[];
+}
+
+export interface GongConversationDetails {
+  callId: string;
+  timestamp: string;
+  highlights: GongCallHighlights;
+  extensiveData: any;
+}
+
+export interface GongCallWithDetails extends GongCall {
+  conversationDetails?: GongConversationDetails;
+}
+
+export interface GongFetchCallsWithDetailsResponse {
+  success: boolean;
+  calls: GongCallWithDetails[];
+  total_found: number;
+  message: string;
+}
+
+// Gong Analysis Types (matching backend)
+export interface GongAnalysisRequest {
+  daysBack: number;
+  limit: number;
+  sentiment?: 'positive' | 'negative' | 'all';
+}
+
+export interface GongAnalyzedCall {
+  id: string;
+  title: string;
+  date: string;
+  duration: number;
+  participants: string[];
+  sentiment: 'positive' | 'negative' | 'neutral';
+  analysis: {
+    callSummary: string;
+    painPoints: ExtractedPainPoint[];
+    croOpportunity: {
+      adCopyIdeas: string[];
+      googleAdsHeadlines: string[];
+      googleAdsDescriptions: string[];
+      landingPageRecommendations: string[];
+    };
+  };
+  highlights: any;
+  extensive_data: any;
+  call_rank: number;
+  analysis_timestamp: string;
+}
+
+export interface GongAnalysisResponse {
+  success: boolean;
+  analyzed_calls: GongAnalyzedCall[];
+  analysis_metadata?: {
+    total_calls_found: number;
+    total_calls_analyzed: number;
+    sentiment_filter_applied: string;
+    date_range: {
+      days_back: number;
+      start_date: string;
+      end_date: string;
+    };
+    analysis_timestamp: string;
+    processing_time_ms: number;
+  };
+  gong_results?: {
+    calls: any[];
+    total_found: number;
+    sentiment_filter: string;
+    search_timestamp: string;
+  };
+  workflow_id: string;
+  completed_at: string;
+  message?: string;
+  errors?: string[];
+}
+
+export interface LandingPageAnalysisRequest {
+  url: string;
+  callInsights: GongAnalyzedCall[];
+}
+
+export interface LandingPageAnalysisResult {
+  url: string;
+  screenshot: string;
+  extractedContent: PageTextContent;
+  croRecommendations: {
+    headlineImprovements: string[];
+    copyImprovements: string[];
+    googleAdsVariations: {
+      headlines: string[];
+      descriptions: string[];
+    };
+    conversionOptimizations: string[];
+  };
+}
+
+// Gong Chat Types for CRO Conversations
+export interface StartGongConversationRequest {
+  call_id: string;
+  title: string;
+  date: string;
+  duration: number;
+  participants: string[];
+  sentiment: 'positive' | 'negative' | 'neutral';
+  callSummary: string;
+  painPoints: ExtractedPainPoint[];
+  croOpportunity: {
+    adCopyIdeas: string[];
+    googleAdsHeadlines: string[];
+    googleAdsDescriptions: string[];
+    landingPageRecommendations: string[];
+  };
+}
+
+export interface StartGongConversationResponse {
+  conversation_id: string;
+  initial_message: ChatMessage;
+}
+
+export interface SendGongMessageRequest {
+  conversation_id: string;
+  message: string;
+}
+
+export interface SendGongMessageResponse {
+  user_message: ChatMessage;
+  assistant_message: ChatMessage;
+  conversation_stage?: string;
+} 

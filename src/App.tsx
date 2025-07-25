@@ -5,11 +5,33 @@ import './App.css';
 import Navigation from './components/Navigation';
 import LandingPage from './pages/LandingPage';
 import AppPage from './pages/AppPage';
+import CROPage from './pages/CROPage';
 import PlaybooksPage from './pages/PlaybooksPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import BrandKitPage from './pages/BrandKitPage';
 import BlogCreatorPage from './pages/BlogCreatorPage';
+import GongAnalysisPage from './pages/GongAnalysisPage';
+import LandingPageAnalyzer from './pages/LandingPageAnalyzer';
+
+// Feature flags configuration - centralized control for feature visibility
+interface FeatureFlags {
+  showCRO: boolean;
+  showGongAnalysis: boolean;
+  showLandingPageAnalyzer: boolean;
+  showBlogCreator: boolean;
+  showPlaybooksCreator: boolean;
+  showBrandKit: boolean;
+}
+
+const FEATURE_FLAGS: FeatureFlags = {
+  showCRO: false, // Hide CRO for production
+  showGongAnalysis: true,
+  showLandingPageAnalyzer: true,
+  showBlogCreator: true,
+  showPlaybooksCreator: true,
+  showBrandKit: true,
+};
 
 const AppLayout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -95,7 +117,7 @@ const AppLayout: React.FC = () => {
             className={`mobile-menu-content ${isClosing ? 'closing' : ''}`} 
             onClick={(e) => e.stopPropagation()}
           >
-            <Navigation onItemClick={closeMobileMenu} />
+            <Navigation onItemClick={closeMobileMenu} featureFlags={FEATURE_FLAGS} />
           </div>
         </div>
       )}
@@ -103,12 +125,15 @@ const AppLayout: React.FC = () => {
       {/* Main Layout */}
       <div className="main-layout">
         {/* Left Navigation */}
-        <Navigation />
+        <Navigation featureFlags={FEATURE_FLAGS} />
 
         {/* Page Content */}
         <div className="page-content">
           <Routes>
             <Route path="/app" element={<AppPage />} />
+            {FEATURE_FLAGS.showCRO && <Route path="/cro" element={<CROPage />} />}
+            <Route path="/landing-page-analyzer" element={<LandingPageAnalyzer />} />
+            <Route path="/gong-analysis" element={<GongAnalysisPage />} />
             <Route path="/playbooks-creator" element={<PlaybooksPage />} />
             <Route path="/blog-creator" element={<BlogCreatorPage />} />
             <Route path="/brand-kit" element={<BrandKitPage />} />
