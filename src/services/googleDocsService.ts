@@ -29,7 +29,7 @@ class GoogleDocsService {
 
   constructor() {
     this.clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
-    this.scopes = 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/drive.file';
+    this.scopes = 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
   }
 
   /**
@@ -69,7 +69,8 @@ class GoogleDocsService {
           await window.gapi.client.init({
             discoveryDocs: [
               'https://docs.googleapis.com/$discovery/rest?version=v1',
-              'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+              'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+              'https://sheets.googleapis.com/$discovery/rest?version=v4'
             ]
           });
           
@@ -342,6 +343,236 @@ class GoogleDocsService {
     } catch (error) {
       console.error('Error creating Google Doc:', error);
       throw new Error('Failed to create Google Document. Please try again.');
+    }
+  }
+
+  /**
+   * Get or create Apollo Playbooks tracking spreadsheet
+   * Why this matters: Maintains a single shared spreadsheet for all playbook tracking with consistent schema.
+   */
+  async getOrCreatePlaybookSpreadsheet(): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    // Check if we have a stored spreadsheet ID
+    const storedSpreadsheetId = localStorage.getItem('apollo_playbook_spreadsheet_id');
+    
+    if (storedSpreadsheetId) {
+      try {
+        // Verify the spreadsheet still exists and is accessible
+        window.gapi.client.setToken({ access_token: this.accessToken });
+        const response = await window.gapi.client.sheets.spreadsheets.get({
+          spreadsheetId: storedSpreadsheetId
+        });
+        
+        if (response.result) {
+          return {
+            spreadsheetId: storedSpreadsheetId,
+            spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${storedSpreadsheetId}/edit`
+          };
+        }
+      } catch (error) {
+        console.log('Stored spreadsheet not accessible, creating new one');
+        localStorage.removeItem('apollo_playbook_spreadsheet_id');
+      }
+    }
+
+    // Create new spreadsheet
+    return await this.createPlaybookSpreadsheet();
+  }
+
+  /**
+   * Create new Apollo Playbooks tracking spreadsheet
+   * Why this matters: Creates a properly formatted spreadsheet with headers for tracking all playbook generation.
+   */
+  async createPlaybookSpreadsheet(): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    try {
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      const today = new Date().toLocaleDateString();
+      const spreadsheetTitle = `Apollo Playbooks Content - ${today}`;
+
+      // Create new spreadsheet
+      const createResponse = await window.gapi.client.sheets.spreadsheets.create({
+        resource: {
+          properties: {
+            title: spreadsheetTitle
+          },
+          sheets: [{
+            properties: {
+              title: 'Playbook Tracking',
+              gridProperties: {
+                rowCount: 1000,
+                columnCount: 6
+              }
+            }
+          }]
+        }
+      });
+
+      const spreadsheetId = createResponse.result.spreadsheetId;
+      
+      if (!spreadsheetId) {
+        throw new Error('Failed to create spreadsheet');
+      }
+
+      // Add headers
+      const headers = [
+        'Date Created',
+        'Body',
+        'Job Title',
+        'H1 Title',
+        'Meta SEO Title',
+        'Meta Description'
+      ];
+
+      await window.gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: spreadsheetId,
+        range: 'Playbook Tracking!A1:F1',
+        valueInputOption: 'RAW',
+        resource: {
+          values: [headers]
+        }
+      });
+
+      // Format column B (Body) to prevent text wrapping and row expansion
+      await window.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: spreadsheetId,
+        resource: {
+          requests: [
+            {
+              repeatCell: {
+                range: {
+                  sheetId: createResponse.result.sheets[0].properties.sheetId,
+                  startColumnIndex: 1, // Column B (0-indexed)
+                  endColumnIndex: 2,   // Only column B
+                },
+                cell: {
+                  userEnteredFormat: {
+                    wrapStrategy: 'CLIP' // Prevents text wrapping and row expansion
+                  }
+                },
+                fields: 'userEnteredFormat.wrapStrategy'
+              }
+            }
+          ]
+        }
+      });
+
+      // Store spreadsheet ID for future use
+      localStorage.setItem('apollo_playbook_spreadsheet_id', spreadsheetId);
+
+      const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+      return { spreadsheetId, spreadsheetUrl };
+
+    } catch (error) {
+      console.error('Error creating playbook spreadsheet:', error);
+      throw new Error('Failed to create Google Spreadsheet. Please try again.');
+    }
+  }
+
+  /**
+   * Append playbook data to tracking spreadsheet
+   * Why this matters: Logs all generated playbook content with metadata for tracking and analytics.
+   */
+  async appendPlaybookData(playbookData: {
+    jobTitle: string;
+    metaSeoTitle: string;
+    metaDescription: string;
+    htmlContent: string;
+  }): Promise<{ success: boolean; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    try {
+      // Get or create spreadsheet
+      const { spreadsheetId, spreadsheetUrl } = await this.getOrCreatePlaybookSpreadsheet();
+      
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      // Extract H1 title from HTML content
+      const h1Title = this.extractH1Title(playbookData.htmlContent);
+      
+      // Format timestamp as YYYY-MM-DD
+      const formattedDate = new Date().toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
+      
+      // Prepare row data
+      const rowData = [
+        formattedDate,
+        playbookData.htmlContent,
+        playbookData.jobTitle,
+        h1Title,
+        playbookData.metaSeoTitle,
+        playbookData.metaDescription
+      ];
+
+      // Append data to spreadsheet
+      await window.gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: spreadsheetId,
+        range: 'Playbook Tracking!A:F',
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        resource: {
+          values: [rowData]
+        }
+      });
+
+      console.log('Successfully appended playbook data to spreadsheet');
+      return { success: true, spreadsheetUrl };
+
+    } catch (error) {
+      console.error('Error appending playbook data:', error);
+      throw new Error('Failed to save data to Google Spreadsheet. Please try again.');
+    }
+  }
+
+  /**
+   * Open existing playbook spreadsheet in new tab
+   * Why this matters: Provides quick access to the tracking spreadsheet with all logged data.
+   */
+  async openPlaybookSpreadsheet(): Promise<string> {
+    try {
+      const { spreadsheetUrl } = await this.getOrCreatePlaybookSpreadsheet();
+      window.open(spreadsheetUrl, '_blank');
+      return spreadsheetUrl;
+    } catch (error) {
+      console.error('Error opening playbook spreadsheet:', error);
+      throw new Error('Failed to open Google Spreadsheet. Please try again.');
+    }
+  }
+
+  /**
+   * Extract H1 title from HTML content
+   * Why this matters: Provides the main heading as a separate trackable field.
+   */
+  private extractH1Title(htmlContent: string): string {
+    try {
+      // Create a temporary DOM parser to extract H1
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
+      const h1Element = doc.querySelector('h1');
+      
+      if (h1Element) {
+        return h1Element.textContent?.trim() || 'No H1 Found';
+      }
+      
+      // Fallback: try to find h1 using regex if DOM parsing fails
+      const h1Match = htmlContent.match(/<h1[^>]*>(.*?)<\/h1>/i);
+      if (h1Match && h1Match[1]) {
+        // Remove any HTML tags from the content
+        return h1Match[1].replace(/<[^>]*>/g, '').trim();
+      }
+      
+      return 'No H1 Found';
+    } catch (error) {
+      console.error('Error extracting H1 title:', error);
+      return 'H1 Extraction Error';
     }
   }
 

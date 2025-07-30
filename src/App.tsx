@@ -5,11 +5,15 @@ import './App.css';
 import Navigation from './components/Navigation';
 import LandingPage from './pages/LandingPage';
 import AppPage from './pages/AppPage';
+import CROPage from './pages/CROPage';
 import PlaybooksPage from './pages/PlaybooksPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import BrandKitPage from './pages/BrandKitPage';
 import BlogCreatorPage from './pages/BlogCreatorPage';
+import GongAnalysisPage from './pages/GongAnalysisPage';
+import LandingPageAnalyzer from './pages/LandingPageAnalyzer';
+import { FEATURE_FLAGS, FeatureFlags } from './utils/featureFlags';
 
 const AppLayout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -109,6 +113,9 @@ const AppLayout: React.FC = () => {
         <div className="page-content">
           <Routes>
             <Route path="/app" element={<AppPage />} />
+            {FEATURE_FLAGS.showCRO && <Route path="/cro" element={<CROPage />} />}
+            <Route path="/landing-page-analyzer" element={<LandingPageAnalyzer />} />
+            <Route path="/gong-analysis" element={<GongAnalysisPage />} />
             <Route path="/playbooks-creator" element={<PlaybooksPage />} />
             <Route path="/blog-creator" element={<BlogCreatorPage />} />
             <Route path="/brand-kit" element={<BrandKitPage />} />

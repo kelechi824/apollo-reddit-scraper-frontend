@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, CheckCircle, Copy, Check } from 'lucide-react';
+import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, CheckCircle, Copy, Check, Table } from 'lucide-react';
 import { BrandKit } from '../types';
 import googleDocsService from '../services/googleDocsService';
 
@@ -261,6 +261,9 @@ const PlaybookGenerationModal: React.FC<PlaybookGenerationModalProps> = ({
   });
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saving' | 'saved' | ''>('');
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isOpeningSheets, setIsOpeningSheets] = useState(false);
+  const [showSheetsMessage, setShowSheetsMessage] = useState(false);
+  const [sheetsSuccessMessage, setSheetsSuccessMessage] = useState('');
   
   const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   const userPromptRef = useRef<HTMLTextAreaElement>(null);
@@ -694,6 +697,26 @@ const PlaybookGenerationModal: React.FC<PlaybookGenerationModalProps> = ({
   }, []);
 
   /**
+   * Auto-reset generation state when content is successfully generated
+   * Why this matters: Automatically calls the working reset function when NEW playbook content appears.
+   */
+  useEffect(() => {
+    // Only auto-reset if we're generating AND content was just updated
+    if (isGenerating && generatedPlaybook) {
+      // Use a small delay to ensure React has processed the content update
+      const timer = setTimeout(() => {
+        forceResetGenerationState();
+      }, 100);
+      
+      // Clear timer if component unmounts or dependencies change
+      return () => clearTimeout(timer);
+    }
+    
+    // Return undefined when condition is not met (satisfies TypeScript)
+    return undefined;
+  }, [isGenerating, generatedPlaybook]);
+
+  /**
    * Handle generation progress animation
    * Why this matters: Cycles through different status messages to show AI processing stages.
    */
@@ -707,6 +730,7 @@ const PlaybookGenerationModal: React.FC<PlaybookGenerationModalProps> = ({
           if (nextStep >= generationMessages.length - 1) {
             if (generationTimerRef.current) {
               clearInterval(generationTimerRef.current);
+              generationTimerRef.current = null;
             }
             return generationMessages.length - 1;
           }
@@ -714,6 +738,7 @@ const PlaybookGenerationModal: React.FC<PlaybookGenerationModalProps> = ({
         });
       }, 5000);
     } else {
+      // Clear timer and reset step when not generating
       if (generationTimerRef.current) {
         clearInterval(generationTimerRef.current);
         generationTimerRef.current = null;
@@ -724,6 +749,7 @@ const PlaybookGenerationModal: React.FC<PlaybookGenerationModalProps> = ({
     return () => {
       if (generationTimerRef.current) {
         clearInterval(generationTimerRef.current);
+        generationTimerRef.current = null;
       }
     };
   }, [isGenerating, generationMessages.length]);
@@ -1395,6 +1421,19 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
   };
 
   /**
+   * Force reset generation state (backup method)
+   * Why this matters: Provides a way to manually reset stuck generation states
+   */
+  const forceResetGenerationState = () => {
+    if (generationTimerRef.current) {
+      clearInterval(generationTimerRef.current);
+      generationTimerRef.current = null;
+    }
+    setIsGenerating(false);
+    setGenerationStep(0);
+  };
+
+  /**
    * Generate playbook using AI service
    * Why this matters: Creates comprehensive playbooks by combining markdown data with brand context.
    */
@@ -1405,6 +1444,15 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
     }
 
     setIsGenerating(true);
+    
+    // Clear existing content when regenerating to ensure auto-reset only triggers for new content
+    if (generatedPlaybook) {
+      setGeneratedPlaybook('');
+      setEditableContent('');
+      setMetaSeoTitle('');
+      setMetaDescription('');
+    }
+    
     try {
       // Replace liquid variables in prompts
       const processedSystemPrompt = processLiquidVariables(systemPrompt, brandKit);
@@ -1437,6 +1485,9 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
       setIsEditingContent(false);
       setMetaSeoTitle(parsedResponse.metaSeoTitle);
       setMetaDescription(parsedResponse.metaDescription);
+
+      // Automatically log to Google Sheets on successful generation
+      await logToGoogleSheetsAutomatically(parsedResponse);
 
     } catch (error) {
       console.error('Error generating playbook:', error);
@@ -1479,8 +1530,18 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
       setIsEditingContent(false);
       setMetaSeoTitle(fallbackMetaTitle);
       setMetaDescription(fallbackMetaDescription);
+
+      // Automatically log fallback content to Google Sheets
+      await logToGoogleSheetsAutomatically({
+        content: parsedFallback.content,
+        metaSeoTitle: fallbackMetaTitle,
+        metaDescription: fallbackMetaDescription
+      });
     } finally {
-      setIsGenerating(false);
+      // Reset generation state using the reliable method
+      setTimeout(() => {
+        forceResetGenerationState();
+      }, 10);
     }
   };
 
@@ -1743,6 +1804,93 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
         alert(`Google Docs integration error: ${errorMessage}. Opening Google Docs instead.`);
         window.open('https://docs.google.com/', '_blank');
       }
+    }
+  };
+
+  /**
+   * Log playbook to Google Sheets and open tracking spreadsheet
+   * Why this matters: Automatically logs generated playbook data to a shared tracking spreadsheet for analytics and backup.
+   */
+  const openGoogleSheets = async () => {
+    const contentToCopy = isEditingContent ? editableContent : generatedPlaybook;
+    if (!contentToCopy) {
+      alert('Please generate playbook first before logging to Google Sheets.');
+      return;
+    }
+
+    // Check if Client ID is available
+    if (!process.env.REACT_APP_GOOGLE_CLIENT_ID) {
+      alert('Google Client ID not configured. Please check your .env file and restart the server.');
+      return;
+    }
+
+    setIsOpeningSheets(true);
+    try {
+      // Prepare playbook data for logging
+      const playbookData = {
+        jobTitle: jobTitle,
+        metaSeoTitle: metaSeoTitle || `${jobTitle} Outreach Playbook`,
+        metaDescription: metaDescription || `Comprehensive ${jobTitle} outreach strategies and tactics.`,
+        htmlContent: contentToCopy
+      };
+
+      // Log data to spreadsheet and get URL
+      const result = await googleDocsService.appendPlaybookData(playbookData);
+      
+      if (result.success) {
+        // Show success message
+        setSheetsSuccessMessage('Playbook logged to Google Sheets successfully!');
+        setShowSheetsMessage(true);
+        setTimeout(() => setShowSheetsMessage(false), 3000);
+        
+        // Open the spreadsheet in a new tab
+        window.open(result.spreadsheetUrl, '_blank');
+      }
+      
+    } catch (error) {
+      console.error('Error logging to Google Sheets:', error);
+      
+      // Show error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Failed to save')) {
+        alert('Unable to log to Google Sheets. Please check your Google account permissions and try again.');
+      } else if (errorMessage.includes('Authentication')) {
+        alert('Google authentication required. Please sign in to your Google account.');
+      } else {
+        alert(`Google Sheets error: ${errorMessage}. Please try again.`);
+      }
+    } finally {
+      setIsOpeningSheets(false);
+    }
+  };
+
+  /**
+   * Automatically log playbook data to Google Sheets (silent background operation)
+   * Why this matters: Provides seamless data tracking without interrupting user workflow.
+   */
+  const logToGoogleSheetsAutomatically = async (parsedResponse: any) => {
+    // Only attempt if Google Client ID is configured
+    if (!process.env.REACT_APP_GOOGLE_CLIENT_ID) {
+      console.log('Google Sheets auto-logging skipped: Client ID not configured');
+      return;
+    }
+
+    try {
+      // Prepare playbook data for logging
+      const playbookData = {
+        jobTitle: jobTitle,
+        metaSeoTitle: parsedResponse.metaSeoTitle || `${jobTitle} Outreach Playbook`,
+        metaDescription: parsedResponse.metaDescription || `Comprehensive ${jobTitle} outreach strategies and tactics.`,
+        htmlContent: parsedResponse.content
+      };
+
+      // Attempt to log to spreadsheet silently
+      await googleDocsService.appendPlaybookData(playbookData);
+      console.log('✅ Playbook automatically logged to Google Sheets');
+      
+    } catch (error) {
+      // Silent failure - don't disrupt user experience with alerts
+      console.log('⚠️ Auto-logging to Google Sheets failed (silent):', error);
     }
   };
 
@@ -2573,6 +2721,76 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
                     <Globe size={14} />
                     Publish to CMS
                   </button>
+
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={openGoogleSheets}
+                      disabled={isOpeningSheets}
+                      className="content-modal-btn"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        backgroundColor: isOpeningSheets ? '#9ca3af' : '#16a34a',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: isOpeningSheets ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease',
+                        minHeight: '2.75rem', // Touch-friendly
+                        minWidth: '12.5rem',
+                        justifyContent: 'center',
+                        opacity: isOpeningSheets ? 0.6 : 1
+                      }}
+                      onMouseOver={(e) => {
+                        if (!isOpeningSheets) {
+                          e.currentTarget.style.backgroundColor = '#15803d';
+                          e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!isOpeningSheets) {
+                          e.currentTarget.style.backgroundColor = '#16a34a';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }
+                      }}
+                    >
+                      {isOpeningSheets ? (
+                        <Clock className="animate-spin" size={14} />
+                      ) : (
+                        <Table size={14} />
+                      )}
+                      {isOpeningSheets ? 'Logging to Sheets...' : 'Open in Google Sheets'}
+                    </button>
+                    
+                    {/* Success message */}
+                    {showSheetsMessage && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '100%',
+                        transform: 'translate(0.5rem, -50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        padding: '0.5rem 0.75rem',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                        zIndex: 1000
+                      }}>
+                        <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                        {sheetsSuccessMessage}
+                      </div>
+                    )}
+                  </div>
                   
                   <button
                     onClick={openGoogleDocs}
@@ -2971,6 +3189,75 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
                         <Globe size={14} />
                         Publish to CMS
                       </button>
+
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          onClick={openGoogleSheets}
+                          disabled={isOpeningSheets}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.75rem 1rem',
+                            backgroundColor: isOpeningSheets ? '#9ca3af' : '#16a34a',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            cursor: isOpeningSheets ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease',
+                            minHeight: '2.75rem',
+                            minWidth: '12.5rem',
+                            justifyContent: 'center',
+                            opacity: isOpeningSheets ? 0.6 : 1
+                          }}
+                          onMouseOver={(e) => {
+                            if (!isOpeningSheets) {
+                              e.currentTarget.style.backgroundColor = '#15803d';
+                              e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (!isOpeningSheets) {
+                              e.currentTarget.style.backgroundColor = '#16a34a';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                            }
+                          }}
+                        >
+                          {isOpeningSheets ? (
+                            <Clock className="animate-spin" size={14} />
+                          ) : (
+                            <Table size={14} />
+                          )}
+                          {isOpeningSheets ? 'Logging to Sheets...' : 'Open in Google Sheets'}
+                        </button>
+                        
+                        {/* Success message */}
+                        {showSheetsMessage && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '100%',
+                            transform: 'translate(0.5rem, -50%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                            padding: '0.5rem 0.75rem',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                            zIndex: 1000
+                          }}>
+                            <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                            {sheetsSuccessMessage}
+                          </div>
+                        )}
+                      </div>
                       
                       <button
                         onClick={openGoogleDocs}
