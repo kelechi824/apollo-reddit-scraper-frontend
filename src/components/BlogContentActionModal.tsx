@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, CheckCircle, Copy, Check } from 'lucide-react';
+import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, CheckCircle, Copy, Check, Table } from 'lucide-react';
 import { BrandKit } from '../types';
 import googleDocsService from '../services/googleDocsService';
 
@@ -302,6 +302,11 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
   const [editableContent, setEditableContent] = useState('');
   const [showGeneratedContentModal, setShowGeneratedContentModal] = useState(false);
   
+  // Google Sheets related states
+  const [isOpeningSheets, setIsOpeningSheets] = useState(false);
+  const [showSheetsMessage, setShowSheetsMessage] = useState(false);
+  const [sheetsSuccessMessage, setSheetsSuccessMessage] = useState('');
+
   // Custom CMS Demo States
   const [showCustomCMSForm, setShowCustomCMSForm] = useState<boolean>(false);
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
@@ -1436,9 +1441,19 @@ Return ONLY the JSON object with the three required fields. No additional text o
             overflow-y: auto;
         }
         
-        .tab {
-            margin-left: 20px;
+        .html-code {
+            color: #d4d4d4;
+            font-size: 13px;
+            line-height: 1.5;
         }
+        
+        /* HTML syntax highlighting */
+        .html-tag { color: #569cd6; }
+        .html-attr { color: #92c5f7; }
+        .html-value { color: #ce9178; }
+        .html-text { color: #d4d4d4; }
+        
+        
     </style>
 </head>
 <body>
@@ -1460,15 +1475,17 @@ Return ONLY the JSON object with the three required fields. No additional text o
     <div class="code-container">
         <div class="code-header">
             <span class="code-title">HTML Source Code</span>
-            <button class="copy-btn" onclick="copyToClipboard()">📋 Copy HTML</button>
+            <button class="copy-btn" onclick="copyHtmlCode()">📋 Copy HTML</button>
         </div>
-        <div class="code-content" id="htmlContent">${contentToOpen.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        <div class="code-content">
+            <pre class="html-code" id="htmlCode">${contentToOpen.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+        </div>
     </div>
 
     <script>
-        function copyToClipboard() {
-            const htmlContent = \`${contentToOpen.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
-            navigator.clipboard.writeText(htmlContent).then(() => {
+        function copyHtmlCode() {
+            const htmlCode = \`${contentToOpen.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
+            navigator.clipboard.writeText(htmlCode).then(() => {
                 const btn = document.querySelector('.copy-btn');
                 const originalText = btn.textContent;
                 btn.textContent = '✅ Copied!';
@@ -1478,18 +1495,9 @@ Return ONLY the JSON object with the three required fields. No additional text o
                     btn.style.backgroundColor = '#0e639c';
                 }, 2000);
             }).catch(err => {
-                console.error('Failed to copy:', err);
-                alert('Copy failed. Please select and copy manually.');
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy HTML. Please select and copy manually.');
             });
-        }
-        
-        // Add syntax highlighting effect
-        const codeContent = document.getElementById('htmlContent');
-        if (codeContent) {
-            codeContent.innerHTML = codeContent.innerHTML
-                .replace(/(&lt;\/?)([a-zA-Z][a-zA-Z0-9]*)/g, '$1<span style="color: #569cd6;">$2</span>')
-                .replace(/(&lt;[^&gt;]*?)(\s[a-zA-Z-]+)(=)/g, '$1<span style="color: #9cdcfe;">$2</span><span style="color: #d4d4d4;">$3</span>')
-                .replace(/(=)(\"[^\"]*\")/g, '$1<span style="color: #ce9178;">$2</span>');
         }
     </script>
 </body>
@@ -1502,6 +1510,110 @@ Return ONLY the JSON object with the three required fields. No additional text o
       newWindow.document.close();
     } else {
       alert('Popup blocked. Please allow popups and try again.');
+    }
+  };
+
+  /**
+   * Open Google Docs with content
+   * Why this matters: Allows users to quickly move generated content to Google Docs for further editing and collaboration.
+   */
+  const openGoogleDocs = async () => {
+    const contentToCopy = isEditingContent ? editableContent : generatedContent;
+    if (!contentToCopy) {
+      alert('Please generate content first before creating a Google Doc.');
+      return;
+    }
+
+    // Check if Client ID is available
+    if (!process.env.REACT_APP_GOOGLE_CLIENT_ID) {
+      alert('Google Client ID not configured. Please check your .env file and restart the server.');
+      return;
+    }
+
+    try {
+      // Generate document title from keyword
+      const docTitle = `Apollo Blog Content - ${keywordRow.keyword}`;
+      
+      // Create new Google Doc with content
+      const documentUrl = await googleDocsService.createDocument(docTitle, contentToCopy);
+      
+      // Open the new document in a new tab
+      window.open(documentUrl, '_blank');
+      
+    } catch (error) {
+      console.error('Error creating Google Doc:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        error: error
+      });
+      
+      // Fallback to opening empty Google Docs if API fails
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Failed to create')) {
+        alert('Unable to create Google Document. Please check your Google account permissions and try again.');
+      } else {
+        // If user cancels authentication, just open Google Docs
+        alert(`Google Docs integration error: ${errorMessage}. Opening Google Docs instead.`);
+        window.open('https://docs.google.com/', '_blank');
+      }
+    }
+  };
+
+  /**
+   * Open Google Sheets with content data
+   * Why this matters: Provides data logging and tracking capabilities for content management.
+   */
+  const openGoogleSheets = async () => {
+    const contentToCopy = isEditingContent ? editableContent : generatedContent;
+    if (!contentToCopy) {
+      alert('Please generate content first before logging to Google Sheets.');
+      return;
+    }
+
+    // Check if Client ID is available
+    if (!process.env.REACT_APP_GOOGLE_CLIENT_ID) {
+      alert('Google Client ID not configured. Please check your .env file and restart the server.');
+      return;
+    }
+
+    setIsOpeningSheets(true);
+    try {
+      // Prepare blog content data for logging
+      const blogData = {
+        keyword: keywordRow.keyword,
+        metaSeoTitle: metaSeoTitle || `${keywordRow.keyword} - Complete Guide`,
+        metaDescription: metaDescription || `Comprehensive guide about ${keywordRow.keyword} with expert insights and actionable tips.`,
+        htmlContent: contentToCopy
+      };
+
+      // Log data to blog content spreadsheet and get URL
+      const result = await googleDocsService.appendBlogData(blogData);
+      
+      if (result.success) {
+        // Show success message
+        setSheetsSuccessMessage('Blog content logged to Google Sheets successfully!');
+        setShowSheetsMessage(true);
+        setTimeout(() => setShowSheetsMessage(false), 3000);
+        
+        // Open the spreadsheet in a new tab
+        window.open(result.spreadsheetUrl, '_blank');
+      }
+      
+    } catch (error) {
+      console.error('Error logging to Google Sheets:', error);
+      
+      // Show error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Failed to save')) {
+        alert('Unable to log to Google Sheets. Please check your Google account permissions and try again.');
+      } else if (errorMessage.includes('Authentication')) {
+        alert('Google authentication required. Please sign in to your Google account.');
+      } else {
+        alert(`Google Sheets error: ${errorMessage}. Please try again.`);
+      }
+    } finally {
+      setIsOpeningSheets(false);
     }
   };
 
@@ -2286,6 +2398,34 @@ Return ONLY the JSON object with the three required fields. No additional text o
                     )}
                   </button>
 
+                  {/* Publish to CMS Button */}
+                  <button
+                    onClick={() => setShowCMSModal(true)}
+                    className="content-modal-btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      minHeight: '2.75rem',
+                      minWidth: '7.5rem',
+                      justifyContent: 'center'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+                  >
+                    <Globe size={14} />
+                    Publish to CMS
+                  </button>
+
                   {/* Open in HTML Button */}
                   <button
                     onClick={openInHTML}
@@ -2324,29 +2464,129 @@ Return ONLY the JSON object with the three required fields. No additional text o
                   </button>
 
                   <button
-                    onClick={() => setShowCMSModal(true)}
+                    onClick={openGoogleDocs}
                     className="content-modal-btn"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
                       padding: '0.75rem 1rem',
-                      backgroundColor: '#10b981',
-                      color: 'white',
+                      backgroundColor: '#84ADEA',
+                      color: 'black',
                       border: 'none',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '500',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
-                      minHeight: '2.75rem',
-                      minWidth: '7.5rem',
+                      minHeight: '2.75rem', // Touch-friendly
+                      minWidth: '12.5rem',
                       justifyContent: 'center'
                     }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#6b96e8';
+                      e.currentTarget.style.color = 'black';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#84ADEA';
+                      e.currentTarget.style.color = 'black';
+                    }}
                   >
-                    <Globe size={14} />
-                    Publish to CMS
+                    <img 
+                      src="/google-docs-logo.png" 
+                      alt="Google Docs"
+                      style={{
+                        width: '1rem',
+                        height: '1rem',
+                        objectFit: 'contain'
+                      }}
+                      onError={(e) => {
+                        // Fallback to ExternalLink icon if logo fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const icon = document.createElement('div');
+                          icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 0 0-5"/><path d="m17 7-10 10"/></svg>';
+                          icon.style.display = 'flex';
+                          icon.style.alignItems = 'center';
+                          icon.style.justifyContent = 'center';
+                          parent.insertBefore(icon, target);
+                        }
+                      }}
+                    />
+                    Google Docs
                   </button>
+
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={openGoogleSheets}
+                      className="content-modal-btn"
+                      disabled={isOpeningSheets}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        backgroundColor: '#16a34a',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: isOpeningSheets ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease',
+                        minHeight: '2.75rem', // Touch-friendly
+                        minWidth: '12.5rem',
+                        justifyContent: 'center',
+                        opacity: isOpeningSheets ? 0.6 : 1
+                      }}
+                      onMouseOver={(e) => {
+                        if (!isOpeningSheets) {
+                          e.currentTarget.style.backgroundColor = '#15803d';
+                          e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!isOpeningSheets) {
+                          e.currentTarget.style.backgroundColor = '#16a34a';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }
+                      }}
+                    >
+                      {isOpeningSheets ? (
+                        <Clock className="animate-spin" size={14} />
+                      ) : (
+                        <Table size={14} />
+                      )}
+                      {isOpeningSheets ? 'Logging to Sheets...' : 'Open in Google Sheets'}
+                    </button>
+                    
+                    {/* Success message */}
+                    {showSheetsMessage && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '100%',
+                        transform: 'translate(0.5rem, -50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        padding: '0.5rem 0.75rem',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                        zIndex: 1000
+                      }}>
+                        <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                        {sheetsSuccessMessage}
+                      </div>
+                    )}
+                  </div>
 
                   <div style={{ position: 'relative' }}>
                     <button
@@ -2595,6 +2835,342 @@ Return ONLY the JSON object with the three required fields. No additional text o
                       Complete the workflow first to see generated content here
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Bottom Action Buttons - Duplicate for convenience */}
+              {generatedContent && (
+                <div style={{ 
+                  marginTop: '2rem',
+                  paddingTop: '1rem',
+                  borderTop: '0.0625rem solid #e5e7eb'
+                }}>
+                  <div className="content-action-buttons" style={{ 
+                    display: 'flex', 
+                    gap: '0.75rem',
+                    marginBottom: '1rem',
+                    flexWrap: 'wrap', // Stack on mobile
+                    justifyContent: 'center' // Center the buttons
+                  }}>
+                    {/* Edit/Save Button */}
+                    <button
+                      onClick={toggleEditMode}
+                      className="mobile-hide-edit"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        backgroundColor: isEditingContent ? '#10b981' : '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        minHeight: '2.75rem',
+                        minWidth: '7.5rem',
+                        justifyContent: 'center'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = isEditingContent ? '#059669' : '#d97706';
+                        e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = isEditingContent ? '#10b981' : '#f59e0b';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      {isEditingContent ? (
+                        <>
+                          <Check size={14} />
+                          Save Changes
+                        </>
+                      ) : (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                          Edit Content
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => setShowCMSModal(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        minHeight: '2.75rem',
+                        minWidth: '7.5rem',
+                        justifyContent: 'center'
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+                    >
+                      <Globe size={14} />
+                      Publish to CMS
+                    </button>
+
+                    {/* Open in HTML Button */}
+                    <button
+                      onClick={openInHTML}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        backgroundColor: '#7c3aed',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        minHeight: '2.75rem',
+                        minWidth: '7.5rem',
+                        justifyContent: 'center'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#6d28d9';
+                        e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#7c3aed';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m6 16 6-12 6 12H6Z"/>
+                        <path d="m8 12 8 0"/>
+                      </svg>
+                      Open in HTML
+                    </button>
+
+                    <button
+                      onClick={openGoogleDocs}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        backgroundColor: '#84ADEA',
+                        color: 'black',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        minHeight: '2.75rem',
+                        minWidth: '12.5rem',
+                        justifyContent: 'center'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#6b96e8';
+                        e.currentTarget.style.color = 'black';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#84ADEA';
+                        e.currentTarget.style.color = 'black';
+                      }}
+                    >
+                      <img 
+                        src="/google-docs-logo.png" 
+                        alt="Google Docs"
+                        style={{
+                          width: '1rem',
+                          height: '1rem',
+                          objectFit: 'contain'
+                        }}
+                        onError={(e) => {
+                          // Fallback to ExternalLink icon if logo fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            const icon = document.createElement('div');
+                            icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 0 0-5"/><path d="m17 7-10 10"/></svg>';
+                            icon.style.display = 'flex';
+                            icon.style.alignItems = 'center';
+                            icon.style.justifyContent = 'center';
+                            parent.insertBefore(icon, target);
+                          }
+                        }}
+                      />
+                      Google Docs
+                    </button>
+
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        onClick={openGoogleSheets}
+                        disabled={isOpeningSheets}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          backgroundColor: isOpeningSheets ? '#9ca3af' : '#16a34a',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: isOpeningSheets ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease',
+                          minHeight: '2.75rem',
+                          minWidth: '12.5rem',
+                          justifyContent: 'center',
+                          opacity: isOpeningSheets ? 0.6 : 1
+                        }}
+                        onMouseOver={(e) => {
+                          if (!isOpeningSheets) {
+                            e.currentTarget.style.backgroundColor = '#15803d';
+                            e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (!isOpeningSheets) {
+                            e.currentTarget.style.backgroundColor = '#16a34a';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }
+                        }}
+                      >
+                        {isOpeningSheets ? (
+                          <Clock className="animate-spin" size={14} />
+                        ) : (
+                          <Table size={14} />
+                        )}
+                        {isOpeningSheets ? 'Logging to Sheets...' : 'Open in Google Sheets'}
+                      </button>
+                      
+                      {/* Success message */}
+                      {showSheetsMessage && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '100%',
+                          transform: 'translate(0.5rem, -50%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                          padding: '0.5rem 0.75rem',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '500',
+                          whiteSpace: 'nowrap',
+                          boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                          zIndex: 1000
+                        }}>
+                          <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                          {sheetsSuccessMessage}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        onClick={copyToClipboard}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          backgroundColor: '#6b7280',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          minHeight: '2.75rem',
+                          minWidth: '7.5rem',
+                          justifyContent: 'center'
+                        }}
+                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
+                      >
+                        <Copy size={14} />
+                        Copy
+                      </button>
+                      
+                      {/* Copied message */}
+                      {showCopiedMessage && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '100%',
+                          transform: 'translate(0.5rem, -50%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                          padding: '0.5rem 0.75rem',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '500',
+                          whiteSpace: 'nowrap',
+                          boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                          zIndex: 1000
+                        }}>
+                          <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                          Copied!
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Clear Button - Full width on mobile */}
+                  <button
+                    onClick={clearGeneratedContent}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#fef2f2',
+                      border: '0.0625rem solid #fecaca',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#dc2626',
+                      transition: 'all 0.2s ease',
+                      minHeight: '2.75rem',
+                      width: '100%',
+                      justifyContent: 'center'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dc2626';
+                      e.currentTarget.style.color = 'white';
+                      e.currentTarget.style.borderColor = '#dc2626';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#fef2f2';
+                      e.currentTarget.style.color = '#dc2626';
+                      e.currentTarget.style.borderColor = '#fecaca';
+                    }}
+                  >
+                    <X size={14} />
+                    Clear Generated Content
+                  </button>
                 </div>
               )}
             </div>

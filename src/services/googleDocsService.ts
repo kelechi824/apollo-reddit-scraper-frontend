@@ -533,6 +533,464 @@ class GoogleDocsService {
   }
 
   /**
+   * Get or create blog content tracking spreadsheet
+   * Why this matters: Maintains a dedicated spreadsheet for blog content separate from playbooks.
+   */
+  async getOrCreateBlogSpreadsheet(): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    // Check if we have a stored spreadsheet ID for blog content
+    const storedSpreadsheetId = localStorage.getItem('apollo_blog_spreadsheet_id');
+    
+    if (storedSpreadsheetId) {
+      try {
+        // Verify the spreadsheet still exists and is accessible
+        window.gapi.client.setToken({ access_token: this.accessToken });
+        const response = await window.gapi.client.sheets.spreadsheets.get({
+          spreadsheetId: storedSpreadsheetId
+        });
+        
+        if (response.result) {
+          // Check if headers exist in the existing spreadsheet
+          try {
+            const headerResponse = await window.gapi.client.sheets.spreadsheets.values.get({
+              spreadsheetId: storedSpreadsheetId,
+              range: 'Blog Content Tracking!A1:F1'
+            });
+            
+            // If no headers exist or headers are different, add/update them
+            const expectedHeaders = ['Date Created', 'Keyword', 'Body', 'H1 Title', 'Meta SEO Title', 'Meta Description'];
+            const currentHeaders = headerResponse.result.values && headerResponse.result.values[0];
+            
+            if (!currentHeaders || !this.arraysEqual(currentHeaders, expectedHeaders)) {
+              console.log('Adding missing headers to existing blog spreadsheet');
+              await this.addBlogHeaders(storedSpreadsheetId, response.result.sheets[0].properties.sheetId);
+              // Clear bold formatting from existing content rows
+              await this.clearBoldFromExistingContent(storedSpreadsheetId, response.result.sheets[0].properties.sheetId);
+            }
+          } catch (headerError) {
+            console.log('Adding headers to existing spreadsheet');
+            await this.addBlogHeaders(storedSpreadsheetId, response.result.sheets[0].properties.sheetId);
+            // Clear bold formatting from existing content rows
+            await this.clearBoldFromExistingContent(storedSpreadsheetId, response.result.sheets[0].properties.sheetId);
+          }
+          
+          return {
+            spreadsheetId: storedSpreadsheetId,
+            spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${storedSpreadsheetId}/edit`
+          };
+        }
+      } catch (error) {
+        console.log('Stored blog spreadsheet not accessible, creating new one');
+        localStorage.removeItem('apollo_blog_spreadsheet_id');
+      }
+    }
+
+    // Create new spreadsheet
+    return await this.createBlogSpreadsheet();
+  }
+
+  /**
+   * Create new Apollo Blog Content tracking spreadsheet
+   * Why this matters: Creates a properly formatted spreadsheet with headers for tracking all blog content generation.
+   */
+  async createBlogSpreadsheet(): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    try {
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      const today = new Date().toLocaleDateString();
+      const spreadsheetTitle = `Apollo Blog Content - ${today}`;
+
+      // Create new spreadsheet
+      const createResponse = await window.gapi.client.sheets.spreadsheets.create({
+        resource: {
+          properties: {
+            title: spreadsheetTitle
+          },
+          sheets: [{
+            properties: {
+              title: 'Blog Content Tracking',
+              gridProperties: {
+                rowCount: 1000,
+                columnCount: 6
+              }
+            }
+          }]
+        }
+      });
+
+      const spreadsheetId = createResponse.result.spreadsheetId;
+      
+      if (!spreadsheetId) {
+        throw new Error('Failed to create blog content spreadsheet');
+      }
+
+      // Add headers for blog content in specified order
+      const headers = [
+        'Date Created',
+        'Keyword',
+        'Body',
+        'H1 Title',
+        'Meta SEO Title',
+        'Meta Description'
+      ];
+
+      await window.gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: spreadsheetId,
+        range: 'Blog Content Tracking!A1:F1',
+        valueInputOption: 'RAW',
+        resource: {
+          values: [headers]
+        }
+      });
+
+      // Format headers and body column
+      await window.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: spreadsheetId,
+        resource: {
+          requests: [
+            {
+              // Make header row bold
+              repeatCell: {
+                range: {
+                  sheetId: createResponse.result.sheets[0].properties.sheetId,
+                  startRowIndex: 0, // Row 1 (0-indexed)
+                  endRowIndex: 1,   // Only row 1
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 6,   // Through column F
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: true
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            },
+            {
+              // Ensure content rows are not bold (set default formatting for rows 2+)
+              repeatCell: {
+                range: {
+                  sheetId: createResponse.result.sheets[0].properties.sheetId,
+                  startRowIndex: 1, // Row 2 onwards (0-indexed)
+                  endRowIndex: 1000, // Through row 1000
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 6,   // Through column F
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: false
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            },
+            {
+              // Format column C (Body) to prevent text wrapping and row expansion
+              repeatCell: {
+                range: {
+                  sheetId: createResponse.result.sheets[0].properties.sheetId,
+                  startColumnIndex: 2, // Column C (0-indexed)
+                  endColumnIndex: 3,   // Only column C
+                },
+                cell: {
+                  userEnteredFormat: {
+                    wrapStrategy: 'CLIP' // Prevents text wrapping and row expansion
+                  }
+                },
+                fields: 'userEnteredFormat.wrapStrategy'
+              }
+            }
+          ]
+        }
+      });
+
+      // Store spreadsheet ID for future use
+      localStorage.setItem('apollo_blog_spreadsheet_id', spreadsheetId);
+
+      const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+      return { spreadsheetId, spreadsheetUrl };
+
+    } catch (error) {
+      console.error('Error creating blog content spreadsheet:', error);
+      throw new Error('Failed to create Google Spreadsheet for blog content. Please try again.');
+    }
+  }
+
+  /**
+   * Append blog content data to tracking spreadsheet
+   * Why this matters: Logs all generated blog content with metadata for tracking and analytics.
+   */
+  async appendBlogData(blogData: {
+    keyword: string;
+    metaSeoTitle: string;
+    metaDescription: string;
+    htmlContent: string;
+  }): Promise<{ success: boolean; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    try {
+      // Get or create blog spreadsheet
+      const { spreadsheetId, spreadsheetUrl } = await this.getOrCreateBlogSpreadsheet();
+      
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      // Extract H1 title from HTML content
+      const h1Title = this.extractH1Title(blogData.htmlContent);
+      
+      // Format timestamp as YYYY-MM-DD
+      const formattedDate = new Date().toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
+      
+      // Prepare row data for blog content in specified order
+      const rowData = [
+        formattedDate,
+        blogData.keyword,
+        blogData.htmlContent, // Body
+        h1Title,
+        blogData.metaSeoTitle,
+        blogData.metaDescription
+      ];
+
+      // Get current row count to know where the new data will be inserted
+      const dataResponse = await window.gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: 'Blog Content Tracking!A:F'
+      });
+      const currentRowCount = dataResponse.result.values ? dataResponse.result.values.length : 1;
+      const newRowIndex = currentRowCount; // 0-indexed, so this will be the new row
+
+      // Append data to spreadsheet
+      await window.gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: spreadsheetId,
+        range: 'Blog Content Tracking!A:F',
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        resource: {
+          values: [rowData]
+        }
+      });
+
+      // Get sheet info to access sheetId
+      const spreadsheetInfo = await window.gapi.client.sheets.spreadsheets.get({
+        spreadsheetId: spreadsheetId
+      });
+      const sheetId = spreadsheetInfo.result.sheets[0].properties.sheetId;
+
+      // Ensure the newly added row is not bold
+      await window.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: spreadsheetId,
+        resource: {
+          requests: [
+            {
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startRowIndex: newRowIndex, // The newly added row
+                  endRowIndex: newRowIndex + 1, // Just this one row
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 6,   // Through column F
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: false
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            }
+          ]
+        }
+      });
+
+      console.log('Successfully appended blog content data to spreadsheet');
+      return { success: true, spreadsheetUrl };
+
+    } catch (error) {
+      console.error('Error appending blog content data:', error);
+      throw new Error('Failed to save blog content data to Google Spreadsheet. Please try again.');
+    }
+  }
+
+  /**
+   * Helper method to compare two arrays for equality
+   * Why this matters: Used to check if existing headers match expected headers.
+   */
+  private arraysEqual(a: any[], b: any[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Add blog headers to an existing spreadsheet
+   * Why this matters: Ensures existing spreadsheets have proper headers with correct formatting.
+   */
+  private async addBlogHeaders(spreadsheetId: string, sheetId: number): Promise<void> {
+    try {
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      // Add headers for blog content in specified order
+      const headers = [
+        'Date Created',
+        'Keyword',
+        'Body',
+        'H1 Title',
+        'Meta SEO Title',
+        'Meta Description'
+      ];
+
+      // Update headers
+      await window.gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: spreadsheetId,
+        range: 'Blog Content Tracking!A1:F1',
+        valueInputOption: 'RAW',
+        resource: {
+          values: [headers]
+        }
+      });
+
+      // Format headers and body column
+      await window.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: spreadsheetId,
+        resource: {
+          requests: [
+            {
+              // Make header row bold
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startRowIndex: 0, // Row 1 (0-indexed)
+                  endRowIndex: 1,   // Only row 1
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 6,   // Through column F
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: true
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            },
+            {
+              // Ensure content rows are not bold (set default formatting for rows 2+)
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startRowIndex: 1, // Row 2 onwards (0-indexed)
+                  endRowIndex: 1000, // Through row 1000
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 6,   // Through column F
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: false
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            },
+            {
+              // Format column C (Body) to prevent text wrapping and row expansion
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startColumnIndex: 2, // Column C (0-indexed)
+                  endColumnIndex: 3,   // Only column C
+                },
+                cell: {
+                  userEnteredFormat: {
+                    wrapStrategy: 'CLIP' // Prevents text wrapping and row expansion
+                  }
+                },
+                fields: 'userEnteredFormat.wrapStrategy'
+              }
+            }
+          ]
+        }
+      });
+
+      console.log('Successfully added headers to existing blog spreadsheet');
+    } catch (error) {
+      console.error('Error adding headers to existing spreadsheet:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear bold formatting from existing content rows
+   * Why this matters: Ensures existing content rows are not bold, only headers should be bold.
+   */
+  private async clearBoldFromExistingContent(spreadsheetId: string, sheetId: number): Promise<void> {
+    try {
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      // Get current data to determine how many rows have content
+      const dataResponse = await window.gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: 'Blog Content Tracking!A:F'
+      });
+
+      const numRows = dataResponse.result.values ? dataResponse.result.values.length : 1;
+      
+      if (numRows > 1) { // If there are content rows beyond the header
+        // Clear bold formatting from all content rows (row 2 onwards)
+        await window.gapi.client.sheets.spreadsheets.batchUpdate({
+          spreadsheetId: spreadsheetId,
+          resource: {
+            requests: [
+              {
+                repeatCell: {
+                  range: {
+                    sheetId: sheetId,
+                    startRowIndex: 1, // Row 2 onwards (0-indexed)
+                    endRowIndex: numRows, // Through the last row with data
+                    startColumnIndex: 0, // Start from column A
+                    endColumnIndex: 6,   // Through column F
+                  },
+                  cell: {
+                    userEnteredFormat: {
+                      textFormat: {
+                        bold: false
+                      }
+                    }
+                  },
+                  fields: 'userEnteredFormat.textFormat.bold'
+                }
+              }
+            ]
+          }
+        });
+
+        console.log(`Successfully cleared bold formatting from ${numRows - 1} content rows`);
+      }
+    } catch (error) {
+      console.error('Error clearing bold formatting from existing content:', error);
+      // Don't throw error here as this is not critical
+    }
+  }
+
+  /**
    * Open existing playbook spreadsheet in new tab
    * Why this matters: Provides quick access to the tracking spreadsheet with all logged data.
    */
