@@ -54,7 +54,13 @@ const GongDigDeeperModal: React.FC<GongDigDeeperModalProps> = ({ isOpen, onClose
   const testConversationExists = async (conversationId: string) => {
     try {
       // Send a test message to see if conversation exists
-      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/gong-chat/message`, {
+      // Determine backend URL based on environment
+      // Why this matters: Ensures production deployments use the correct backend URL
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
+      
+      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/gong-chat/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +123,13 @@ const GongDigDeeperModal: React.FC<GongDigDeeperModalProps> = ({ isOpen, onClose
         croOpportunity: call.analysis.croOpportunity
       };
 
-      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/gong-chat/start-conversation`, {
+      // Determine backend URL based on environment  
+      // Why this matters: Ensures production deployments use the correct backend URL
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
+      
+      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/gong-chat/start-conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -197,7 +209,11 @@ const GongDigDeeperModal: React.FC<GongDigDeeperModalProps> = ({ isOpen, onClose
     setIsLoading(true);
 
     try {
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+      // Determine backend URL based on environment
+    // Why this matters: Ensures production deployments use the correct backend URL
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://apollo-reddit-scraper-backend.vercel.app'
+      : 'http://localhost:3003';
       const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/gong-chat/message`, {
         method: 'POST',
         headers: {
@@ -364,7 +380,11 @@ const GongDigDeeperModal: React.FC<GongDigDeeperModalProps> = ({ isOpen, onClose
 
     // Send feedback to backend for collection
     try {
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+      // Determine backend URL based on environment
+    // Why this matters: Ensures production deployments use the correct backend URL
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://apollo-reddit-scraper-backend.vercel.app'
+      : 'http://localhost:3003';
       await fetch(`${baseUrl.replace(/\/$/, '')}/api/gong-chat/feedback`, {
         method: 'POST',
         headers: {

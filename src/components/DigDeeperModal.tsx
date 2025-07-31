@@ -54,7 +54,13 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
   const testConversationExists = async (conversationId: string) => {
     try {
       // Send a test message to see if conversation exists
-      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/chat/message`, {
+      // Determine backend URL based on environment  
+      // Why this matters: Ensures production deployments use the correct backend URL
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
+      
+      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/chat/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,7 +119,13 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
         audience_insight: post.analysis.audience_insight
       };
 
-      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/chat/start-conversation`, {
+      // Determine backend URL based on environment
+      // Why this matters: Ensures production deployments use the correct backend URL  
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
+      
+      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/chat/start-conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -193,7 +205,11 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
     setIsLoading(true);
 
     try {
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+      // Determine backend URL based on environment
+    // Why this matters: Ensures production deployments use the correct backend URL
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://apollo-reddit-scraper-backend.vercel.app'
+      : 'http://localhost:3003';
       const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat/message`, {
         method: 'POST',
         headers: {
@@ -360,7 +376,11 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
 
     // Send feedback to backend for collection
     try {
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+      // Determine backend URL based on environment
+    // Why this matters: Ensures production deployments use the correct backend URL
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://apollo-reddit-scraper-backend.vercel.app'
+      : 'http://localhost:3003';
       await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat/feedback`, {
         method: 'POST',
         headers: {

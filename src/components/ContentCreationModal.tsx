@@ -1164,8 +1164,14 @@ Return ONLY the JSON object, no additional text.`;
         user_prompt: processedUserPrompt
       };
 
+      // Determine backend URL based on environment
+      // Why this matters: Ensures production deployments use the correct backend URL
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
+      
       // Call the content generation API
-      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/content/generate`, {
+      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/content/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1652,7 +1658,13 @@ Return ONLY the JSON object, no additional text.`;
     try {
       console.log('📰 Publishing to CMS:', customCMSConfig);
 
-      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/content/publish-to-cms`, {
+      // Determine backend URL based on environment
+      // Why this matters: Ensures production deployments use the correct backend URL
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
+      
+      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/content/publish-to-cms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -60,7 +60,11 @@ const LandingPageAnalysisModal: React.FC<LandingPageAnalysisModalProps> = ({
         callInsights: callInsights
       };
 
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+      // Determine backend URL based on environment - matches BlogCreatorPage pattern
+      // Why this matters: Ensures production deployments use the correct backend URL
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
       const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/gong-analysis/analyze-landing-page`, {
         method: 'POST',
         headers: {
