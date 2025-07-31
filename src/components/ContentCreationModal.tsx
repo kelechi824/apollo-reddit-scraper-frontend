@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, CheckCircle, Copy, Check } from 'lucide-react';
+import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, CheckCircle, Copy, Check, Table } from 'lucide-react';
 import { AnalyzedPost, BrandKit, ContentCreationRequest } from '../types';
 import googleDocsService from '../services/googleDocsService';
 
@@ -273,6 +273,11 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editableContent, setEditableContent] = useState('');
   const [showGeneratedContentModal, setShowGeneratedContentModal] = useState(false);
+  
+  // Google Sheets related states
+  const [isOpeningSheets, setIsOpeningSheets] = useState(false);
+  const [showSheetsMessage, setShowSheetsMessage] = useState(false);
+  const [sheetsSuccessMessage, setSheetsSuccessMessage] = useState('');
   
   // Custom CMS Demo States
   const [showCustomCMSForm, setShowCustomCMSForm] = useState<boolean>(false);
@@ -1599,6 +1604,241 @@ Return ONLY the JSON object, no additional text.`;
   };
 
   /**
+   * Open HTML content in new window for developer review
+   * Why this matters: Allows developers to inspect the raw HTML output for debugging and integration.
+   */
+  const openInHTML = () => {
+    const contentToOpen = isEditingContent ? editableContent : generatedContent;
+    if (!contentToOpen) {
+      alert('No content to display. Please generate content first.');
+      return;
+    }
+
+    // Create a simple HTML page showing the raw HTML source
+    const rawHtmlDisplay = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw HTML Source - ${metaSeoTitle || `Content for ${post.title}`}</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        
+        .header {
+            background-color: #2d2d30;
+            padding: 20px;
+            margin: -20px -20px 20px -20px;
+            border-bottom: 3px solid #007acc;
+        }
+        
+        .header h1 {
+            color: #4ec9b0;
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        
+        .header p {
+            color: #9cdcfe;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .meta-info {
+            background-color: #252526;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .meta-info h3 {
+            color: #f59e0b;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        
+        .meta-field {
+            margin: 8px 0;
+            color: #d4d4d4;
+            font-size: 13px;
+        }
+        
+        .meta-label {
+            color: #4fc1ff;
+            font-weight: bold;
+        }
+        
+        .code-container {
+            background-color: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 5px;
+            position: relative;
+        }
+        
+        .code-header {
+            background-color: #2d2d30;
+            padding: 10px 15px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-title {
+            color: #cccccc;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .copy-btn {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: inherit;
+        }
+        
+        .copy-btn:hover {
+            background-color: #1177bb;
+        }
+        
+        .html-code {
+            padding: 20px;
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        /* HTML syntax highlighting */
+        .html-tag { color: #569cd6; }
+        .html-attr { color: #92c5f7; }
+        .html-value { color: #ce9178; }
+        .html-text { color: #d4d4d4; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Raw HTML Source Code</h1>
+        <p>Generated content for: ${post.title}</p>
+        <p>Subreddit: r/${post.subreddit} | Score: ${post.score}</p>
+    </div>
+    
+    <div class="meta-info">
+        <h3>SEO Metadata</h3>
+        <div class="meta-field"><span class="meta-label">Title:</span> ${metaSeoTitle || 'No title generated'}</div>
+        <div class="meta-field"><span class="meta-label">Description:</span> ${metaDescription || 'No description generated'}</div>
+    </div>
+    
+    <div class="code-container">
+        <div class="code-header">
+            <span class="code-title">HTML Source Code</span>
+            <button class="copy-btn" onclick="copyHtmlCode()">📋 Copy HTML</button>
+        </div>
+        
+        <pre class="html-code" id="htmlCode">${contentToOpen.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+    </div>
+    
+    <script>
+        function copyHtmlCode() {
+            const htmlCode = \`${contentToOpen.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
+            navigator.clipboard.writeText(htmlCode).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.backgroundColor = '#16a34a';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.backgroundColor = '#0e639c';
+                }, 2000);
+            }).catch(() => {
+                alert('Failed to copy HTML. Please select and copy manually.');
+            });
+        }
+    </script>
+</body>
+</html>`;
+
+    // Open in new window
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      newWindow.document.write(rawHtmlDisplay);
+      newWindow.document.close();
+    } else {
+      alert('Please allow popups to view the HTML source code.');
+    }
+  };
+
+  /**
+   * Open Google Sheets with content data
+   * Why this matters: Provides data logging and tracking capabilities for content management.
+   */
+  const openGoogleSheets = async () => {
+    const contentToCopy = isEditingContent ? editableContent : generatedContent;
+    if (!contentToCopy) {
+      alert('Please generate content first before logging to Google Sheets.');
+      return;
+    }
+
+    // Check if Client ID is available
+    if (!process.env.REACT_APP_GOOGLE_CLIENT_ID) {
+      alert('Google Client ID not configured. Please check your .env file and restart the server.');
+      return;
+    }
+
+    setIsOpeningSheets(true);
+    try {
+      // Prepare content data for logging
+      const contentData = {
+        jobTitle: post.title, // Using jobTitle to match the expected interface
+        metaSeoTitle: metaSeoTitle || `Content for ${post.title}`,
+        metaDescription: metaDescription || `Generated content for Reddit post from r/${post.subreddit}`,
+        htmlContent: contentToCopy
+      };
+
+      // Log data to spreadsheet and get URL
+      const result = await googleDocsService.appendPlaybookData(contentData);
+      
+      if (result.success) {
+        // Show success message
+        setSheetsSuccessMessage('Content logged to Google Sheets successfully!');
+        setShowSheetsMessage(true);
+        setTimeout(() => setShowSheetsMessage(false), 3000);
+        
+        // Open the spreadsheet in a new tab
+        window.open(result.spreadsheetUrl, '_blank');
+      }
+      
+    } catch (error) {
+      console.error('Error logging to Google Sheets:', error);
+      
+      // Show error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Failed to save')) {
+        alert('Unable to log to Google Sheets. Please check your Google account permissions and try again.');
+      } else if (errorMessage.includes('Authentication')) {
+        alert('Google authentication required. Please sign in to your Google account.');
+      } else {
+        alert(`Google Sheets error: ${errorMessage}. Please try again.`);
+      }
+    } finally {
+      setIsOpeningSheets(false);
+    }
+  };
+
+  /**
    * Show confirmation dialog before clearing content
    * Why this matters: Prevents accidental deletion of generated content
    */
@@ -2630,6 +2870,43 @@ Return ONLY the JSON object, no additional text.`;
                     <Globe size={14} />
                     Publish to CMS
                   </button>
+
+                  {/* Open in HTML Button */}
+                  <button
+                    onClick={openInHTML}
+                    className="content-modal-btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#7c3aed',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      minHeight: '2.75rem', // Touch-friendly
+                      minWidth: '7.5rem',
+                      justifyContent: 'center'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#6d28d9';
+                      e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#7c3aed';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m6 16 6-12 6 12H6Z"/>
+                      <path d="m8 12 8 0"/>
+                    </svg>
+                    Open in HTML
+                  </button>
                   
                   <button
                     onClick={openGoogleDocs}
@@ -2685,6 +2962,76 @@ Return ONLY the JSON object, no additional text.`;
                     />
                     Google Docs
                   </button>
+
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={openGoogleSheets}
+                      className="content-modal-btn"
+                      disabled={isOpeningSheets}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        backgroundColor: '#16a34a',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: isOpeningSheets ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease',
+                        minHeight: '2.75rem', // Touch-friendly
+                        minWidth: '12.5rem',
+                        justifyContent: 'center',
+                        opacity: isOpeningSheets ? 0.6 : 1
+                      }}
+                      onMouseOver={(e) => {
+                        if (!isOpeningSheets) {
+                          e.currentTarget.style.backgroundColor = '#15803d';
+                          e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!isOpeningSheets) {
+                          e.currentTarget.style.backgroundColor = '#16a34a';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }
+                      }}
+                    >
+                      {isOpeningSheets ? (
+                        <Clock className="animate-spin" size={14} />
+                      ) : (
+                        <Table size={14} />
+                      )}
+                      {isOpeningSheets ? 'Logging to Sheets...' : 'Open in Google Sheets'}
+                    </button>
+                    
+                    {/* Success message */}
+                    {showSheetsMessage && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '100%',
+                        transform: 'translate(0.5rem, -50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        padding: '0.5rem 0.75rem',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                        zIndex: 1000
+                      }}>
+                        <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                        {sheetsSuccessMessage}
+                      </div>
+                    )}
+                  </div>
 
                   <div style={{ position: 'relative' }}>
                     <button
@@ -2996,6 +3343,7 @@ Return ONLY the JSON object, no additional text.`;
 
                       <button
                         onClick={() => setShowCMSModal(true)}
+                        className="content-modal-btn"
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -3019,9 +3367,47 @@ Return ONLY the JSON object, no additional text.`;
                         <Globe size={14} />
                         Publish to CMS
                       </button>
+
+                      {/* Open in HTML Button */}
+                      <button
+                        onClick={openInHTML}
+                        className="content-modal-btn"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          backgroundColor: '#7c3aed',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          minHeight: '2.75rem',
+                          minWidth: '7.5rem',
+                          justifyContent: 'center'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#6d28d9';
+                          e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#7c3aed';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m6 16 6-12 6 12H6Z"/>
+                          <path d="m8 12 8 0"/>
+                        </svg>
+                        Open in HTML
+                      </button>
                       
                       <button
                         onClick={openGoogleDocs}
+                        className="content-modal-btn"
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -3042,10 +3428,12 @@ Return ONLY the JSON object, no additional text.`;
                         onMouseOver={(e) => {
                           e.currentTarget.style.backgroundColor = '#6b96e8';
                           e.currentTarget.style.color = 'black';
+                          e.currentTarget.style.transform = 'translateY(-0.0625rem)';
                         }}
                         onMouseOut={(e) => {
                           e.currentTarget.style.backgroundColor = '#84ADEA';
                           e.currentTarget.style.color = 'black';
+                          e.currentTarget.style.transform = 'translateY(0)';
                         }}
                       >
                         <img 
@@ -3074,31 +3462,129 @@ Return ONLY the JSON object, no additional text.`;
                         Google Docs
                       </button>
 
-                      <button
-                        onClick={copyToClipboard}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1rem',
-                          backgroundColor: '#6b7280',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875rem',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          minHeight: '2.75rem',
-                          minWidth: '7.5rem',
-                          justifyContent: 'center'
-                        }}
-                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
-                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
-                      >
-                        <Copy size={14} />
-                        Copy
-                      </button>
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          onClick={openGoogleSheets}
+                          disabled={isOpeningSheets}
+                          className="content-modal-btn"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.75rem 1rem',
+                            backgroundColor: '#16a34a',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            cursor: isOpeningSheets ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease',
+                            minHeight: '2.75rem',
+                            minWidth: '12.5rem',
+                            justifyContent: 'center',
+                            opacity: isOpeningSheets ? 0.6 : 1
+                          }}
+                          onMouseOver={(e) => {
+                            if (!isOpeningSheets) {
+                              e.currentTarget.style.backgroundColor = '#15803d';
+                              e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (!isOpeningSheets) {
+                              e.currentTarget.style.backgroundColor = '#16a34a';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                            }
+                          }}
+                        >
+                          {isOpeningSheets ? (
+                            <Clock className="animate-spin" size={14} />
+                          ) : (
+                            <Table size={14} />
+                          )}
+                          {isOpeningSheets ? 'Logging to Sheets...' : 'Open in Google Sheets'}
+                        </button>
+                        
+                        {/* Success message */}
+                        {showSheetsMessage && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '100%',
+                            transform: 'translate(0.5rem, -50%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                            padding: '0.5rem 0.75rem',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                            zIndex: 1000
+                          }}>
+                            <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                            {sheetsSuccessMessage}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          onClick={copyToClipboard}
+                          className="content-modal-btn"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.75rem 1rem',
+                            backgroundColor: '#6b7280',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            minHeight: '2.75rem',
+                            minWidth: '7.5rem',
+                            justifyContent: 'center'
+                          }}
+                          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
+                          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
+                        >
+                          <Copy size={14} />
+                          Copy
+                        </button>
+                        
+                        {/* Copied message */}
+                        {showCopiedMessage && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '100%',
+                            transform: 'translate(0.5rem, -50%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                            padding: '0.5rem 0.75rem',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                            zIndex: 1000
+                          }}>
+                            <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                            Copied!
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Clear Button - Full width on mobile */}

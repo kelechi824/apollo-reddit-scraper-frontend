@@ -2670,6 +2670,33 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
                     )}
                   </button>
 
+                  <button
+                    onClick={() => setShowCMSModal(true)}
+                    className="content-modal-btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      minHeight: '2.75rem', // Touch-friendly
+                      minWidth: '7.5rem',
+                      justifyContent: 'center'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+                  >
+                    <Globe size={14} />
+                    Publish to CMS
+                  </button>
+
                   {/* Open in HTML Button */}
                   <button
                     onClick={openInHTML}
@@ -2708,15 +2735,15 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
                   </button>
 
                   <button
-                    onClick={() => setShowCMSModal(true)}
+                    onClick={openGoogleDocs}
                     className="content-modal-btn"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
                       padding: '0.75rem 1rem',
-                      backgroundColor: '#10b981',
-                      color: 'white',
+                      backgroundColor: '#84ADEA',
+                      color: 'black',
                       border: 'none',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
@@ -2724,14 +2751,42 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       minHeight: '2.75rem', // Touch-friendly
-                      minWidth: '7.5rem',
+                      minWidth: '12.5rem',
                       justifyContent: 'center'
                     }}
-                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
-                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#6b96e8';
+                      e.currentTarget.style.color = 'black';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#84ADEA';
+                      e.currentTarget.style.color = 'black';
+                    }}
                   >
-                    <Globe size={14} />
-                    Publish to CMS
+                    <img 
+                      src="/google-docs-logo.png" 
+                      alt="Google Docs"
+                      style={{
+                        width: '1rem',
+                        height: '1rem',
+                        objectFit: 'contain'
+                      }}
+                      onError={(e) => {
+                        // Fallback to ExternalLink icon if logo fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const icon = document.createElement('div');
+                          icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 0 0-5"/><path d="m17 7-10 10"/></svg>';
+                          icon.style.display = 'flex';
+                          icon.style.alignItems = 'center';
+                          icon.style.justifyContent = 'center';
+                          parent.insertBefore(icon, target);
+                        }
+                      }}
+                    />
+                    Google Docs
                   </button>
 
                   <div style={{ position: 'relative' }}>
@@ -2803,61 +2858,6 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
                       </div>
                     )}
                   </div>
-                  
-                  <button
-                    onClick={openGoogleDocs}
-                    className="content-modal-btn"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.75rem 1rem',
-                      backgroundColor: '#84ADEA',
-                      color: 'black',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      minHeight: '2.75rem', // Touch-friendly
-                      minWidth: '12.5rem',
-                      justifyContent: 'center'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#6b96e8';
-                      e.currentTarget.style.color = 'black';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#84ADEA';
-                      e.currentTarget.style.color = 'black';
-                    }}
-                  >
-                    <img 
-                      src="/google-docs-logo.png" 
-                      alt="Google Docs"
-                      style={{
-                        width: '1rem',
-                        height: '1rem',
-                        objectFit: 'contain'
-                      }}
-                      onError={(e) => {
-                        // Fallback to ExternalLink icon if logo fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent) {
-                          const icon = document.createElement('div');
-                          icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 0 0-5"/><path d="m17 7-10 10"/></svg>';
-                          icon.style.display = 'flex';
-                          icon.style.alignItems = 'center';
-                          icon.style.justifyContent = 'center';
-                          parent.insertBefore(icon, target);
-                        }
-                      }}
-                    />
-                    Google Docs
-                  </button>
 
                   <div style={{ position: 'relative' }}>
                     <button
@@ -3140,6 +3140,32 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
                         )}
                       </button>
 
+                      <button
+                        onClick={() => setShowCMSModal(true)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          minHeight: '2.75rem',
+                          minWidth: '7.5rem',
+                          justifyContent: 'center'
+                        }}
+                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+                      >
+                        <Globe size={14} />
+                        Publish to CMS
+                      </button>
+
                       {/* Open in HTML Button */}
                       <button
                         onClick={openInHTML}
@@ -3177,14 +3203,14 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
                       </button>
 
                       <button
-                        onClick={() => setShowCMSModal(true)}
+                        onClick={openGoogleDocs}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.5rem',
                           padding: '0.75rem 1rem',
-                          backgroundColor: '#10b981',
-                          color: 'white',
+                          backgroundColor: '#84ADEA',
+                          color: 'black',
                           border: 'none',
                           borderRadius: '0.5rem',
                           fontSize: '0.875rem',
@@ -3192,14 +3218,42 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
                           cursor: 'pointer',
                           transition: 'all 0.2s ease',
                           minHeight: '2.75rem',
-                          minWidth: '7.5rem',
+                          minWidth: '12.5rem',
                           justifyContent: 'center'
                         }}
-                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
-                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#6b96e8';
+                          e.currentTarget.style.color = 'black';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#84ADEA';
+                          e.currentTarget.style.color = 'black';
+                        }}
                       >
-                        <Globe size={14} />
-                        Publish to CMS
+                        <img 
+                          src="/google-docs-logo.png" 
+                          alt="Google Docs"
+                          style={{
+                            width: '1rem',
+                            height: '1rem',
+                            objectFit: 'contain'
+                          }}
+                          onError={(e) => {
+                            // Fallback to ExternalLink icon if logo fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              const icon = document.createElement('div');
+                              icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 0 0-5"/><path d="m17 7-10 10"/></svg>';
+                              icon.style.display = 'flex';
+                              icon.style.alignItems = 'center';
+                              icon.style.justifyContent = 'center';
+                              parent.insertBefore(icon, target);
+                            }
+                          }}
+                        />
+                        Google Docs
                       </button>
 
                       <div style={{ position: 'relative' }}>
@@ -3270,60 +3324,6 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
                           </div>
                         )}
                       </div>
-                      
-                      <button
-                        onClick={openGoogleDocs}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1rem',
-                          backgroundColor: '#84ADEA',
-                          color: 'black',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875rem',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          minHeight: '2.75rem',
-                          minWidth: '12.5rem',
-                          justifyContent: 'center'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.backgroundColor = '#6b96e8';
-                          e.currentTarget.style.color = 'black';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.backgroundColor = '#84ADEA';
-                          e.currentTarget.style.color = 'black';
-                        }}
-                      >
-                        <img 
-                          src="/google-docs-logo.png" 
-                          alt="Google Docs"
-                          style={{
-                            width: '1rem',
-                            height: '1rem',
-                            objectFit: 'contain'
-                          }}
-                          onError={(e) => {
-                            // Fallback to ExternalLink icon if logo fails to load
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const parent = target.parentElement;
-                            if (parent) {
-                              const icon = document.createElement('div');
-                              icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 0 0-5"/><path d="m17 7-10 10"/></svg>';
-                              icon.style.display = 'flex';
-                              icon.style.alignItems = 'center';
-                              icon.style.justifyContent = 'center';
-                              parent.insertBefore(icon, target);
-                            }
-                          }}
-                        />
-                        Google Docs
-                      </button>
 
                       <div style={{ position: 'relative' }}>
                         <button
