@@ -60,14 +60,16 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             Gong Call Analyzer
           </NavLink>
           
-          <NavLink 
-            to="/landing-page-analyzer" 
-            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            onClick={onItemClick}
-          >
-            <Monitor className="nav-icon" />
-            Landing Page CRO Analyzer
-          </NavLink>
+          {FEATURE_FLAGS.showLandingPageAnalyzer && (
+            <NavLink 
+              to="/landing-page-analyzer" 
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              onClick={onItemClick}
+            >
+              <Monitor className="nav-icon" />
+              Landing Page CRO Analyzer
+            </NavLink>
+          )}
           
           <NavLink 
             to="/brand-kit" 
