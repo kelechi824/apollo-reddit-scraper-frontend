@@ -737,7 +737,11 @@ Return as JSON: ["post 1", "post 2", "post 3"]`;
       const processedUserPrompt = replaceBrandKitVariables(finalUserPrompt, brandKit);
 
       // Call the content generation API using same approach as ContentCreationModal
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+      // Determine backend URL based on environment
+    // Why this matters: Ensures production deployments use the correct backend URL
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://apollo-reddit-scraper-backend.vercel.app'
+      : 'http://localhost:3003';
       const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/content/generate`, {
         method: 'POST',
         headers: {

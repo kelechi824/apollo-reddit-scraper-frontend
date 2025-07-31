@@ -5,7 +5,11 @@ import { WorkflowResponse } from '../types';
 
 const AppPage: React.FC = () => {
   const [currentResults, setCurrentResults] = useState<WorkflowResponse | null>(null);
-  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+  // Determine backend URL based on environment
+// Why this matters: Ensures production deployments use the correct backend URL
+const apiUrl = process.env.NODE_ENV === 'production' 
+  ? 'https://apollo-reddit-scraper-backend.vercel.app'
+  : 'http://localhost:3003';
 
   /**
    * Load saved results from localStorage on component mount

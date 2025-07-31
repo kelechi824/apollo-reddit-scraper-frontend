@@ -986,7 +986,12 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       const contentPreview = content.replace(/<[^>]*>/g, '').substring(0, 500);
       console.log('📝 Content preview length:', contentPreview.length);
       
-      const apiUrl = `${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/content/generate-meta`;
+      // Determine backend URL based on environment
+    // Why this matters: Ensures production deployments use the correct backend URL
+    const backendUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://apollo-reddit-scraper-backend.vercel.app'
+      : 'http://localhost:3003';
+    const apiUrl = `${backendUrl.replace(/\/$/, '')}/api/content/generate-meta`;
       console.log('🌐 API URL:', apiUrl);
       
       const requestBody = {
@@ -1651,7 +1656,13 @@ Return ONLY the JSON object with the three required fields. No additional text o
         audience_summary: brandKit.idealCustomerProfile || 'Business professionals seeking solutions'
       };
 
-      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/content/generate`, {
+      // Determine backend URL based on environment
+      // Why this matters: Ensures production deployments use the correct backend URL
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
+      
+      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/content/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1811,7 +1822,13 @@ Return ONLY the JSON object with the three required fields. No additional text o
     try {
       console.log('📰 Publishing content to CMS:', customCMSConfig);
 
-      const response = await fetch(`${(process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '')}/api/content/publish-to-cms`, {
+      // Determine backend URL based on environment
+      // Why this matters: Ensures production deployments use the correct backend URL  
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
+        
+      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/content/publish-to-cms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

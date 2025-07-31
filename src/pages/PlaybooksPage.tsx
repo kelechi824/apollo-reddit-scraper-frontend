@@ -7,7 +7,11 @@ const PlaybooksPage: React.FC = () => {
   const [selectedJobTitle, setSelectedJobTitle] = useState('');
   const [markdownData, setMarkdownData] = useState('');
 
-  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+  // Determine backend URL based on environment
+// Why this matters: Ensures production deployments use the correct backend URL
+const apiUrl = process.env.NODE_ENV === 'production' 
+  ? 'https://apollo-reddit-scraper-backend.vercel.app'
+  : 'http://localhost:3003';
 
   /**
    * Handle playbook generation trigger
