@@ -12,7 +12,7 @@ export interface FeatureFlags {
 export const FEATURE_FLAGS: FeatureFlags = {
   showCRO: false, // Hide CRO for production
   showGongAnalysis: true,
-  showLandingPageAnalyzer: true,
+  showLandingPageAnalyzer: false, // Hide Landing Page Analyzer from navigation
   showBlogCreator: true,
   showPlaybooksCreator: true,
   showBrandKit: true,

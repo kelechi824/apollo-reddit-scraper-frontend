@@ -114,7 +114,7 @@ const AppLayout: React.FC = () => {
           <Routes>
             <Route path="/app" element={<AppPage />} />
             {FEATURE_FLAGS.showCRO && <Route path="/cro" element={<CROPage />} />}
-            <Route path="/landing-page-analyzer" element={<LandingPageAnalyzer />} />
+            {FEATURE_FLAGS.showLandingPageAnalyzer && <Route path="/landing-page-analyzer" element={<LandingPageAnalyzer />} />}
             <Route path="/gong-analysis" element={<GongAnalysisPage />} />
             <Route path="/playbooks-creator" element={<PlaybooksPage />} />
             <Route path="/blog-creator" element={<BlogCreatorPage />} />
