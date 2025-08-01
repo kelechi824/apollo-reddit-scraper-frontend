@@ -1564,6 +1564,82 @@ Return ONLY the JSON object with the three required fields. No additional text o
    * Open Google Sheets with content data
    * Why this matters: Provides data logging and tracking capabilities for content management.
    */
+  /**
+   * Generate URL slug from keyword
+   * Why this matters: Creates SEO-friendly URLs by converting keywords to lowercase, hyphenated format.
+   */
+  const generateUrlSlug = (keyword: string): string => {
+    return keyword
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+  };
+
+  /**
+   * Determine secondary category based on content analysis
+   * Why this matters: Automatically categorizes content for better organization and content strategy.
+   */
+  const determineSecondaryCategory = (keyword: string, content: string): string => {
+    const keywordLower = keyword.toLowerCase();
+    const contentLower = content.toLowerCase();
+    const combinedText = `${keywordLower} ${contentLower}`;
+
+    // Define category keywords for matching
+    const categoryKeywords = {
+      'Sales': ['sales', 'selling', 'prospect', 'deal', 'revenue', 'quota', 'pipeline', 'conversion', 'closing', 'negotiation'],
+      'Prospecting': ['prospecting', 'outreach', 'cold email', 'cold call', 'lead generation', 'qualification', 'discovery'],
+      'Marketing': ['marketing', 'campaign', 'brand', 'advertising', 'promotion', 'content marketing', 'social media'],
+      'CRM': ['crm', 'customer relationship', 'salesforce', 'hubspot', 'pipedrive', 'contact management'],
+      'Revenue Operations': ['revops', 'revenue operations', 'sales ops', 'operations', 'process', 'workflow', 'automation'],
+      'GTM': ['gtm', 'go-to-market', 'market entry', 'launch', 'strategy', 'positioning'],
+      'Data': ['data', 'analytics', 'metrics', 'reporting', 'insights', 'intelligence', 'dashboard'],
+      'AI': ['ai', 'artificial intelligence', 'machine learning', 'automation', 'chatbot', 'predictive'],
+      'B2B': ['b2b', 'business to business', 'enterprise', 'saas', 'software'],
+      'Demand Generation': ['demand gen', 'lead gen', 'inbound', 'content', 'seo', 'paid ads'],
+      'Content Marketing': ['content', 'blog', 'article', 'video', 'podcast', 'webinar'],
+      'Marketing Strategy': ['strategy', 'planning', 'budget', 'roi', 'attribution'],
+      'Sales Intelligence': ['intelligence', 'research', 'data enrichment', 'contact discovery'],
+      'Compliance Data Strategy': ['compliance', 'gdpr', 'privacy', 'regulation', 'legal'],
+      'Roles': ['manager', 'director', 'vp', 'ceo', 'founder', 'rep', 'coordinator'],
+      'Companies': ['company', 'organization', 'business', 'startup', 'enterprise', 'corporation']
+    };
+
+    // Count keyword matches for each category
+    let bestCategory = 'General';
+    let maxMatches = 0;
+
+    for (const [category, keywords] of Object.entries(categoryKeywords)) {
+      const matches = keywords.filter(keyword => combinedText.includes(keyword)).length;
+      if (matches > maxMatches) {
+        maxMatches = matches;
+        bestCategory = category;
+      }
+    }
+
+    return bestCategory;
+  };
+
+  /**
+   * Randomly select author from predefined list
+   * Why this matters: Ensures author attribution is distributed across the team for content variety.
+   */
+  const selectRandomAuthor = (): string => {
+    const authors = [
+      'shaun-hinklein',
+      'andy-mccotter-bicknell', 
+      'cam-thompson',
+      'kenny-keesee',
+      'maribeth-daytona',
+      'melanie-maecardeno'
+    ];
+    
+    const randomIndex = Math.floor(Math.random() * authors.length);
+    return authors[randomIndex];
+  };
+
   const openGoogleSheets = async () => {
     const contentToCopy = isEditingContent ? editableContent : generatedContent;
     if (!contentToCopy) {
@@ -1579,12 +1655,20 @@ Return ONLY the JSON object with the three required fields. No additional text o
 
     setIsOpeningSheets(true);
     try {
-      // Prepare blog content data for logging
+      // Generate the new metadata fields
+      const urlSlug = generateUrlSlug(keywordRow.keyword);
+      const secondaryCategory = determineSecondaryCategory(keywordRow.keyword, contentToCopy);
+      const author = selectRandomAuthor();
+
+      // Prepare blog content data for logging with new fields
       const blogData = {
         keyword: keywordRow.keyword,
         metaSeoTitle: metaSeoTitle || `${keywordRow.keyword} - Complete Guide`,
         metaDescription: metaDescription || `Comprehensive guide about ${keywordRow.keyword} with expert insights and actionable tips.`,
-        htmlContent: contentToCopy
+        htmlContent: contentToCopy,
+        urlSlug: urlSlug,
+        secondaryCategory: secondaryCategory,
+        author: author
       };
 
       // Log data to blog content spreadsheet and get URL
