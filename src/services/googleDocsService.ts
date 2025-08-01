@@ -557,11 +557,11 @@ class GoogleDocsService {
           try {
             const headerResponse = await window.gapi.client.sheets.spreadsheets.values.get({
               spreadsheetId: storedSpreadsheetId,
-              range: 'Blog Content Tracking!A1:F1'
+              range: 'Blog Content Tracking!A1:I1'
             });
             
             // If no headers exist or headers are different, add/update them
-            const expectedHeaders = ['Date Created', 'Keyword', 'Body', 'H1 Title', 'Meta SEO Title', 'Meta Description'];
+            const expectedHeaders = ['Publish Date', 'Keyword', 'Content', 'Article Title', 'SEO Title', 'Meta Description', 'URL Slug', 'Secondary Category', 'Author'];
             const currentHeaders = headerResponse.result.values && headerResponse.result.values[0];
             
             if (!currentHeaders || !this.arraysEqual(currentHeaders, expectedHeaders)) {
@@ -618,7 +618,7 @@ class GoogleDocsService {
               title: 'Blog Content Tracking',
               gridProperties: {
                 rowCount: 1000,
-                columnCount: 6
+                columnCount: 9
               }
             }
           }]
@@ -633,24 +633,27 @@ class GoogleDocsService {
 
       // Add headers for blog content in specified order
       const headers = [
-        'Date Created',
+        'Publish Date',
         'Keyword',
-        'Body',
-        'H1 Title',
-        'Meta SEO Title',
-        'Meta Description'
+        'Content',
+        'Article Title',
+        'SEO Title',
+        'Meta Description',
+        'URL Slug',
+        'Secondary Category',
+        'Author'
       ];
 
       await window.gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: spreadsheetId,
-        range: 'Blog Content Tracking!A1:F1',
+        range: 'Blog Content Tracking!A1:I1',
         valueInputOption: 'RAW',
         resource: {
           values: [headers]
         }
       });
 
-      // Format headers and body column
+      // Format headers and content column
       await window.gapi.client.sheets.spreadsheets.batchUpdate({
         spreadsheetId: spreadsheetId,
         resource: {
@@ -663,7 +666,7 @@ class GoogleDocsService {
                   startRowIndex: 0, // Row 1 (0-indexed)
                   endRowIndex: 1,   // Only row 1
                   startColumnIndex: 0, // Start from column A
-                  endColumnIndex: 6,   // Through column F
+                  endColumnIndex: 9,   // Through column I
                 },
                 cell: {
                   userEnteredFormat: {
@@ -683,7 +686,7 @@ class GoogleDocsService {
                   startRowIndex: 1, // Row 2 onwards (0-indexed)
                   endRowIndex: 1000, // Through row 1000
                   startColumnIndex: 0, // Start from column A
-                  endColumnIndex: 6,   // Through column F
+                  endColumnIndex: 9,   // Through column I
                 },
                 cell: {
                   userEnteredFormat: {
@@ -696,7 +699,7 @@ class GoogleDocsService {
               }
             },
             {
-              // Format column C (Body) to prevent text wrapping and row expansion
+              // Format column C (Content) to prevent text wrapping and row expansion
               repeatCell: {
                 range: {
                   sheetId: createResponse.result.sheets[0].properties.sheetId,
@@ -736,6 +739,9 @@ class GoogleDocsService {
     metaSeoTitle: string;
     metaDescription: string;
     htmlContent: string;
+    urlSlug: string;
+    secondaryCategory: string;
+    author: string;
   }): Promise<{ success: boolean; spreadsheetUrl: string }> {
     if (!this.isAuthenticated()) {
       await this.authenticate();
@@ -757,16 +763,19 @@ class GoogleDocsService {
       const rowData = [
         formattedDate,
         blogData.keyword,
-        blogData.htmlContent, // Body
+        blogData.htmlContent, // Content
         h1Title,
         blogData.metaSeoTitle,
-        blogData.metaDescription
+        blogData.metaDescription,
+        blogData.urlSlug,
+        blogData.secondaryCategory,
+        blogData.author
       ];
 
       // Get current row count to know where the new data will be inserted
       const dataResponse = await window.gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
-        range: 'Blog Content Tracking!A:F'
+        range: 'Blog Content Tracking!A:I'
       });
       const currentRowCount = dataResponse.result.values ? dataResponse.result.values.length : 1;
       const newRowIndex = currentRowCount; // 0-indexed, so this will be the new row
@@ -774,7 +783,7 @@ class GoogleDocsService {
       // Append data to spreadsheet
       await window.gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: spreadsheetId,
-        range: 'Blog Content Tracking!A:F',
+        range: 'Blog Content Tracking!A:I',
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         resource: {
@@ -800,7 +809,7 @@ class GoogleDocsService {
                   startRowIndex: newRowIndex, // The newly added row
                   endRowIndex: newRowIndex + 1, // Just this one row
                   startColumnIndex: 0, // Start from column A
-                  endColumnIndex: 6,   // Through column F
+                  endColumnIndex: 9,   // Through column I
                 },
                 cell: {
                   userEnteredFormat: {
@@ -847,25 +856,28 @@ class GoogleDocsService {
 
       // Add headers for blog content in specified order
       const headers = [
-        'Date Created',
+        'Publish Date',
         'Keyword',
-        'Body',
-        'H1 Title',
-        'Meta SEO Title',
-        'Meta Description'
+        'Content',
+        'Article Title',
+        'SEO Title',
+        'Meta Description',
+        'URL Slug',
+        'Secondary Category',
+        'Author'
       ];
 
       // Update headers
       await window.gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: spreadsheetId,
-        range: 'Blog Content Tracking!A1:F1',
+        range: 'Blog Content Tracking!A1:I1',
         valueInputOption: 'RAW',
         resource: {
           values: [headers]
         }
       });
 
-      // Format headers and body column
+      // Format headers and content column
       await window.gapi.client.sheets.spreadsheets.batchUpdate({
         spreadsheetId: spreadsheetId,
         resource: {
@@ -878,7 +890,7 @@ class GoogleDocsService {
                   startRowIndex: 0, // Row 1 (0-indexed)
                   endRowIndex: 1,   // Only row 1
                   startColumnIndex: 0, // Start from column A
-                  endColumnIndex: 6,   // Through column F
+                  endColumnIndex: 9,   // Through column I
                 },
                 cell: {
                   userEnteredFormat: {
@@ -898,7 +910,7 @@ class GoogleDocsService {
                   startRowIndex: 1, // Row 2 onwards (0-indexed)
                   endRowIndex: 1000, // Through row 1000
                   startColumnIndex: 0, // Start from column A
-                  endColumnIndex: 6,   // Through column F
+                  endColumnIndex: 9,   // Through column I
                 },
                 cell: {
                   userEnteredFormat: {
@@ -911,7 +923,7 @@ class GoogleDocsService {
               }
             },
             {
-              // Format column C (Body) to prevent text wrapping and row expansion
+              // Format column C (Content) to prevent text wrapping and row expansion
               repeatCell: {
                 range: {
                   sheetId: sheetId,
@@ -948,7 +960,7 @@ class GoogleDocsService {
       // Get current data to determine how many rows have content
       const dataResponse = await window.gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
-        range: 'Blog Content Tracking!A:F'
+        range: 'Blog Content Tracking!A:I'
       });
 
       const numRows = dataResponse.result.values ? dataResponse.result.values.length : 1;
@@ -966,7 +978,7 @@ class GoogleDocsService {
                     startRowIndex: 1, // Row 2 onwards (0-indexed)
                     endRowIndex: numRows, // Through the last row with data
                     startColumnIndex: 0, // Start from column A
-                    endColumnIndex: 6,   // Through column F
+                    endColumnIndex: 9,   // Through column I
                   },
                   cell: {
                     userEnteredFormat: {
