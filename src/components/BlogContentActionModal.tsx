@@ -457,6 +457,17 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       .generated-content-display td:last-child {
         padding-right: 1.25rem;
       }
+
+      /* Mobile backdrop for modals */
+      .mobile-modal-backdrop {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background-color: rgba(0, 0, 0, 0.5) !important;
+        z-index: 9999 !important;
+      }
     `;
     document.head.appendChild(style);
     
@@ -785,65 +796,102 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
 
   // Initialize content from keywordRow when modal opens
   useEffect(() => {
-    if (isOpen && keywordRow) {
-      // Load saved data first
-      loadSavedData();
+    if (!isOpen || !keywordRow) return;
+    
+    // Load saved data first
+    loadSavedData();
+    
+    // Always prioritize fresh content from keywordRow over cached content
+    // This ensures users see the latest generated content with proper Apollo branding
+    const content = keywordRow.output || '';
+    if (content.trim().length > 0) {
+      setGeneratedContent(content);
+      setEditableContent(content);
+      setIsEditingContent(false);
       
-      // Set content directly from keywordRow (already processed HTML) only if no saved content
+      // Clear any old cached content to prevent confusion
+      localStorage.removeItem(`apollo_blog_content_draft_${keywordRow.id}`);
+      
+      console.log('📊 Initializing BlogContentActionModal with fresh content for keyword:', keywordRow.keyword);
+      console.log('🔄 Fresh content length:', content.length, 'characters');
+      
+      // Generate AI-powered meta fields from keyword and content
+      // Why this matters: Creates dynamic, contextually relevant meta fields instead of templates
+      console.log('🚀 Starting AI meta field generation...');
+      generateAIMetaFields(keywordRow.keyword, content).then(metaFields => {
+        console.log('✅ Generated AI meta fields:', metaFields);
+        setMetaSeoTitle(metaFields.metaSeoTitle);
+        setMetaDescription(metaFields.metaDescription);
+        // Auto-save the generated meta fields
+        autoSaveContent(content, metaFields.metaSeoTitle, metaFields.metaDescription);
+      }).catch(error => {
+        console.error('❌ Failed to generate AI meta fields - falling back to templates:', error);
+        console.error('❌ Error details:', error.message || error);
+        // Use simple fallbacks if AI generation fails
+        const fallbackTitle = generateFallbackTitle(keywordRow.keyword);
+        const fallbackDescription = generateFallbackDescription(keywordRow.keyword);
+        setMetaSeoTitle(fallbackTitle);
+        setMetaDescription(fallbackDescription);
+        // Auto-save the fallback meta fields
+        autoSaveContent(content, fallbackTitle, fallbackDescription);
+      });
+    } else {
+      // Fallback to cached content only if no fresh content exists
       const savedContent = localStorage.getItem(`apollo_blog_content_draft_${keywordRow.id}`);
-      if (!savedContent) {
-        const content = keywordRow.output || '';
-        setGeneratedContent(content);
-        setEditableContent(content);
-        setIsEditingContent(false);
-        
-        console.log('📊 Initializing BlogContentActionModal for keyword:', keywordRow.keyword);
-        
-        // Generate AI-powered meta fields from keyword and content
-        // Why this matters: Creates dynamic, contextually relevant meta fields instead of templates
-        console.log('🚀 Starting AI meta field generation...');
-        generateAIMetaFields(keywordRow.keyword, content).then(metaFields => {
-          console.log('✅ Generated AI meta fields:', metaFields);
-          setMetaSeoTitle(metaFields.metaSeoTitle);
-          setMetaDescription(metaFields.metaDescription);
-          // Auto-save the generated meta fields
-          autoSaveContent(content, metaFields.metaSeoTitle, metaFields.metaDescription);
-        }).catch(error => {
-          console.error('❌ Failed to generate AI meta fields - falling back to templates:', error);
-          console.error('❌ Error details:', error.message || error);
-          // Use simple fallbacks if AI generation fails
-          const fallbackTitle = generateFallbackTitle(keywordRow.keyword);
-          const fallbackDescription = generateFallbackDescription(keywordRow.keyword);
-          setMetaSeoTitle(fallbackTitle);
-          setMetaDescription(fallbackDescription);
-          // Auto-save the fallback meta fields
-          autoSaveContent(content, fallbackTitle, fallbackDescription);
-        });
-      }
-      
-      // Load brand kit
-      const loadBrandKit = () => {
-        const draft = localStorage.getItem('apollo_brand_kit_draft');
-        const saved = localStorage.getItem('apollo_brand_kit');
-        const dataToLoad = draft || saved;
-        
-        if (dataToLoad) {
-          try {
-            setBrandKit(JSON.parse(dataToLoad));
-          } catch (error) {
-            console.error('Error loading brand kit:', error);
-          }
-        }
-      };
-
-      loadBrandKit();
-      
-      // Generate prompts based on keyword only if no saved prompts
-      const savedPrompts = localStorage.getItem(`apollo_blog_prompts_draft_${keywordRow.id}`);
-      if (!savedPrompts) {
-        generateInitialPrompts();
+      if (savedContent) {
+        console.log('📋 No fresh content, loading cached content for keyword:', keywordRow.keyword);
       }
     }
+    
+    // Load brand kit
+    const loadBrandKit = () => {
+      console.log('🔍 [BlogContentActionModal] Loading brand kit...');
+      const draft = localStorage.getItem('apollo_brand_kit_draft');
+      const saved = localStorage.getItem('apollo_brand_kit');
+      const dataToLoad = draft || saved;
+      
+      console.log('🔍 [BlogContentActionModal] Draft found:', !!draft);
+      console.log('🔍 [BlogContentActionModal] Saved found:', !!saved);
+      
+      if (dataToLoad) {
+        try {
+          const parsedBrandKit = JSON.parse(dataToLoad);
+          console.log('✅ [BlogContentActionModal] Brand kit loaded:', parsedBrandKit);
+          setBrandKit(parsedBrandKit);
+        } catch (error) {
+          console.error('❌ [BlogContentActionModal] Error loading brand kit:', error);
+        }
+      } else {
+        console.log('❌ [BlogContentActionModal] No brand kit data found in localStorage');
+      }
+    };
+
+    loadBrandKit();
+    
+    // Always generate fresh prompts to ensure latest updates are applied
+    generateInitialPrompts();
+    
+    // Clear any old saved prompts to prevent conflicts
+    localStorage.removeItem(`apollo_blog_prompts_draft_${keywordRow.id}`);
+
+    // Listen for localStorage changes to update brand kit in real-time
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'apollo_brand_kit' || e.key === 'apollo_brand_kit_draft') {
+        loadBrandKit();
+      }
+    };
+
+    const handleCustomStorageChange = () => {
+      loadBrandKit();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('apollo_brand_kit_updated', handleCustomStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('apollo_brand_kit_updated', handleCustomStorageChange);
+    };
   }, [isOpen, keywordRow]);
 
   /**
@@ -854,14 +902,8 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
     if (!keywordRow) return;
     
     try {
-      // Load saved prompts
-      const savedPrompts = localStorage.getItem(`apollo_blog_prompts_draft_${keywordRow.id}`);
-      if (savedPrompts) {
-        const parsedPrompts = JSON.parse(savedPrompts);
-        setSystemPrompt(parsedPrompts.systemPrompt || '');
-        setUserPrompt(parsedPrompts.userPrompt || '');
-        console.log('✅ Loaded saved prompts for keyword:', keywordRow.keyword);
-      }
+      // Skip loading saved prompts - we always generate fresh ones now
+      // This ensures the latest prompt updates are always applied
       
       // Load saved content and meta fields
       const savedContent = localStorage.getItem(`apollo_blog_content_draft_${keywordRow.id}`);
@@ -1100,6 +1142,10 @@ Respond with JSON:
    */
   const resetToDefaults = () => {
     generateInitialPrompts();
+    // Clear saved prompts to ensure fresh defaults are applied
+    if (keywordRow) {
+      localStorage.removeItem(`apollo_blog_prompts_draft_${keywordRow.id}`);
+    }
   };
 
   /**
@@ -1107,7 +1153,7 @@ Respond with JSON:
    * Why this matters: Creates targeted prompts for regenerating or editing existing content.
    */
   const generateInitialPrompts = () => {
-    const currentYear = new Date().getFullYear();
+    const currentYear = 2025;
     const systemPromptTemplate = `You are a world-class SEO, AEO, and LLM SEO content marketer for Apollo with deep expertise in creating comprehensive, AI-optimized articles that rank highly and get cited by AI answer engines (ChatGPT, Perplexity, Gemini, Claude, etc.). Your specialty is transforming content briefs into definitive resources that become the go-to sources for specific topics.
 
 CRITICAL CONTENT PHILOSOPHY:
@@ -1160,7 +1206,7 @@ FORMATTING REQUIREMENTS:
    - Apply {{ brand_kit.tone_of_voice }} consistently throughout
    - Follow {{ brand_kit.writing_rules }} for style and approach
 
-IMPORTANT: The current year is ${currentYear}. When referencing "current year," "this year," or discussing recent trends, always use ${currentYear}. Do not reference 2024 or earlier years as current.
+IMPORTANT: The current year is 2025. When referencing "current year," "this year," or discussing recent trends, always use 2025. Do not reference 2024 or earlier years as current.
 
 CRITICAL OUTPUT REQUIREMENTS:
 - Return ONLY clean HTML content without any markdown code blocks, explanatory text, or meta-commentary
@@ -1175,7 +1221,7 @@ CONTENT STRUCTURE REQUIREMENTS:
 4. **Tables for Structured Data** (comparisons, features, statistics)
 5. **Practical Implementation Guidance** with step-by-step processes
 6. **Real-World Examples** and case studies (using brand kit data)
-7. **Strong Conclusion** with clear next steps and CTA
+7. **Natural Apollo Promotion** - End with compelling call-to-action using brand kit variables
 
 BRAND INTEGRATION GUIDELINES:
 - Lead with value and insights, not promotional content
@@ -1186,7 +1232,7 @@ BRAND INTEGRATION GUIDELINES:
 
 Remember: Create the definitive resource that makes other content feel incomplete by comparison. Every section should provide genuine value and actionable insights.`;
 
-    const userPromptTemplate = `Based on this keyword and brand context, create comprehensive AEO-optimized content for ${currentYear}:
+    const userPromptTemplate = `Based on this keyword and brand context, create comprehensive AEO-optimized content for 2025 (remember we are in 2025):
 
 **Target Keyword:** ${keywordRow.keyword}
 
@@ -1214,12 +1260,12 @@ Remember: Create the definitive resource that makes other content feel incomplet
    - Apply {{ brand_kit.brand_point_of_view }} in strategic sections
    - Follow {{ brand_kit.tone_of_voice }} throughout the content
    - Implement {{ brand_kit.writing_rules }} for style consistency
-   - End with compelling CTA using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }} (target="_blank")
+   - End with the mandatory 4-part conclusion structure including CTA using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }} (target="_blank")
 
 4. **Content Depth & Value:**
    - Provide comprehensive coverage that serves as the definitive resource
    - Include practical, actionable guidance with specific examples
-   - Address both current best practices and emerging trends for ${currentYear}
+   - Address both current best practices and emerging trends for 2025
    - Cover implementation strategies with step-by-step processes
    - Include relevant metrics, benchmarks, and data points
 
@@ -1243,7 +1289,7 @@ Remember: Create the definitive resource that makes other content feel incomplet
 4. Ensure content is non-promotional and genuinely helpful
 5. Include specific data points, statistics, and examples from the provided data
 6. Use {{ brand_kit.ideal_customer_profile }} to inject customer testimonials only once within the body content where appropriate
-7. Promote Apollo at the end using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }} (open in new tab)
+7. Promote Apollo naturally at the end of the article using our {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }}. Open the CTA destination in a new tab (target="_blank")
 8. DO NOT use emdashes (—) in the content
 9. AVOID AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..."
 10. Use natural, human-like language throughout
@@ -1287,6 +1333,8 @@ CORRECT FORMAT: Pure JSON object starting with opening brace, ending with closin
 - Tables must be included for structured data presentation
 - HTML formatting must be clean and semantic
 - Focus on providing genuine value and actionable insights
+- End naturally with Apollo promotion using brand kit variables
+- Use proper HTML tags only (no markdown)
 
 Return ONLY the JSON object with the three required fields. No additional text or explanations.`;
 
@@ -1832,16 +1880,27 @@ Return ONLY the JSON object with the three required fields. No additional text o
    * Why this matters: Creates fresh content and properly extracts meta fields from JSON response
    */
   const generateContent = async () => {
+    console.log('🚀 [BlogContentActionModal] Starting generateContent...');
+    console.log('🔍 [BlogContentActionModal] Brand kit available:', !!brandKit);
+    console.log('🔍 [BlogContentActionModal] Brand kit data:', brandKit);
+    
     if (!brandKit) {
+      console.log('❌ [BlogContentActionModal] No brand kit found');
       alert('Please configure your Brand Kit first in the Brand Kit page.');
       return;
     }
 
     setIsGenerating(true);
     try {
+      console.log('🔍 [BlogContentActionModal] Original system prompt:', systemPrompt);
+      console.log('🔍 [BlogContentActionModal] Original user prompt:', userPrompt);
+      
       // Replace liquid variables in prompts
       const processedSystemPrompt = processLiquidVariables(systemPrompt, brandKit);
       const processedUserPrompt = processLiquidVariables(userPrompt, brandKit);
+      
+      console.log('✅ [BlogContentActionModal] Processed system prompt:', processedSystemPrompt);
+      console.log('✅ [BlogContentActionModal] Processed user prompt:', processedUserPrompt);
 
       // Create proper post_context structure that the backend expects
       const postContext = {
@@ -1858,6 +1917,16 @@ Return ONLY the JSON object with the three required fields. No additional text o
         ? 'https://apollo-reddit-scraper-backend.vercel.app'
         : 'http://localhost:3003';
       
+      const requestBody = {
+        post_context: postContext,
+        brand_kit: brandKit,
+        system_prompt: processedSystemPrompt,
+        user_prompt: processedUserPrompt
+      };
+      
+      console.log('📡 [BlogContentActionModal] API Request Body:', requestBody);
+      console.log('📡 [BlogContentActionModal] Backend URL:', backendUrl);
+
       const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/content/generate`, {
         method: 'POST',
         headers: {
@@ -1876,6 +1945,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
       }
 
       const data = await response.json();
+      console.log('📥 [BlogContentActionModal] API Response:', data);
       
       // Handle the response - it might be a single content string or array
       let contentResult = '';
@@ -1887,7 +1957,12 @@ Return ONLY the JSON object with the three required fields. No additional text o
         }
       } else if (data.variations && Array.isArray(data.variations)) {
         contentResult = data.variations[0] || '';
+      } else {
+        console.log('❌ [BlogContentActionModal] No content found in response structure:', data);
+        throw new Error('No content found in API response');
       }
+      
+      console.log('✅ [BlogContentActionModal] Final content result:', contentResult);
       
       // Parse the AI response to extract all fields
       const parsedResponse = parseAIResponse(contentResult);
@@ -1996,10 +2071,78 @@ Return ONLY the JSON object with the three required fields. No additional text o
    * Why this matters: Allows users to regenerate content with new prompts or settings
    */
   const runWorkflowAgain = async () => {
-    if (onStatusUpdate) {
-      onStatusUpdate(keywordRow.id, 'running');
+    console.log('🚀 [BlogContentActionModal] Starting runWorkflowAgain...');
+    console.log('🔍 [BlogContentActionModal] Brand kit available:', !!brandKit);
+    
+    if (!brandKit) {
+      console.log('❌ [BlogContentActionModal] No brand kit found');
+      alert('Please configure your Brand Kit first in the Brand Kit page.');
+      return;
     }
-    onClose(); // Close modal to let user see the progress in the table
+
+    try {
+      // Process liquid variables in prompts
+      const processedSystemPrompt = processLiquidVariables(systemPrompt, brandKit);
+      const processedUserPrompt = processLiquidVariables(userPrompt, brandKit);
+      
+      console.log('✅ [BlogContentActionModal] Processed system prompt:', processedSystemPrompt);
+      console.log('✅ [BlogContentActionModal] Processed user prompt:', processedUserPrompt);
+
+      // Determine backend URL based on environment
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
+
+      // Update status to running BEFORE making the API call
+      if (onStatusUpdate) {
+        onStatusUpdate(keywordRow.id, 'running');
+      }
+
+      // Close modal to let user see the progress in the table
+      onClose();
+
+      // Call the blog creator API with custom prompts
+      const response = await fetch(`${backendUrl}/api/blog-creator/generate-content`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          keyword: keywordRow.keyword,
+          content_length: 'medium',
+          brand_kit: brandKit,
+          system_prompt: processedSystemPrompt,
+          user_prompt: processedUserPrompt
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to regenerate content');
+      }
+
+      const responseData = await response.json();
+      const { data: result } = responseData;
+      
+      console.log('✅ [BlogContentActionModal] Workflow regeneration completed');
+
+      // Update the keyword row with new content
+      if (onContentUpdate) {
+        onContentUpdate(keywordRow.id, result.content || '');
+      }
+      
+      if (onStatusUpdate) {
+        onStatusUpdate(keywordRow.id, 'completed');
+      }
+
+    } catch (error) {
+      console.error('❌ [BlogContentActionModal] Workflow regeneration failed:', error);
+      
+      if (onStatusUpdate) {
+        onStatusUpdate(keywordRow.id, 'error');
+      }
+      
+      alert(`Failed to regenerate content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   /**
@@ -3854,6 +3997,14 @@ Return ONLY the JSON object with the three required fields. No additional text o
             )}
           </div>
         </div>
+      )}
+
+      {/* Mobile backdrop for variables menu */}
+      {showVariablesMenu && window.innerWidth <= 768 && (
+        <div 
+          className="mobile-modal-backdrop"
+          onClick={() => setShowVariablesMenu(false)}
+        />
       )}
 
       {/* Variables Menu */}
