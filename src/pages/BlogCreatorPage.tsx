@@ -626,6 +626,151 @@ const BlogCreatorPage: React.FC = () => {
         console.warn('Failed to load brand kit:', error);
       }
 
+      // Generate default prompts with brand kit integration (same as BlogContentActionModal)
+      const generateDefaultPrompts = () => {
+        const currentYear = 2025;
+        const systemPromptTemplate = `You are a world-class SEO, AEO, and LLM SEO content marketer for Apollo with deep expertise in creating comprehensive, AI-optimized articles that rank highly and get cited by AI answer engines (ChatGPT, Perplexity, Gemini, Claude, etc.). Your specialty is transforming content briefs into definitive resources that become the go-to sources for specific topics.
+
+CRITICAL CONTENT PHILOSOPHY:
+Your goal is to create content that becomes the definitive, comprehensive resource on the topic - the content that other creators reference and that AI engines cite as authoritative.
+
+CONTENT COVERAGE REQUIREMENTS:
+- Address ALL aspects of the topic comprehensively
+- Include practical, actionable guidance that readers can implement
+- Provide genuine value that advances knowledge in the space
+- Cover both current best practices AND emerging trends
+- Include specific examples, metrics, and concrete details
+
+AEO (ANSWER ENGINE OPTIMIZATION) PRINCIPLES:
+- Structure for extractability with clear, self-contained insights
+- Use semantic HTML and proper heading hierarchy (<h1> → <h2> → <h3>)
+- Format data in proper <table> and <ul>/<ol> structures for easy AI parsing
+- Include specific examples, metrics, and concrete details
+- Write headlines that match search intent ("How to...", "What is...", "Best ways to...")
+- Place the most important answer in the first paragraph under each heading
+
+FORMATTING REQUIREMENTS:
+1. **Proper HTML Structure:**
+   - Use <h1> for main title, <h2> for major sections, <h3> for subsections
+   - Format all lists with proper <ul>, <ol>, and <li> tags
+   - Use <table> elements for any comparative data, features, or structured information
+   - Include <p> tags for all paragraphs
+   - Use <strong> for emphasis and key concepts
+   - Format links as: <a href="URL" target="_blank">anchor text</a>
+
+2. **Tables and Structured Data:**
+   - When presenting comparisons, features, pricing, or any structured data, ALWAYS use HTML tables
+   - Include proper <thead>, <tbody>, <th>, and <td> elements
+   - Use tables for: feature comparisons, pricing tiers, pros/cons, statistics, timelines, etc.
+
+3. **Brand Kit Variable Integration:**
+   - MUST process and include brand kit variables naturally throughout content
+   - Use {{ brand_kit.ideal_customer_profile }} for testimonials and customer examples
+   - Include {{ brand_kit.competitors }} when discussing competitive landscape
+   - Reference {{ brand_kit.brand_point_of_view }} in strategic sections
+   - End with strong CTA using {{ brand_kit.cta_text }} and {{ brand_kit.cta_destination }}
+   - Apply {{ brand_kit.tone_of_voice }} consistently throughout
+   - Follow {{ brand_kit.writing_rules }} for style and approach
+
+IMPORTANT: The current year is 2025. When referencing "current year," "this year," or discussing recent trends, always use 2025. Do not reference 2024 or earlier years as current.
+
+CRITICAL OUTPUT REQUIREMENTS:
+- Return ONLY clean HTML content without any markdown code blocks, explanatory text, or meta-commentary
+- DO NOT include phrases like "Here's the content:" or HTML code block markers
+- Start directly with the HTML content and end with the closing HTML tag
+- No markdown formatting, no code block indicators, no explanatory paragraphs
+
+Remember: Create the definitive resource that makes other content feel incomplete by comparison. Every section should provide genuine value and actionable insights.`;
+
+        const userPromptTemplate = `Based on this keyword and brand context, create comprehensive AEO-optimized content for 2025 (remember we are in 2025):
+
+**Target Keyword:** ${keyword.keyword}
+
+**CRITICAL CONTENT REQUIREMENTS:**
+
+1. **HTML Structure & Formatting:**
+   - Create an H1 title that directly addresses the keyword (use question format when appropriate)
+   - Use proper heading hierarchy with H2 for major sections, H3 for subsections
+   - Format ALL lists with proper <ul>/<ol> and <li> tags
+   - Create HTML tables for ANY structured data (features, comparisons, statistics, timelines)
+   - Use <p> tags for all paragraphs, <strong> for emphasis
+
+2. **Required Tables/Structured Data:**
+   - Include at least 2-3 HTML tables presenting relevant information such as:
+     * Feature comparisons or capability matrices
+     * Implementation timelines or process steps
+     * Statistics or performance metrics
+     * Pricing or value comparisons
+     * Best practices checklist
+   - Format tables with proper <thead>, <tbody>, <th>, and <td> elements
+
+3. **Brand Kit Variable Integration (MANDATORY):**
+   - Use {{ brand_kit.ideal_customer_profile }} to include customer testimonials or examples (at least once)
+   - Reference {{ brand_kit.competitors }} when discussing market landscape
+   - Apply {{ brand_kit.brand_point_of_view }} in strategic sections
+   - Follow {{ brand_kit.tone_of_voice }} throughout the content
+   - Implement {{ brand_kit.writing_rules }} for style consistency
+   - End with natural Apollo promotion using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }} (target="_blank")
+
+4. **Content Depth & Value:**
+   - Provide comprehensive coverage that serves as the definitive resource
+   - Include practical, actionable guidance with specific examples
+   - Address both current best practices and emerging trends for 2025
+   - Cover implementation strategies with step-by-step processes
+   - Include relevant metrics, benchmarks, and data points
+
+Promote Apollo naturally at the end of the article using our {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }}. Open the CTA destination in a new tab (target="_blank").`;
+
+        return { systemPrompt: systemPromptTemplate, userPrompt: userPromptTemplate };
+      };
+
+      // Generate default prompts
+      const { systemPrompt: defaultSystemPrompt, userPrompt: defaultUserPrompt } = generateDefaultPrompts();
+
+      // Process brand kit variables in prompts if brand kit is available
+      const processLiquidVariables = (text: string, brandKit: any): string => {
+        if (!brandKit) return text;
+        
+        let processed = text;
+        
+        // Process all possible brand kit variables (complete list from codebase)
+        const brandKitMappings = {
+          '{{ brand_kit.brand_name }}': brandKit.brandName || brandKit.brand_name || '',
+          '{{ brand_kit.url }}': brandKit.url || '',
+          '{{ brand_kit.about_brand }}': brandKit.aboutBrand || brandKit.about_brand || '',
+          '{{ brand_kit.ideal_customer_profile }}': brandKit.idealCustomerProfile || brandKit.ideal_customer_profile || '',
+          '{{ brand_kit.competitors }}': brandKit.competitors || '',
+          '{{ brand_kit.brand_point_of_view }}': brandKit.brandPointOfView || brandKit.brand_point_of_view || '',
+          '{{ brand_kit.author_persona }}': brandKit.authorPersona || brandKit.author_persona || '',
+          '{{ brand_kit.tone_of_voice }}': brandKit.toneOfVoice || brandKit.tone_of_voice || '',
+          '{{ brand_kit.header_case_type }}': brandKit.headerCaseType || brandKit.header_case_type || '',
+          '{{ brand_kit.writing_rules }}': brandKit.writingRules || brandKit.writing_rules || '',
+          '{{ brand_kit.cta_text }}': brandKit.ctaText || brandKit.cta_text || '',
+          '{{ brand_kit.cta_destination }}': brandKit.ctaDestination || brandKit.cta_destination || '',
+          '{{ brand_kit.value_proposition }}': brandKit.valueProposition || brandKit.value_proposition || '',
+          '{{ brand_kit.key_features }}': brandKit.keyFeatures || brandKit.key_features || ''
+        };
+        
+        Object.entries(brandKitMappings).forEach(([placeholder, value]) => {
+          if (value) {
+            processed = processed.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+          }
+        });
+        
+        return processed;
+      };
+
+      const processedSystemPrompt = brandKit ? processLiquidVariables(defaultSystemPrompt, brandKit) : defaultSystemPrompt;
+      const processedUserPrompt = brandKit ? processLiquidVariables(defaultUserPrompt, brandKit) : defaultUserPrompt;
+
+      console.log(`📝 [BlogCreatorPage] Using default prompts with brand kit integration`);
+      console.log(`🔧 [BlogCreatorPage] Brand kit available:`, !!brandKit);
+      console.log(`🔧 [BlogCreatorPage] System prompt length:`, processedSystemPrompt.length);
+      console.log(`🔧 [BlogCreatorPage] User prompt length:`, processedUserPrompt.length);
+      if (brandKit) {
+        console.log(`🔧 [BlogCreatorPage] Brand kit keys:`, Object.keys(brandKit));
+      }
+
       // Determine backend URL based on environment
       const backendUrl = process.env.NODE_ENV === 'production' 
         ? 'https://apollo-reddit-scraper-backend.vercel.app'
@@ -633,9 +778,15 @@ const BlogCreatorPage: React.FC = () => {
 
       console.log(`🚀 Starting content generation for keyword: "${keyword.keyword}"`);
       console.log(`🔗 Backend URL: ${backendUrl}`);
-      console.log(`📦 Request payload:`, { keyword: keyword.keyword, content_length: 'medium', brand_kit: brandKit });
+      console.log(`📦 Request payload:`, { 
+        keyword: keyword.keyword, 
+        content_length: 'medium', 
+        brand_kit: brandKit,
+        system_prompt: processedSystemPrompt.length + ' chars',
+        user_prompt: processedUserPrompt.length + ' chars'
+      });
 
-      // Start synchronous content generation (no polling needed)
+      // Start synchronous content generation with default prompts (no polling needed)
       const response = await fetch(`${backendUrl}/api/blog-creator/generate-content`, {
         method: 'POST',
         headers: {
@@ -644,7 +795,9 @@ const BlogCreatorPage: React.FC = () => {
         body: JSON.stringify({
           keyword: keyword.keyword,
           content_length: 'medium',
-          brand_kit: brandKit
+          brand_kit: brandKit,
+          system_prompt: processedSystemPrompt,
+          user_prompt: processedUserPrompt
         })
       });
 
