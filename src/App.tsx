@@ -13,6 +13,7 @@ import BrandKitPage from './pages/BrandKitPage';
 import BlogCreatorPage from './pages/BlogCreatorPage';
 import GongAnalysisPage from './pages/GongAnalysisPage';
 import LandingPageAnalyzer from './pages/LandingPageAnalyzer';
+import BlogHistoryPage from './pages/BlogHistoryPage';
 import { FEATURE_FLAGS, FeatureFlags } from './utils/featureFlags';
 
 const AppLayout: React.FC = () => {
@@ -118,6 +119,7 @@ const AppLayout: React.FC = () => {
             <Route path="/gong-analysis" element={<GongAnalysisPage />} />
             <Route path="/playbooks-creator" element={<PlaybooksPage />} />
             <Route path="/blog-creator" element={<BlogCreatorPage />} />
+            <Route path="/blog-history" element={<BlogHistoryPage />} />
             <Route path="/brand-kit" element={<BrandKitPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />

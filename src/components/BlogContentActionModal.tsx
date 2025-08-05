@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, CheckCircle, Copy, Check, Table } from 'lucide-react';
 import { BrandKit } from '../types';
 import googleDocsService from '../services/googleDocsService';
+import { autoSaveBlogIfReady } from '../services/blogHistoryService';
 
 // Import the KeywordRow interface from BlogCreatorPage
 interface KeywordRow {
@@ -2157,6 +2158,15 @@ Return ONLY the JSON object with the three required fields. No additional text o
       if (onStatusUpdate) {
         onStatusUpdate(keywordRow.id, 'completed');
       }
+
+      // Auto-save to blog history
+      const updatedKeywordRow = {
+        ...keywordRow,
+        status: 'completed' as const,
+        output: result.content || '',
+        metadata: result.metadata || keywordRow.metadata
+      };
+      autoSaveBlogIfReady(updatedKeywordRow);
 
     } catch (error) {
       console.error('❌ [BlogContentActionModal] Workflow regeneration failed:', error);

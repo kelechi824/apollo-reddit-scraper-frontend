@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor } from 'lucide-react';
+import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight } from 'lucide-react';
 import { FEATURE_FLAGS, FeatureFlags } from '../utils/featureFlags';
 
 interface NavigationProps {
@@ -8,6 +8,16 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
+  const [showBlogSubMenu, setShowBlogSubMenu] = useState(false);
+
+  /**
+   * Handle Blog Creator hover/click to show sub-menu
+   * Why this matters: Provides access to blog history via hover/click interaction
+   */
+  const handleBlogCreatorInteraction = (show: boolean) => {
+    setShowBlogSubMenu(show);
+  };
+
   return (
     <nav className="navigation">
       <div className="nav-menu">
@@ -31,14 +41,34 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             Playbooks Creator
           </NavLink>
           
-          <NavLink 
-            to="/blog-creator" 
-            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            onClick={onItemClick}
+          <div 
+            className="nav-item-with-submenu"
+            onMouseEnter={() => handleBlogCreatorInteraction(true)}
+            onMouseLeave={() => handleBlogCreatorInteraction(false)}
           >
-            <PenTool className="nav-icon" />
-            Blog Creator
-          </NavLink>
+            <NavLink 
+              to="/blog-creator" 
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              onClick={onItemClick}
+            >
+              <PenTool className="nav-icon" />
+              Blog Creator
+              <ChevronRight className={`nav-submenu-icon ${showBlogSubMenu ? 'rotated' : ''}`} />
+            </NavLink>
+            
+            {showBlogSubMenu && (
+              <div className="nav-submenu">
+                <NavLink 
+                  to="/blog-history" 
+                  className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
+                  onClick={onItemClick}
+                >
+                  <Clock className="nav-icon" />
+                  Blogs History
+                </NavLink>
+              </div>
+            )}
+          </div>
           
           {FEATURE_FLAGS.showCRO && (
             <NavLink 
@@ -99,6 +129,81 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
           </NavLink>
         </div>
       </div>
+
+      {/* Sub-menu Styles */}
+      <style>
+        {`
+          .nav-item-with-submenu {
+            position: relative;
+          }
+
+          .nav-submenu-icon {
+            width: 1rem;
+            height: 1rem;
+            margin-left: auto;
+            transition: transform 0.2s ease;
+          }
+
+          .nav-submenu-icon.rotated {
+            transform: rotate(90deg);
+          }
+
+          .nav-submenu {
+            margin-left: 1rem;
+            border-left: 2px solid #e5e7eb;
+            padding-left: 0.75rem;
+            margin-top: 0.5rem;
+            animation: slideDown 0.2s ease-out;
+          }
+
+          .nav-submenu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #6b7280;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+          }
+
+          .nav-submenu-item:hover {
+            background-color: #f3f4f6;
+            color: #111827;
+          }
+
+          .nav-submenu-item.active {
+            background-color: #f3f4f6;
+            color: #111827;
+            font-weight: 600;
+          }
+
+          .nav-submenu-item .nav-icon {
+            width: 1rem;
+            height: 1rem;
+          }
+
+          @keyframes slideDown {
+            from {
+              opacity: 0;
+              transform: translateY(-0.5rem);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          /* Mobile-specific styles */
+          @media (max-width: 768px) {
+            .nav-item-with-submenu {
+              /* On mobile, use click instead of hover */
+            }
+          }
+        `}
+      </style>
     </nav>
   );
 };

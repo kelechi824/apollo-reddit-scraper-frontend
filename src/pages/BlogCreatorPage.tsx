@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Play, Upload, MoreHorizontal, FileText, ExternalLink, Copy, RefreshCw, Trash2, X, AlertTriangle, Globe, Brain, BarChart3, Sparkles, Clock, CheckCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import BlogContentActionModal from '../components/BlogContentActionModal';
 import BackendDetailsPopup from '../components/BackendDetailsPopup';
+import { autoSaveBlogIfReady } from '../services/blogHistoryService';
 
 
 // Define interfaces for our data structure
@@ -1107,19 +1108,22 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
       console.log(`📊 Processing completed result for keyword: ${keyword.keyword}`);
       // Process the completed result directly (no polling needed in synchronous approach)
       const finalWorkflowDetails = extractWorkflowDetailsFromResult(result);
+      const updatedKeywordRow: KeywordRow = { 
+        ...keyword, 
+        status: 'completed' as const,
+        progress: '✅ Content generation complete!',
+        output: result.content || '',
+        metadata: result.metadata,
+        generationResult: result,
+        ...(finalWorkflowDetails && { workflowDetails: finalWorkflowDetails })
+      };
+      
       setKeywords(prev => prev.map(k => 
-        k.id === keywordId 
-          ? { 
-              ...k, 
-              status: 'completed',
-              progress: '✅ Content generation complete!',
-              output: result.content || '',
-              metadata: result.metadata,
-              generationResult: result,
-              ...(finalWorkflowDetails && { workflowDetails: finalWorkflowDetails })
-            }
-          : k
+        k.id === keywordId ? updatedKeywordRow : k
       ));
+
+      // Auto-save to blog history
+      autoSaveBlogIfReady(updatedKeywordRow);
 
     } catch (error) {
       // Handle API failures with error status
