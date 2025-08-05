@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Upload, MoreHorizontal, FileText, ExternalLink, Copy, RefreshCw, Trash2, X, AlertTriangle, Globe, Brain, BarChart3, Sparkles, Clock, CheckCircle } from 'lucide-react';
+import { Play, Upload, MoreHorizontal, FileText, ExternalLink, Copy, RefreshCw, Trash2, X, AlertTriangle, Globe, Brain, BarChart3, Sparkles, Clock, CheckCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import BlogContentActionModal from '../components/BlogContentActionModal';
 import BackendDetailsPopup from '../components/BackendDetailsPopup';
 
@@ -8,6 +8,8 @@ import BackendDetailsPopup from '../components/BackendDetailsPopup';
 interface KeywordRow {
   id: string;
   keyword: string;
+  monthlyVolume?: number;
+  avgDifficulty?: number;
   status: 'pending' | 'running' | 'completed' | 'error';
   progress: string;
   output: string;
@@ -270,6 +272,10 @@ const BlogCreatorPage: React.FC = () => {
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
 
+  // Sorting state
+  const [sortField, setSortField] = useState<'monthlyVolume' | 'avgDifficulty' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
   /**
    * Load saved progress from localStorage on mount
    * Why this matters: Restores user's Blog Creator workflow progress across page refreshes, preventing data loss.
@@ -281,18 +287,38 @@ const BlogCreatorPage: React.FC = () => {
       try {
         const progress = JSON.parse(savedProgress);
         
-        // Restore keywords with proper Date objects
+        // Restore keywords with proper Date objects and optional properties
         if (progress.keywords && Array.isArray(progress.keywords)) {
-          const restoredKeywords = progress.keywords.map((keyword: any) => ({
-            ...keyword,
-            createdAt: new Date(keyword.createdAt) // Convert ISO string back to Date
-          }));
+          const restoredKeywords = progress.keywords.map((keyword: any) => {
+            const baseKeyword = {
+              ...keyword,
+              createdAt: new Date(keyword.createdAt) // Convert ISO string back to Date
+            };
+            
+            // Ensure optional properties are properly handled
+            if (keyword.monthlyVolume !== undefined) {
+              baseKeyword.monthlyVolume = keyword.monthlyVolume;
+            }
+            if (keyword.avgDifficulty !== undefined) {
+              baseKeyword.avgDifficulty = keyword.avgDifficulty;
+            }
+            
+            return baseKeyword;
+          });
           setKeywords(restoredKeywords);
         }
         
         // Restore selected rows
         if (progress.selectedRows && Array.isArray(progress.selectedRows)) {
           setSelectedRows(new Set(progress.selectedRows));
+        }
+        
+        // Restore sort state
+        if (progress.sortField) {
+          setSortField(progress.sortField);
+        }
+        if (progress.sortDirection) {
+          setSortDirection(progress.sortDirection);
         }
         
         console.log('Blog Creator progress restored from localStorage');
@@ -336,6 +362,8 @@ const BlogCreatorPage: React.FC = () => {
             createdAt: keyword.createdAt.toISOString() // Convert Date to ISO string for storage
           })),
           selectedRows: Array.from(selectedRows), // Convert Set to Array for storage
+          sortField,
+          sortDirection,
           timestamp: new Date().toISOString()
         };
         
@@ -359,7 +387,57 @@ const BlogCreatorPage: React.FC = () => {
         clearTimeout(timeout);
       }
     };
-  }, [keywords, selectedRows]);
+  }, [keywords, selectedRows, sortField, sortDirection]);
+
+  /**
+   * Handle column sorting
+   * Why this matters: Allows users to sort keywords by volume (highest first) or difficulty (lowest first) for strategic prioritization
+   */
+  const handleSort = (field: 'monthlyVolume' | 'avgDifficulty') => {
+    let newDirection: 'asc' | 'desc' = 'desc';
+    
+    // If clicking the same field, toggle direction
+    if (sortField === field) {
+      newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      // For new field, default to desc for volume (highest first) and asc for difficulty (lowest first)
+      newDirection = field === 'monthlyVolume' ? 'desc' : 'asc';
+    }
+    
+    setSortField(field);
+    setSortDirection(newDirection);
+  };
+
+  /**
+   * Get sorted keywords array
+   * Why this matters: Applies current sort settings to keywords, handling undefined values properly
+   */
+  const getSortedKeywords = () => {
+    if (!sortField) return keywords;
+    
+    return [...keywords].sort((a, b) => {
+      const aValue = a[sortField];
+      const bValue = b[sortField];
+      
+      // Handle undefined values - put them at the end
+      if (aValue === undefined && bValue === undefined) return 0;
+      if (aValue === undefined) return 1;
+      if (bValue === undefined) return -1;
+      
+      // Normal numeric comparison
+      const comparison = aValue - bValue;
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  /**
+   * Reset sorting to original upload order
+   * Why this matters: Allows users to return to the original keyword order after exploring different sorts
+   */
+  const resetSorting = () => {
+    setSortField(null);
+    setSortDirection('desc');
+  };
 
   /**
    * Clear saved progress (for debugging or manual reset)
@@ -369,6 +447,8 @@ const BlogCreatorPage: React.FC = () => {
     localStorage.removeItem('apollo_blog_creator_progress');
     setKeywords([]);
     setSelectedRows(new Set());
+    setSortField(null);
+    setSortDirection('desc');
     setUploadError(null);
     setUploadSuccess(null);
     console.log('Blog Creator progress cleared');
@@ -399,6 +479,7 @@ const BlogCreatorPage: React.FC = () => {
       const newKeywordRows = newUniqueKeywords.map((keyword, index) => ({
         id: `keyword-${Date.now()}-${index}`,
         keyword: keyword,
+        // monthlyVolume and avgDifficulty will be populated from CSV or manual entry later
         status: 'pending' as const,
         progress: '',
         output: '',
@@ -460,8 +541,8 @@ const BlogCreatorPage: React.FC = () => {
   };
 
   /**
-   * Simple CSV upload processing
-   * Why this matters: Handles CSV upload without requiring the full LargeCSVUploader component UI
+   * Enhanced CSV upload processing with multi-column support
+   * Why this matters: Handles CSV upload with multiple columns (keyword, monthly volume, avg difficulty) to populate all table data
    */
   const handleSimpleCSVUpload = async (file: File) => {
     try {
@@ -479,28 +560,211 @@ const BlogCreatorPage: React.FC = () => {
         return;
       }
 
-      // Simple CSV processing (we'll enhance this to use Papa Parse like LargeCSVUploader)
+      // Enhanced CSV processing to handle multiple columns
       const text = await file.text();
       const lines = text.split('\n').filter(line => line.trim());
       
-      // Skip header if present
-      const startIndex = lines.length > 0 && 
-        lines[0].toLowerCase().includes('keyword') ? 1 : 0;
+      if (lines.length === 0) {
+        setUploadError('CSV file is empty');
+        setShowUploadErrorModal(true);
+        return;
+      }
+
+      // Parse first line to determine if it's a header and column structure
+      const firstLine = lines[0];
+      const firstLineLower = firstLine.toLowerCase();
       
-      const uploadedKeywords = lines.slice(startIndex).map(line => line.trim()).filter(line => line);
+      // Check if first line contains headers
+      const hasHeaders = firstLineLower.includes('keyword') || 
+                        firstLineLower.includes('volume') || 
+                        firstLineLower.includes('difficulty');
       
-      // Create result object matching CSVUploadResult interface
+      const startIndex = hasHeaders ? 1 : 0;
+      
+      // Parse each line as CSV with proper quote handling
+      const parsedKeywords: Array<{
+        keyword: string;
+        monthlyVolume?: number;
+        avgDifficulty?: number;
+      }> = [];
+
+      /**
+       * Simple CSV parser that handles quoted values correctly
+       * Why this matters: Handles cases like 'chief sales officer,"1,900",0' properly
+       */
+      const parseCSVLine = (line: string): string[] => {
+        const columns: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            columns.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        
+        // Add the last column
+        columns.push(current.trim());
+        
+        return columns.map(col => col.replace(/^["']|["']$/g, '')); // Remove surrounding quotes
+      };
+
+      for (let i = startIndex; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        // Parse CSV line with proper quote handling
+        const columns = parseCSVLine(line);
+        
+        if (columns.length === 0 || !columns[0]) continue;
+        
+        const keywordData: {
+          keyword: string;
+          monthlyVolume?: number;
+          avgDifficulty?: number;
+        } = {
+          keyword: columns[0]
+        };
+        
+        // Try to parse monthly volume from second column if available
+        if (columns.length > 1 && columns[1]) {
+          const volumeStr = columns[1].replace(/,/g, ''); // Remove commas from numbers
+          const volume = parseInt(volumeStr, 10);
+          if (!isNaN(volume) && volume > 0) {
+            keywordData.monthlyVolume = volume;
+          }
+        }
+        
+        // Try to parse avg difficulty from third column if available
+        if (columns.length > 2 && columns[2]) {
+          const difficultyStr = columns[2];
+          const difficulty = parseFloat(difficultyStr);
+          if (!isNaN(difficulty) && difficulty >= 0) {
+            keywordData.avgDifficulty = difficulty;
+          }
+        }
+        
+        parsedKeywords.push(keywordData);
+      }
+      
+      // Create result object with enhanced data
       const result = {
-        keywords: uploadedKeywords,
+        keywordsData: parsedKeywords, // Enhanced data with volume and difficulty
+        keywords: parsedKeywords.map(item => item.keyword), // Backward compatibility
         totalProcessed: lines.length,
         errors: []
       };
 
-      handleCSVUploadComplete(result);
+      handleEnhancedCSVUploadComplete(result);
     } catch (error) {
       setUploadError('Failed to process uploaded CSV file');
       setShowUploadErrorModal(true);
       console.error('Error processing CSV:', error);
+    }
+  };
+
+  /**
+   * Handle enhanced CSV upload completion with multi-column data
+   * Why this matters: Processes CSV results that include monthly volume and avg difficulty data alongside keywords
+   */
+  const handleEnhancedCSVUploadComplete = (result: { 
+    keywordsData: Array<{
+      keyword: string;
+      monthlyVolume?: number;
+      avgDifficulty?: number;
+    }>;
+    keywords: string[];
+    totalProcessed: number;
+    errors: string[];
+  }) => {
+    try {
+      // Clear previous messages
+      setUploadError(null);
+      setUploadSuccess(null);
+
+      // Get existing keywords (case-insensitive for comparison)
+      const existingKeywords = keywords.map(k => k.keyword.toLowerCase().trim());
+      
+      // Filter out duplicates - only add truly new keywords
+      const newUniqueKeywordData = result.keywordsData.filter(keywordData => 
+        !existingKeywords.includes(keywordData.keyword.toLowerCase().trim())
+      );
+
+      // Count duplicates found
+      const duplicatesFound = result.keywordsData.length - newUniqueKeywordData.length;
+
+      // Convert new keyword data to KeywordRow format with volume and difficulty
+      const newKeywordRows = newUniqueKeywordData.map((keywordData, index) => {
+        const baseRow = {
+          id: `keyword-${Date.now()}-${index}`,
+          keyword: keywordData.keyword,
+          status: 'pending' as const,
+          progress: '',
+          output: '',
+          createdAt: new Date()
+        };
+        
+        // Add optional properties only if they have values
+        if (keywordData.monthlyVolume !== undefined) {
+          (baseRow as any).monthlyVolume = keywordData.monthlyVolume;
+        }
+        if (keywordData.avgDifficulty !== undefined) {
+          (baseRow as any).avgDifficulty = keywordData.avgDifficulty;
+        }
+        
+        return baseRow as KeywordRow;
+      });
+
+      // Add only new keywords to existing list (preserving existing states)
+      setKeywords(prev => [...prev, ...newKeywordRows]);
+
+      // Set success message with deduplication and data info
+      let successMsg = '';
+      const hasVolumeData = newUniqueKeywordData.some(item => item.monthlyVolume !== undefined);
+      const hasDifficultyData = newUniqueKeywordData.some(item => item.avgDifficulty !== undefined);
+      
+      if (newUniqueKeywordData.length > 0 && duplicatesFound > 0) {
+        successMsg = `Added ${newUniqueKeywordData.length} new keywords (${duplicatesFound} duplicates skipped)`;
+      } else if (newUniqueKeywordData.length > 0) {
+        successMsg = `Successfully added ${newUniqueKeywordData.length} new keywords`;
+      } else {
+        successMsg = `No new keywords added - all ${duplicatesFound} keywords already exist`;
+      }
+
+      // Add data info
+      if (hasVolumeData || hasDifficultyData) {
+        const dataTypes = [];
+        if (hasVolumeData) dataTypes.push('volume data');
+        if (hasDifficultyData) dataTypes.push('difficulty data');
+        successMsg += ` with ${dataTypes.join(' and ')}`;
+      }
+
+      setUploadSuccess(successMsg);
+
+      // Show processing info and errors if any
+      if (result.errors.length > 0) {
+        const errorMsg = `Upload processed ${result.totalProcessed} rows with ${result.errors.length} warnings: ${result.errors.slice(0, 2).join(', ')}${result.errors.length > 2 ? '...' : ''}`;
+        setUploadError(errorMsg);
+        setShowUploadErrorModal(true);
+      }
+
+      // Clear messages after 7 seconds
+      setTimeout(() => {
+        setUploadSuccess(null);
+        setUploadError(null);
+      }, 7000);
+
+    } catch (error) {
+      setUploadError('Failed to process uploaded keywords');
+      setShowUploadErrorModal(true);
+      console.error('Error processing enhanced CSV upload:', error);
     }
   };
 
@@ -1155,7 +1419,7 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
       <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
         {/* Hero Section */}
       <div style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
-        <div className="max-w-7xl" style={{ padding: '2rem 1rem' }}>
+        <div style={{ padding: '2rem 1rem', width: '100%' }}>
           <div style={{ textAlign: 'center' }}>
             <h1 style={{ fontSize: '2.5rem', fontWeight: '700', color: '#1f2937', marginBottom: '1rem' }}>
               Blog Creator
@@ -1305,7 +1569,7 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl" style={{ padding: '2rem 1rem' }}>
+              <div style={{ padding: '2rem 1rem', width: '100%' }}>
         {/* Control Panel */}
         <div style={{ marginBottom: '1.5rem' }}>
           {/* Upload Status Messages */}
@@ -1431,6 +1695,40 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                       {selectedRows.size} row{selectedRows.size > 1 ? 's' : ''} selected • 
                       {keywords.filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error')).length} ready to execute/retry • 
                       Max 5 concurrent executions
+                      {sortField && (
+                        <span style={{ color: '#3b82f6', marginLeft: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                          • Sorted by {sortField === 'monthlyVolume' ? 'Volume' : 'Difficulty'} ({sortDirection === 'desc' ? '↓' : '↑'})
+                          <button
+                            onClick={resetSorting}
+                            style={{
+                              padding: '0.125rem 0.5rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              backgroundColor: '#f3f4f6',
+                              color: '#6b7280',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '0.25rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#e5e7eb';
+                              e.currentTarget.style.color = '#374151';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#f3f4f6';
+                              e.currentTarget.style.color = '#6b7280';
+                            }}
+                            title="Reset to original order"
+                          >
+                            <X size={10} />
+                            Reset
+                          </button>
+                        </span>
+                      )}
                     </span>
                   ) : (
                     <span>
@@ -1438,6 +1736,40 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                       {keywords.filter(k => k.status === 'error').length} failed • 
                       {keywords.filter(k => k.status === 'completed').length} completed
                       {concurrentExecutions.size > 0 && ` • ${concurrentExecutions.size} running`}
+                      {sortField && (
+                        <span style={{ color: '#3b82f6', marginLeft: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                          • Sorted by {sortField === 'monthlyVolume' ? 'Volume' : 'Difficulty'} ({sortDirection === 'desc' ? '↓' : '↑'})
+                          <button
+                            onClick={resetSorting}
+                            style={{
+                              padding: '0.125rem 0.5rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              backgroundColor: '#f3f4f6',
+                              color: '#6b7280',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '0.25rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#e5e7eb';
+                              e.currentTarget.style.color = '#374151';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#f3f4f6';
+                              e.currentTarget.style.color = '#6b7280';
+                            }}
+                            title="Reset to original order"
+                          >
+                            <X size={10} />
+                            Reset
+                          </button>
+                        </span>
+                      )}
                     </span>
                   )}
                 </div>
@@ -1447,10 +1779,15 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
         </div>
 
         {/* Airtable-like Table */}
-        <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
+        <div className="card" style={{ overflow: 'auto', maxHeight: '70vh' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+              <thead style={{ 
+                backgroundColor: '#f9fafb', 
+                borderBottom: '1px solid #e5e7eb',
+                position: 'sticky',
+                top: 0,
+                zIndex: 10
+              }}>
                 <tr>
                   <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', width: '60px' }}>
                     <input
@@ -1495,6 +1832,78 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                       </div>
                     </div>
                   </th>
+                  <th 
+                    style={{ 
+                      padding: '0.75rem 1.5rem', 
+                      textAlign: 'left', 
+                      fontSize: '0.75rem', 
+                      fontWeight: '500', 
+                      color: '#6b7280', 
+                      textTransform: 'uppercase', 
+                      letterSpacing: '0.05em', 
+                      width: '120px',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      position: 'relative'
+                    }}
+                    onClick={() => handleSort('monthlyVolume')}
+                    title="Click to sort by Monthly Volume"
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      Monthly Volume
+                      <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '0.25rem' }}>
+                        <ChevronUp 
+                          size={12} 
+                          style={{ 
+                            color: sortField === 'monthlyVolume' && sortDirection === 'asc' ? '#3b82f6' : '#6b7280',
+                            marginBottom: '-2px'
+                          }} 
+                        />
+                        <ChevronDown 
+                          size={12} 
+                          style={{ 
+                            color: sortField === 'monthlyVolume' && sortDirection === 'desc' ? '#3b82f6' : '#6b7280' 
+                          }} 
+                        />
+                      </div>
+                    </div>
+                  </th>
+                  <th 
+                    style={{ 
+                      padding: '0.75rem 1.5rem', 
+                      textAlign: 'left', 
+                      fontSize: '0.75rem', 
+                      fontWeight: '500', 
+                      color: '#6b7280', 
+                      textTransform: 'uppercase', 
+                      letterSpacing: '0.05em', 
+                      width: '120px',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      position: 'relative'
+                    }}
+                    onClick={() => handleSort('avgDifficulty')}
+                    title="Click to sort by Avg. Difficulty"
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      Avg. Difficulty
+                      <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '0.25rem' }}>
+                        <ChevronUp 
+                          size={12} 
+                          style={{ 
+                            color: sortField === 'avgDifficulty' && sortDirection === 'asc' ? '#3b82f6' : '#6b7280',
+                            marginBottom: '-2px'
+                          }} 
+                        />
+                        <ChevronDown 
+                          size={12} 
+                          style={{ 
+                            color: sortField === 'avgDifficulty' && sortDirection === 'desc' ? '#3b82f6' : '#6b7280' 
+                          }} 
+                        />
+                      </div>
+                    </div>
+                  </th>
                   <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Execute
                   </th>
@@ -1512,12 +1921,12 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
               <tbody style={{ backgroundColor: '#ffffff' }}>
                 {keywords.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#6b7280' }}>
+                    <td colSpan={8} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#6b7280' }}>
                       Upload a CSV file to get started
                     </td>
                   </tr>
                 ) : (
-                  keywords.map((keyword) => (
+                  getSortedKeywords().map((keyword) => (
                     <tr key={keyword.id} style={{ borderBottom: '1px solid #f3f4f6', backgroundColor: selectedRows.has(keyword.id) ? '#f0f9ff' : '#ffffff' }}>
                       {/* Selection Checkbox */}
                       <td style={{ padding: '1rem', textAlign: 'center' }}>
@@ -1530,12 +1939,35 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                       </td>
 
                       {/* Keywords Column */}
-                      <td style={{ padding: '1rem 1.5rem', whiteSpace: 'nowrap' }}>
-                        <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>
+                      <td style={{ padding: '1rem 1.5rem', maxWidth: '350px', minWidth: '280px' }}>
+                        <div style={{ 
+                          fontSize: '0.875rem', 
+                          fontWeight: '500', 
+                          color: '#1f2937',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title={keyword.keyword} // Show full keyword on hover
+                        >
                           {keyword.keyword}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                           {keyword.createdAt.toLocaleDateString()}
+                        </div>
+                      </td>
+
+                      {/* Monthly Volume Column */}
+                      <td style={{ padding: '1rem 1.5rem', textAlign: 'center', width: '120px' }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>
+                          {keyword.monthlyVolume ? keyword.monthlyVolume.toLocaleString() : '-'}
+                        </div>
+                      </td>
+
+                      {/* Avg. Difficulty Column */}
+                      <td style={{ padding: '1rem 1.5rem', textAlign: 'center', width: '120px' }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>
+                          {keyword.avgDifficulty !== undefined ? keyword.avgDifficulty : '-'}
                         </div>
                       </td>
 
@@ -1800,7 +2232,6 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                 )}
               </tbody>
             </table>
-          </div>
         </div>
 
         {/* Upload Error Modal */}
@@ -1880,6 +2311,9 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                       <strong style={{ color: '#1f2937' }}>Content Format:</strong>
                       <ul style={{ margin: '0.25rem 0 0 1rem', padding: 0 }}>
                         <li>First column should contain keywords</li>
+                        <li>Second column can contain monthly search volume (numbers, quotes optional)</li>
+                        <li>Third column can contain average difficulty (0-100 or decimal)</li>
+                        <li>Numbers with commas should be quoted: "1,900" not 1,900</li>
                         <li>Headers are automatically detected and skipped</li>
                         <li>Keywords longer than 200 characters will be flagged</li>
                         <li>Empty rows are automatically skipped</li>
@@ -1887,10 +2321,29 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                       </ul>
                     </div>
 
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <strong style={{ color: '#1f2937' }}>CSV Format Example:</strong>
+                      <div style={{ 
+                        backgroundColor: '#f3f4f6',
+                        padding: '0.5rem',
+                        borderRadius: '0.25rem',
+                        fontFamily: 'monospace',
+                        fontSize: '0.75rem',
+                        margin: '0.25rem 0'
+                      }}>
+                        Keyword,Monthly Volume,Avg. Difficulty<br/>
+                        abx marketing,300,0<br/>
+                        chief sales officer,"1,900",0<br/>
+                        b2b marketing campaigns,300,0
+                      </div>
+                    </div>
+
                     <div>
                       <strong style={{ color: '#1f2937' }}>Supported Headers:</strong>
                       <ul style={{ margin: '0.25rem 0 0 1rem', padding: 0 }}>
-                        <li>"keyword", "keywords", "term", "query" (case insensitive)</li>
+                        <li>Keywords: "keyword", "keywords", "term", "query" (case insensitive)</li>
+                        <li>Volume: "volume", "monthly volume", "search volume" (case insensitive)</li>
+                        <li>Difficulty: "difficulty", "avg difficulty", "competition" (case insensitive)</li>
                       </ul>
                     </div>
                   </div>
