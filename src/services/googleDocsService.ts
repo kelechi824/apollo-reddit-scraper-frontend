@@ -533,6 +533,66 @@ class GoogleDocsService {
   }
 
   /**
+   * Get or create Reddit blog content tracking spreadsheet
+   * Why this matters: Maintains a dedicated spreadsheet for Reddit blog content separate from regular blog content.
+   */
+  async getOrCreateRedditBlogSpreadsheet(): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    // Check if we have a stored spreadsheet ID for Reddit blog content
+    const storedSpreadsheetId = localStorage.getItem('apollo_reddit_blog_spreadsheet_id');
+    
+    if (storedSpreadsheetId) {
+      try {
+        // Verify the spreadsheet still exists and is accessible
+        window.gapi.client.setToken({ access_token: this.accessToken });
+        const response = await window.gapi.client.sheets.spreadsheets.get({
+          spreadsheetId: storedSpreadsheetId
+        });
+        
+        if (response.result) {
+          // Check if headers exist in the existing spreadsheet
+          try {
+            const headerResponse = await window.gapi.client.sheets.spreadsheets.values.get({
+              spreadsheetId: storedSpreadsheetId,
+              range: 'Reddit Blog Content Tracking!A1:I1'
+            });
+            
+            // If no headers exist or headers are different, add/update them
+            const expectedHeaders = ['Publish Date', 'Post Title', 'Content', 'Article Title', 'SEO Title', 'Meta Description', 'URL Slug', 'Secondary Category', 'Author'];
+            const currentHeaders = headerResponse.result.values && headerResponse.result.values[0];
+            
+            if (!currentHeaders || !this.arraysEqual(currentHeaders, expectedHeaders)) {
+              console.log('Adding missing headers to existing Reddit blog spreadsheet');
+              await this.addRedditBlogHeaders(storedSpreadsheetId, response.result.sheets[0].properties.sheetId);
+              // Clear bold formatting from existing content rows
+              await this.clearBoldFromExistingContent(storedSpreadsheetId, response.result.sheets[0].properties.sheetId);
+            }
+          } catch (headerError) {
+            console.log('Adding headers to existing Reddit spreadsheet');
+            await this.addRedditBlogHeaders(storedSpreadsheetId, response.result.sheets[0].properties.sheetId);
+            // Clear bold formatting from existing content rows
+            await this.clearBoldFromExistingContent(storedSpreadsheetId, response.result.sheets[0].properties.sheetId);
+          }
+          
+          return {
+            spreadsheetId: storedSpreadsheetId,
+            spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${storedSpreadsheetId}/edit`
+          };
+        }
+      } catch (error) {
+        console.log('Stored Reddit blog spreadsheet not accessible, creating new one');
+        localStorage.removeItem('apollo_reddit_blog_spreadsheet_id');
+      }
+    }
+
+    // Create new spreadsheet
+    return await this.createRedditBlogSpreadsheet();
+  }
+
+  /**
    * Get or create blog content tracking spreadsheet
    * Why this matters: Maintains a dedicated spreadsheet for blog content separate from playbooks.
    */
@@ -590,6 +650,144 @@ class GoogleDocsService {
 
     // Create new spreadsheet
     return await this.createBlogSpreadsheet();
+  }
+
+  /**
+   * Create new Apollo Reddit Blog Content tracking spreadsheet
+   * Why this matters: Creates a properly formatted spreadsheet with headers for tracking all Reddit blog content generation.
+   */
+  async createRedditBlogSpreadsheet(): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    try {
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      const today = new Date().toLocaleDateString();
+      const spreadsheetTitle = `Apollo Reddit Blog Content - ${today}`;
+
+      // Create new spreadsheet
+      const createResponse = await window.gapi.client.sheets.spreadsheets.create({
+        resource: {
+          properties: {
+            title: spreadsheetTitle
+          },
+          sheets: [{
+            properties: {
+              title: 'Reddit Blog Content Tracking',
+              gridProperties: {
+                rowCount: 1000,
+                columnCount: 9
+              }
+            }
+          }]
+        }
+      });
+
+      const spreadsheetId = createResponse.result.spreadsheetId;
+      
+      if (!spreadsheetId) {
+        throw new Error('Failed to create Reddit blog content spreadsheet');
+      }
+
+      // Add headers for Reddit blog content in specified order
+      const headers = [
+        'Publish Date',
+        'Post Title',
+        'Content',
+        'Article Title',
+        'SEO Title',
+        'Meta Description',
+        'URL Slug',
+        'Secondary Category',
+        'Author'
+      ];
+
+      await window.gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: spreadsheetId,
+        range: 'Reddit Blog Content Tracking!A1:I1',
+        valueInputOption: 'RAW',
+        resource: {
+          values: [headers]
+        }
+      });
+
+      // Format headers and content column
+      await window.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: spreadsheetId,
+        resource: {
+          requests: [
+            {
+              // Make header row bold
+              repeatCell: {
+                range: {
+                  sheetId: createResponse.result.sheets[0].properties.sheetId,
+                  startRowIndex: 0, // Row 1 (0-indexed)
+                  endRowIndex: 1,   // Only row 1
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 9,   // Through column I
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: true
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            },
+            {
+              // Ensure content rows are not bold (set default formatting for rows 2+)
+              repeatCell: {
+                range: {
+                  sheetId: createResponse.result.sheets[0].properties.sheetId,
+                  startRowIndex: 1, // Row 2 onwards (0-indexed)
+                  endRowIndex: 1000, // Through row 1000
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 9,   // Through column I
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: false
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            },
+            {
+              // Format column C (Content) to prevent text wrapping and row expansion
+              repeatCell: {
+                range: {
+                  sheetId: createResponse.result.sheets[0].properties.sheetId,
+                  startColumnIndex: 2, // Column C (0-indexed)
+                  endColumnIndex: 3,   // Only column C
+                },
+                cell: {
+                  userEnteredFormat: {
+                    wrapStrategy: 'CLIP' // Prevents text wrapping and row expansion
+                  }
+                },
+                fields: 'userEnteredFormat.wrapStrategy'
+              }
+            }
+          ]
+        }
+      });
+
+      // Store spreadsheet ID for future use
+      localStorage.setItem('apollo_reddit_blog_spreadsheet_id', spreadsheetId);
+
+      const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+      return { spreadsheetId, spreadsheetUrl };
+
+    } catch (error) {
+      console.error('Error creating Reddit blog content spreadsheet:', error);
+      throw new Error('Failed to create Google Spreadsheet for Reddit blog content. Please try again.');
+    }
   }
 
   /**
@@ -731,6 +929,110 @@ class GoogleDocsService {
   }
 
   /**
+   * Append Reddit blog content data to tracking spreadsheet
+   * Why this matters: Logs all generated Reddit blog content with metadata for tracking and analytics.
+   */
+  async appendRedditBlogData(blogData: {
+    keyword: string;
+    metaSeoTitle: string;
+    metaDescription: string;
+    htmlContent: string;
+    urlSlug: string;
+    secondaryCategory: string;
+    author: string;
+  }): Promise<{ success: boolean; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    try {
+      // Get or create Reddit blog spreadsheet
+      const { spreadsheetId, spreadsheetUrl } = await this.getOrCreateRedditBlogSpreadsheet();
+      
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      // Extract H1 title from HTML content
+      const h1Title = this.extractH1Title(blogData.htmlContent);
+      
+      // Format timestamp as YYYY-MM-DD
+      const formattedDate = new Date().toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
+      
+      // Prepare row data for Reddit blog content in specified order
+      const rowData = [
+        formattedDate,
+        blogData.keyword, // Post Title (instead of keyword)
+        blogData.htmlContent, // Content
+        h1Title,
+        blogData.metaSeoTitle,
+        blogData.metaDescription,
+        blogData.urlSlug,
+        blogData.secondaryCategory,
+        blogData.author
+      ];
+
+      // Get current row count to know where the new data will be inserted
+      const dataResponse = await window.gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: 'Reddit Blog Content Tracking!A:I'
+      });
+      const currentRowCount = dataResponse.result.values ? dataResponse.result.values.length : 1;
+      const newRowIndex = currentRowCount; // 0-indexed, so this will be the new row
+
+      // Append data to spreadsheet
+      await window.gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: spreadsheetId,
+        range: 'Reddit Blog Content Tracking!A:I',
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        resource: {
+          values: [rowData]
+        }
+      });
+
+      // Get sheet info to access sheetId
+      const spreadsheetInfo = await window.gapi.client.sheets.spreadsheets.get({
+        spreadsheetId: spreadsheetId
+      });
+      const sheetId = spreadsheetInfo.result.sheets[0].properties.sheetId;
+
+      // Ensure the newly added row is not bold
+      await window.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: spreadsheetId,
+        resource: {
+          requests: [
+            {
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startRowIndex: newRowIndex, // The newly added row
+                  endRowIndex: newRowIndex + 1, // Just this one row
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 9,   // Through column I
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: false
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            }
+          ]
+        }
+      });
+
+      console.log('Successfully appended Reddit blog content data to spreadsheet');
+      return { success: true, spreadsheetUrl };
+
+    } catch (error) {
+      console.error('Error appending Reddit blog content data:', error);
+      throw new Error('Failed to save Reddit blog content data to Google Spreadsheet. Please try again.');
+    }
+  }
+
+  /**
    * Append blog content data to tracking spreadsheet
    * Why this matters: Logs all generated blog content with metadata for tracking and analytics.
    */
@@ -844,6 +1146,109 @@ class GoogleDocsService {
       if (a[i] !== b[i]) return false;
     }
     return true;
+  }
+
+  /**
+   * Add Reddit blog headers to an existing spreadsheet
+   * Why this matters: Ensures existing Reddit spreadsheets have proper headers with correct formatting.
+   */
+  private async addRedditBlogHeaders(spreadsheetId: string, sheetId: number): Promise<void> {
+    try {
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      // Add headers for Reddit blog content in specified order
+      const headers = [
+        'Publish Date',
+        'Post Title',
+        'Content',
+        'Article Title',
+        'SEO Title',
+        'Meta Description',
+        'URL Slug',
+        'Secondary Category',
+        'Author'
+      ];
+
+      // Update headers
+      await window.gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: spreadsheetId,
+        range: 'Reddit Blog Content Tracking!A1:I1',
+        valueInputOption: 'RAW',
+        resource: {
+          values: [headers]
+        }
+      });
+
+      // Format headers and content column
+      await window.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: spreadsheetId,
+        resource: {
+          requests: [
+            {
+              // Make header row bold
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startRowIndex: 0, // Row 1 (0-indexed)
+                  endRowIndex: 1,   // Only row 1
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 9,   // Through column I
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: true
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            },
+            {
+              // Ensure content rows are not bold (set default formatting for rows 2+)
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startRowIndex: 1, // Row 2 onwards (0-indexed)
+                  endRowIndex: 1000, // Through row 1000
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 9,   // Through column I
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: false
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            },
+            {
+              // Format column C (Content) to prevent text wrapping and row expansion
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startColumnIndex: 2, // Column C (0-indexed)
+                  endColumnIndex: 3,   // Only column C
+                },
+                cell: {
+                  userEnteredFormat: {
+                    wrapStrategy: 'CLIP' // Prevents text wrapping and row expansion
+                  }
+                },
+                fields: 'userEnteredFormat.wrapStrategy'
+              }
+            }
+          ]
+        }
+      });
+
+      console.log('Successfully added headers to existing Reddit blog spreadsheet');
+    } catch (error) {
+      console.error('Error adding headers to existing Reddit spreadsheet:', error);
+      throw error;
+    }
   }
 
   /**

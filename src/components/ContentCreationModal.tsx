@@ -1800,16 +1800,65 @@ Return ONLY the JSON object, no additional text.`;
 
     setIsOpeningSheets(true);
     try {
-      // Prepare content data for logging
-      const contentData = {
-        jobTitle: post.title, // Using jobTitle to match the expected interface
-        metaSeoTitle: metaSeoTitle || `Content for ${post.title}`,
-        metaDescription: metaDescription || `Generated content for Reddit post from r/${post.subreddit}`,
-        htmlContent: contentToCopy
+      // Generate the new metadata fields
+      const generateUrlSlug = (postTitle: string): string => {
+        return postTitle
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+          .replace(/\s+/g, '-') // Replace spaces with hyphens
+          .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+          .trim();
       };
 
-      // Log data to spreadsheet and get URL
-      const result = await googleDocsService.appendPlaybookData(contentData);
+      const determineSecondaryCategory = (postTitle: string, content: string): string => {
+        const categories = [
+          'Sales Automation', 'Lead Generation', 'Email Marketing', 'CRM', 'Prospecting',
+          'Sales Development', 'Account Management', 'RevOps', 'Data Enrichment', 'Workflow Automation'
+        ];
+        
+        const combinedText = `${postTitle} ${content}`.toLowerCase();
+        
+        for (const category of categories) {
+          const keywords = category.toLowerCase().split(' ');
+          if (keywords.some(keyword => combinedText.includes(keyword))) {
+            return category;
+          }
+        }
+        
+        return 'Sales Automation'; // Default fallback
+      };
+
+      const selectRandomAuthor = (): string => {
+        const authors = [
+          'shaun-hinklein',
+          'andy-mccotter-bicknell', 
+          'cam-thompson',
+          'kenny-keesee',
+          'maribeth-daytona',
+          'melanie-maecardeno'
+        ];
+        
+        const randomIndex = Math.floor(Math.random() * authors.length);
+        return authors[randomIndex];
+      };
+
+      const urlSlug = generateUrlSlug(post.title);
+      const secondaryCategory = determineSecondaryCategory(post.title, contentToCopy);
+      const author = selectRandomAuthor();
+
+      // Prepare blog content data for logging with new fields
+      const blogData = {
+        keyword: post.title, // Using post title instead of keyword
+        metaSeoTitle: metaSeoTitle || `${post.title} - Complete Guide`,
+        metaDescription: metaDescription || `Comprehensive guide about ${post.title} with expert insights and actionable tips.`,
+        htmlContent: contentToCopy,
+        urlSlug: urlSlug,
+        secondaryCategory: secondaryCategory,
+        author: author
+      };
+
+      // Log data to Reddit blog content spreadsheet and get URL
+      const result = await googleDocsService.appendRedditBlogData(blogData);
       
       if (result.success) {
         // Show success message
