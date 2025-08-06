@@ -125,7 +125,7 @@ const AppLayout: React.FC = () => {
             <Route path="/brand-kit" element={<BrandKitPage />} />
             <Route path="/cta-creator" element={<CTACreatorPage />} />
             <Route path="/voc-kit" element={<VoCKitPage />} />
-            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/reddit-analysis-history" element={<HistoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>

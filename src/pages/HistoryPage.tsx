@@ -132,7 +132,7 @@ const HistoryPage: React.FC = () => {
             <div className="history-title-wrapper">
               <Clock style={{width: '2rem', height: '2rem'}} />
               <div className="history-title-text">
-                <h1 className="page-title">Analysis History</h1>
+                <h1 className="page-title">Reddit Analysis History</h1>
                 <p className="history-subtitle">
                   {historyItems.length === 0 
                     ? 'No saved analyses yet' 
