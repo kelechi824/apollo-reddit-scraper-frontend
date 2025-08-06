@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight } from 'lucide-react';
+import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target } from 'lucide-react';
 import { FEATURE_FLAGS, FeatureFlags } from '../utils/featureFlags';
 
 interface NavigationProps {
@@ -108,6 +108,24 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
           >
             <BookOpen className="nav-icon" />
             Brand Kit
+          </NavLink>
+          
+          <NavLink 
+            to="/cta-creator" 
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onItemClick}
+          >
+            <Target className="nav-icon" />
+            CTA Creator
+          </NavLink>
+          
+          <NavLink 
+            to="/voc-kit" 
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onItemClick}
+          >
+            <Users className="nav-icon" />
+            VoC Kit
           </NavLink>
           
           <NavLink 

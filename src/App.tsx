@@ -10,6 +10,8 @@ import PlaybooksPage from './pages/PlaybooksPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import BrandKitPage from './pages/BrandKitPage';
+import VoCKitPage from './pages/VoCKitPage';
+import CTACreatorPage from './pages/CTACreatorPage';
 import BlogCreatorPage from './pages/BlogCreatorPage';
 import GongAnalysisPage from './pages/GongAnalysisPage';
 import LandingPageAnalyzer from './pages/LandingPageAnalyzer';
@@ -121,6 +123,8 @@ const AppLayout: React.FC = () => {
             <Route path="/blog-creator" element={<BlogCreatorPage />} />
             <Route path="/blog-history" element={<BlogHistoryPage />} />
             <Route path="/brand-kit" element={<BrandKitPage />} />
+            <Route path="/cta-creator" element={<CTACreatorPage />} />
+            <Route path="/voc-kit" element={<VoCKitPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
