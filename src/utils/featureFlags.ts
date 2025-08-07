@@ -7,6 +7,7 @@ export interface FeatureFlags {
   showPlaybooksCreator: boolean;
   showBrandKit: boolean;
   showGongFullConversationTab: boolean;
+  showPreviewArticle: boolean;
 }
 
 export const FEATURE_FLAGS: FeatureFlags = {
@@ -17,4 +18,5 @@ export const FEATURE_FLAGS: FeatureFlags = {
   showPlaybooksCreator: true,
   showBrandKit: true,
   showGongFullConversationTab: false, // Hide until transcript data is available
+  showPreviewArticle: false, // Hide Preview Article button functionality
 }; 
