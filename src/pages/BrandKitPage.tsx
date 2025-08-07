@@ -529,30 +529,7 @@ const BrandKitPage: React.FC = () => {
               </div>
             )}
 
-            {/* Instructions */}
-            <div style={{ 
-              backgroundColor: '#f8fafc', 
-              padding: '1rem', 
-              borderRadius: '0.5rem',
-              border: '0.0625rem solid #e2e8f0'
-            }}>
-              <h4 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#475569' }}>
-                How to get your Pythia API Key:
-              </h4>
-              <ol style={{ 
-                fontSize: '0.8rem', 
-                color: '#64748b', 
-                lineHeight: '1.4',
-                paddingLeft: '1rem',
-                margin: 0
-              }}>
-                <li>Log into your Apollo account</li>
-                <li>Navigate to Settings → API & Integrations</li>
-                <li>Generate a new API key with Pythia data access</li>
-                <li>Copy and paste the key above</li>
-                <li>Test the connection to verify access</li>
-              </ol>
-            </div>
+
           </div>
         </div>
 

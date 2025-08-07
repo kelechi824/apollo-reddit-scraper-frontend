@@ -65,6 +65,8 @@ const VoCKitPage: React.FC = () => {
   const [hasGeneratedAnalysis, setHasGeneratedAnalysis] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   const [showExcerptModal, setShowExcerptModal] = useState<{painPoint: VoCPainPoint} | null>(null);
+  const [analysisJobId, setAnalysisJobId] = useState<string | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
   const isInitialLoadRef = useRef(true);
 
@@ -123,6 +125,105 @@ const VoCKitPage: React.FC = () => {
   }, [vocKit]);
 
   /**
+   * Check for ongoing analysis job
+   * Why this matters: Restores analysis state if user left page during extraction.
+   */
+  const checkOngoingAnalysis = async () => {
+    const jobId = localStorage.getItem('apollo_voc_analysis_job_id');
+    if (jobId) {
+      try {
+        const response = await fetch(`http://localhost:3003/api/voc-extraction/job-status/${jobId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          if (result.status === 'processing') {
+            // Resume the extracting state
+            setAnalysisJobId(jobId);
+            setIsExtracting(true);
+            startPolling(jobId);
+          } else if (result.status === 'completed' && result.data) {
+            // Analysis completed while user was away
+            const { variables, painPoints, metadata } = result.data;
+            handleAnalysisComplete(variables, painPoints, metadata);
+            localStorage.removeItem('apollo_voc_analysis_job_id');
+          } else if (result.status === 'failed') {
+            // Analysis failed
+            setMessage('Analysis failed. Please try again.');
+            localStorage.removeItem('apollo_voc_analysis_job_id');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking ongoing analysis:', error);
+        localStorage.removeItem('apollo_voc_analysis_job_id');
+      }
+    }
+  };
+
+  /**
+   * Start polling for job completion
+   * Why this matters: Continuously checks if analysis is complete while user waits.
+   */
+  const startPolling = (jobId: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`http://localhost:3003/api/voc-extraction/job-status/${jobId}`);
+        const result = await response.json();
+        
+        if (result.success && result.status === 'completed' && result.data) {
+          const { variables, painPoints, metadata } = result.data;
+          handleAnalysisComplete(variables, painPoints, metadata);
+          clearInterval(interval);
+          setPollingInterval(null);
+          localStorage.removeItem('apollo_voc_analysis_job_id');
+        } else if (result.success && result.status === 'failed') {
+          setMessage('Analysis failed. Please try again.');
+          setIsExtracting(false);
+          clearInterval(interval);
+          setPollingInterval(null);
+          localStorage.removeItem('apollo_voc_analysis_job_id');
+        }
+      } catch (error) {
+        console.error('Error polling job status:', error);
+      }
+    }, 5000); // Poll every 5 seconds
+    
+    setPollingInterval(interval);
+  };
+
+  /**
+   * Handle analysis completion
+   * Why this matters: Centralizes the logic for when analysis finishes.
+   */
+  const handleAnalysisComplete = (variables: Record<string, string>, painPoints: VoCPainPoint[], metadata: any) => {
+    const updatedVoCKit = {
+      ...vocKit,
+      painPoints: variables,
+      lastUpdated: new Date().toISOString(),
+      hasGeneratedAnalysis: true,
+      extractedPainPoints: painPoints,
+      analysisMetadata: metadata
+    };
+    
+    setVoCKit(updatedVoCKit);
+    setExtractedPainPoints(painPoints);
+    setHasGeneratedAnalysis(true);
+    setIsExtracting(false);
+    
+    // Auto-save the completed analysis
+    try {
+      localStorage.setItem('apollo_voc_kit', JSON.stringify(updatedVoCKit));
+      localStorage.removeItem('apollo_voc_kit_draft');
+      window.dispatchEvent(new CustomEvent('apollo-voc-kit-updated'));
+      console.log('✅ VoC analysis auto-saved successfully');
+    } catch (error) {
+      console.error('Failed to auto-save VoC analysis:', error);
+    }
+    
+    setMessage(`Successfully extracted ${metadata.totalPainPoints} pain points from ${metadata.callsAnalyzed} customer calls`);
+    setTimeout(() => setMessage(''), 5000);
+  };
+
+  /**
    * Load VoC Kit from localStorage
    * Why this matters: Persists VoC configuration and analysis results across sessions.
    */
@@ -151,10 +252,22 @@ const VoCKitPage: React.FC = () => {
       }
     }
 
+    // Check for ongoing analysis
+    checkOngoingAnalysis();
+
     setTimeout(() => {
       isInitialLoadRef.current = false;
     }, 100);
   }, []);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   /**
    * Extract pain points from Gong calls
@@ -165,59 +278,40 @@ const VoCKitPage: React.FC = () => {
     setMessage('');
     
     try {
-      const response = await fetch('http://localhost:3003/api/voc-extraction/liquid-variables', {
+      // Start async analysis job
+      const response = await fetch('http://localhost:3003/api/voc-extraction/start-analysis', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          daysBack: 30,
-          maxCalls: 25
+          daysBack: 180,
+          maxCalls: 250
         }),
       });
 
       const result = await response.json();
 
-      if (result.success) {
-        const { variables, painPoints, metadata } = result.data;
+      if (result.success && result.jobId) {
+        // Store job ID for persistence
+        localStorage.setItem('apollo_voc_analysis_job_id', result.jobId);
+        setAnalysisJobId(result.jobId);
         
-        // Update VoC Kit with analysis results and auto-save
-        const updatedVoCKit = {
-          ...vocKit,
-          painPoints: variables,
-          lastUpdated: new Date().toISOString(),
-          hasGeneratedAnalysis: true,
-          extractedPainPoints: painPoints,
-          analysisMetadata: metadata
-        };
+        // Start polling for completion
+        startPolling(result.jobId);
         
-        setVoCKit(updatedVoCKit);
-        setExtractedPainPoints(painPoints);
-        setHasGeneratedAnalysis(true);
+        setMessage('Analysis started. This may take 3-5 minutes...');
         
-        // Auto-save the completed analysis
-        try {
-          localStorage.setItem('apollo_voc_kit', JSON.stringify(updatedVoCKit));
-          localStorage.removeItem('apollo_voc_kit_draft'); // Clear draft since we have final results
-          window.dispatchEvent(new CustomEvent('apollo-voc-kit-updated'));
-          console.log('✅ VoC analysis auto-saved successfully');
-        } catch (error) {
-          console.error('Failed to auto-save VoC analysis:', error);
-        }
-        
-        setMessage(`Successfully extracted ${metadata.totalPainPoints} pain points from ${metadata.callsAnalyzed} customer calls`);
-        
-        setTimeout(() => setMessage(''), 5000);
       } else {
-        setMessage(`Error: ${result.error || 'Failed to extract pain points'}`);
+        setMessage(`Error: ${result.error || 'Failed to start analysis'}`);
+        setIsExtracting(false);
         setTimeout(() => setMessage(''), 5000);
       }
     } catch (error: any) {
-      console.error('Error extracting pain points:', error);
+      console.error('Error starting analysis:', error);
       setMessage('Error: Failed to connect to VoC extraction service');
-      setTimeout(() => setMessage(''), 5000);
-    } finally {
       setIsExtracting(false);
+      setTimeout(() => setMessage(''), 5000);
     }
   };
 
@@ -226,6 +320,12 @@ const VoCKitPage: React.FC = () => {
    * Why this matters: Allows users to start fresh with a new analysis.
    */
   const handleClearAll = () => {
+    // Stop any ongoing polling
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
+    
     // Reset all state
     const freshVoCKit: VoCKit = {
       painPoints: {},
@@ -238,12 +338,15 @@ const VoCKitPage: React.FC = () => {
     setVoCKit(freshVoCKit);
     setExtractedPainPoints([]);
     setHasGeneratedAnalysis(false);
+    setIsExtracting(false);
+    setAnalysisJobId(null);
     setShowClearModal(false);
     
     // Clear from localStorage
     try {
       localStorage.setItem('apollo_voc_kit', JSON.stringify(freshVoCKit));
       localStorage.removeItem('apollo_voc_kit_draft');
+      localStorage.removeItem('apollo_voc_analysis_job_id');
       window.dispatchEvent(new CustomEvent('apollo-voc-kit-updated'));
       console.log('✅ VoC analysis cleared successfully');
     } catch (error) {
@@ -409,7 +512,7 @@ const VoCKitPage: React.FC = () => {
             lineHeight: '1.5',
             fontSize: '0.875rem'
           }}>
-            Pain points are extracted directly from your Gong call summaries using AI analysis. Each theme represents patterns found across multiple customer conversations, with frequency scores indicating how often these issues appear in actual sales calls. Customer quotes are real excerpts from call summaries.
+            Pain points are extracted and analyzed directly from Gong call summaries using AI. Each theme represents patterns found across multiple customer conversations. Customer quotes are real excerpts from call summaries.
           </p>
 
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -456,6 +559,19 @@ const VoCKitPage: React.FC = () => {
               )}
             </button>
 
+            {/* Time estimate during extraction */}
+            {isExtracting && (
+              <div style={{
+                fontSize: '0.75rem',
+                color: '#6b7280',
+                fontStyle: 'italic',
+                textAlign: 'center'
+              }}>
+                Estimated time: 3-5 minutes<br />
+                You can visit other pages and return to check progress
+              </div>
+            )}
+
             {hasGeneratedAnalysis && (
               <button
                 onClick={() => setShowClearModal(true)}
@@ -486,7 +602,7 @@ const VoCKitPage: React.FC = () => {
                 gap: '1rem',
                 flexWrap: 'wrap'
               }}>
-                <span>📊 {vocKit.analysisMetadata.totalPainPoints} pain points</span>
+                <span>🎯 {vocKit.analysisMetadata.totalPainPoints} pain points categories detected</span>
                 <span>📞 {vocKit.analysisMetadata.callsAnalyzed} calls analyzed</span>
                 <span>📅 {new Date(vocKit.analysisMetadata.analysisDate).toLocaleDateString()}</span>
               </div>
@@ -508,6 +624,53 @@ const VoCKitPage: React.FC = () => {
           )}
         </div>
 
+        {/* CTA Creator Link */}
+        {hasGeneratedAnalysis && (
+          <div style={{ 
+            backgroundColor: 'white', 
+            border: '0.0625rem solid #f3f4f6', 
+            borderRadius: '0.75rem', 
+            padding: '2rem',
+            marginBottom: '2rem'
+          }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem', color: '#374151' }}>
+              🎯 Ready for CTA Generation
+            </h3>
+            <p style={{ color: '#6b7280', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+              Customer pain points are extracted and ready! Use the CTA Creator to generate 
+              hyper-relevant CTAs from any article URL using Voice of Customer insights.
+            </p>
+
+            <a 
+              href="/cta-creator"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.875rem 1.5rem',
+                backgroundColor: '#EBF212',
+                color: 'black',
+                textDecoration: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: '700',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#d4e017';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#EBF212';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              ✨ Go to CTA Creator
+              <span style={{ fontSize: '1rem' }}>→</span>
+            </a>
+          </div>
+        )}
+
         {/* Extracted Pain Points Display */}
         {hasGeneratedAnalysis && extractedPainPoints.length > 0 && (
           <div style={{ 
@@ -518,7 +681,7 @@ const VoCKitPage: React.FC = () => {
             marginBottom: '2rem'
           }}>
             <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem', color: '#374151' }}>
-              Extracted Pain Points ({extractedPainPoints.length})
+              Extracted Pain Points
             </h3>
             
             <div style={{ display: 'grid', gap: '1rem' }}>
@@ -539,15 +702,7 @@ const VoCKitPage: React.FC = () => {
                     <h4 style={{ fontSize: '0.9375rem', fontWeight: '600', margin: 0, color: '#374151' }}>
                       {painPoint.theme}
                     </h4>
-                    <span style={{ 
-                      fontSize: '0.8125rem', 
-                      backgroundColor: '#f3f4f6', 
-                      padding: '0.125rem 0.375rem', 
-                      borderRadius: '0.25rem',
-                      color: '#6b7280'
-                    }}>
-                      freq: {painPoint.frequency}
-                    </span>
+
                     <span style={{ 
                       fontSize: '0.8125rem', 
                       backgroundColor: '#dcfce7', 
@@ -657,157 +812,7 @@ const VoCKitPage: React.FC = () => {
 
 
 
-        {/* Current Pain Points Variables */}
-        <div style={{ 
-          backgroundColor: 'white', 
-          border: '0.0625rem solid #f3f4f6', 
-          borderRadius: '0.75rem', 
-          padding: '2rem',
-          marginBottom: '2rem'
-        }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem', color: '#374151' }}>
-            Pain Point Variables ({Object.keys(vocKit.painPoints).length})
-          </h3>
-          
-          {Object.keys(vocKit.painPoints).length > 0 ? (
-            <div style={{ display: 'grid', gap: '0.75rem' }}>
-              {Object.entries(vocKit.painPoints).map(([key, value]) => (
-                <div key={key} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '0.75rem',
-                  border: '0.0625rem solid #e5e7eb',
-                  borderRadius: '0.5rem',
-                  backgroundColor: '#fafafa'
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
-                      {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </div>
-                    <code style={{ fontSize: '0.75rem', color: '#6b7280' }}>{value}</code>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>
-              No pain point variables extracted yet. Click "Extract Pain Points" to analyze customer calls.
-            </p>
-          )}
-        </div>
 
-        {/* Custom Variables Section */}
-        <div style={{ 
-          backgroundColor: 'white', 
-          border: '0.0625rem solid #f3f4f6', 
-          borderRadius: '0.75rem', 
-          padding: '2rem',
-          marginBottom: '2rem'
-        }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem', color: '#374151' }}>
-            Custom Pain Point Variables
-          </h3>
-          <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-            Add custom pain point variables for specific use cases or manually identified customer concerns.
-          </p>
-
-          {/* Add new variable */}
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            gap: '0.75rem', 
-            marginBottom: '1rem'
-          }}>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <input
-                type="text"
-                value={newVariableName}
-                onChange={(e) => setNewVariableName(e.target.value)}
-                placeholder="Variable name (e.g., pricing concerns)"
-                style={{
-                  flex: '1',
-                  minWidth: '200px',
-                  padding: '0.75rem 1rem',
-                  border: '0.0625rem solid #e5e7eb',
-                  borderRadius: '0.5rem',
-                  backgroundColor: '#fafafa',
-                  outline: 'none'
-                }}
-              />
-              <button
-                onClick={addCustomVariable}
-                style={{
-                  padding: '0.75rem',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-            
-            {newVariableName && (
-              <input
-                type="text"
-                value={newVariableValue}
-                readOnly
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  border: '0.0625rem solid #e5e7eb',
-                  borderRadius: '0.5rem',
-                  backgroundColor: '#f9fafb',
-                  color: '#6b7280',
-                  fontFamily: 'monospace'
-                }}
-              />
-            )}
-          </div>
-
-          {/* Display custom variables */}
-          {Object.entries(vocKit.customVariables).map(([key, value]) => (
-            <div key={key} style={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              gap: '0.5rem', 
-              marginBottom: '0.75rem',
-              padding: '0.75rem',
-              border: '0.0625rem solid #e5e7eb',
-              borderRadius: '0.5rem',
-              backgroundColor: '#fafafa'
-            }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
-                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </div>
-                <code style={{ fontSize: '0.75rem', color: '#6b7280' }}>{value}</code>
-              </div>
-              <button
-                onClick={() => removeCustomVariable(key)}
-                style={{
-                  padding: '0.5rem',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.25rem',
-                  cursor: 'pointer'
-                }}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-
-          {Object.keys(vocKit.customVariables).length === 0 && (
-            <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No custom variables defined yet.</p>
-          )}
-        </div>
 
         {/* CTA Creator Link */}
         {hasGeneratedAnalysis && (
@@ -822,8 +827,8 @@ const VoCKitPage: React.FC = () => {
               🎯 Ready for CTA Generation
             </h3>
             <p style={{ color: '#6b7280', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-              Your customer pain points are extracted and ready! Use the CTA Creator to generate 
-              hyper-relevant CTAs from any article URL using your Voice of Customer insights.
+              Customer pain points are extracted and ready! Use the CTA Creator to generate 
+              hyper-relevant CTAs from any article URL using Voice of Customer insights.
             </p>
 
             <a 
@@ -856,40 +861,6 @@ const VoCKitPage: React.FC = () => {
           </div>
         )}
 
-        {/* Save Button */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          gap: '1rem',
-          marginTop: '1rem',
-          padding: '2rem',
-          backgroundColor: '#fafafa',
-          borderRadius: '0.75rem',
-          border: '0.0625rem solid #f3f4f6'
-        }}>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.875rem 2rem',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.5rem',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-              cursor: isSaving ? 'not-allowed' : 'pointer',
-              opacity: isSaving ? 0.6 : 1
-            }}
-          >
-            <Save size={16} />
-            {isSaving ? 'Saving...' : 'Save VoC Kit'}
-          </button>
-        </div>
       </div>
 
       {/* Call Excerpt Modal */}
