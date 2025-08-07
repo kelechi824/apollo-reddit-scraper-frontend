@@ -132,7 +132,7 @@ const VoCKitPage: React.FC = () => {
     const jobId = localStorage.getItem('apollo_voc_analysis_job_id');
     if (jobId) {
       try {
-        const response = await fetch(`http://localhost:3003/api/voc-extraction/job-status/${jobId}`);
+        const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/voc-extraction/job-status/${jobId}`);
         const result = await response.json();
         
         if (result.success) {
@@ -166,7 +166,7 @@ const VoCKitPage: React.FC = () => {
   const startPolling = (jobId: string) => {
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:3003/api/voc-extraction/job-status/${jobId}`);
+        const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/voc-extraction/job-status/${jobId}`);
         const result = await response.json();
         
         if (result.success && result.status === 'completed' && result.data) {
@@ -279,7 +279,7 @@ const VoCKitPage: React.FC = () => {
     
     try {
       // Start async analysis job
-      const response = await fetch('http://localhost:3003/api/voc-extraction/start-analysis', {
+      const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/voc-extraction/start-analysis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
