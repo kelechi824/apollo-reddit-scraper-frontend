@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Zap, Target, Sparkles, CheckCircle, AlertCircle, ArrowRight, Copy, Download } from 'lucide-react';
+import { ExternalLink, Zap, Target, Sparkles, CheckCircle, AlertCircle, ArrowRight, Copy, Download, AlertTriangle, RotateCcw } from 'lucide-react';
+
+// Skeleton component for loading states
+const Skeleton = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+  <div 
+    className={className}
+    style={{
+      backgroundColor: '#f3f4f6',
+      borderRadius: '0.375rem',
+      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      ...style
+    }}
+  />
+);
 
 interface CTAVariant {
   position: 'beginning' | 'middle' | 'end';
@@ -47,13 +60,27 @@ interface CTAGenerationResult {
  */
 const CTACreatorPage: React.FC = () => {
   const [articleUrl, setArticleUrl] = useState('');
+  const [articleText, setArticleText] = useState('');
+  const [articleMarkdown, setArticleMarkdown] = useState('');
+  const [inputMethod, setInputMethod] = useState<'url' | 'text' | 'markdown'>('url');
   const [enhancedAnalysis, setEnhancedAnalysis] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStage, setGenerationStage] = useState('');
   const [generatedCTAs, setGeneratedCTAs] = useState<CTAGenerationResult | null>(null);
+  const [showSkeletons, setShowSkeletons] = useState(false);
   const [error, setError] = useState('');
   const [copySuccess, setCopySuccess] = useState<string>('');
   const [showPreview, setShowPreview] = useState<string>('');
+  const [showClearModal, setShowClearModal] = useState(false);
+
+  // Approved CTA button options for dynamic switching
+  const approvedCTAButtons = [
+    'Try Apollo Free →',
+    'Start Your Free Trial →',
+    'Schedule a Demo →',
+    'Start a Trial →',
+    'Request a Demo →'
+  ];
 
   /**
    * Check if VoC Kit is configured
@@ -78,7 +105,31 @@ const CTACreatorPage: React.FC = () => {
       }
     };
 
+    // Restore saved CTAs from localStorage
+    const restoreSavedCTAs = () => {
+      try {
+        const savedCTAs = localStorage.getItem('apollo_cta_creator_results');
+        const savedInputs = localStorage.getItem('apollo_cta_creator_inputs');
+        
+        if (savedCTAs) {
+          const parsedCTAs = JSON.parse(savedCTAs);
+          setGeneratedCTAs(parsedCTAs);
+        }
+        
+        if (savedInputs) {
+          const parsedInputs = JSON.parse(savedInputs);
+          setArticleUrl(parsedInputs.articleUrl || '');
+          setArticleText(parsedInputs.articleText || '');
+          setArticleMarkdown(parsedInputs.articleMarkdown || '');
+          setInputMethod(parsedInputs.inputMethod || 'url');
+        }
+      } catch (error) {
+        console.error('Error restoring saved CTAs:', error);
+      }
+    };
+
     checkVocKit();
+    restoreSavedCTAs();
     
     // Listen for VoC Kit updates
     const handleVocUpdate = () => checkVocKit();
@@ -88,12 +139,78 @@ const CTACreatorPage: React.FC = () => {
   }, []);
 
   /**
-   * Generate CTAs from article URL
-   * Why this matters: Executes the complete pipeline to create hyper-relevant CTAs.
+   * Save CTAs and inputs to localStorage
+   * Why this matters: Persists generated CTAs and user inputs across page refreshes for better UX.
+   */
+  const saveCTAsToStorage = (ctas: CTAGenerationResult) => {
+    try {
+      localStorage.setItem('apollo_cta_creator_results', JSON.stringify(ctas));
+      
+      // Also save current inputs
+      const inputsToSave = {
+        articleUrl,
+        articleText,
+        articleMarkdown,
+        inputMethod
+      };
+      localStorage.setItem('apollo_cta_creator_inputs', JSON.stringify(inputsToSave));
+      
+      console.log('✅ CTAs saved to localStorage');
+    } catch (error) {
+      console.error('❌ Failed to save CTAs to localStorage:', error);
+    }
+  };
+
+  /**
+   * Clear saved CTAs from localStorage
+   * Why this matters: Allows users to start fresh and clears storage when needed.
+   */
+  const clearSavedCTAs = () => {
+    try {
+      localStorage.removeItem('apollo_cta_creator_results');
+      localStorage.removeItem('apollo_cta_creator_inputs');
+      console.log('✅ Saved CTAs cleared from localStorage');
+    } catch (error) {
+      console.error('❌ Failed to clear saved CTAs:', error);
+    }
+  };
+
+  /**
+   * Handle clear results confirmation
+   * Why this matters: Executes the actual clear action after user confirms.
+   */
+  const confirmClearResults = () => {
+    setGeneratedCTAs(null);
+    setShowSkeletons(false);
+    clearSavedCTAs();
+    setShowClearModal(false);
+  };
+
+  /**
+   * Cancel clear results action
+   * Why this matters: Closes modal without taking any destructive action.
+   */
+  const cancelClearResults = () => {
+    setShowClearModal(false);
+  };
+
+  /**
+   * Generate CTAs from article URL, text, or markdown
+   * Why this matters: Executes the complete pipeline to create hyper-relevant CTAs from URL, direct text, or markdown input.
    */
   const generateCTAs = async () => {
-    if (!articleUrl.trim()) {
+    if (inputMethod === 'url' && !articleUrl.trim()) {
       setError('Please enter an article URL');
+      return;
+    }
+
+    if (inputMethod === 'text' && !articleText.trim()) {
+      setError('Please paste your article text or HTML');
+      return;
+    }
+
+    if (inputMethod === 'markdown' && !articleMarkdown.trim()) {
+      setError('Please paste your markdown content');
       return;
     }
 
@@ -104,37 +221,92 @@ const CTACreatorPage: React.FC = () => {
 
     setIsGenerating(true);
     setError('');
-    setGeneratedCTAs(null);
-    setGenerationStage('Extracting article content...');
+    
+    // If CTAs already exist, show skeletons instead of clearing
+    if (generatedCTAs) {
+      setShowSkeletons(true);
+    } else {
+      setGeneratedCTAs(null);
+    }
+    
+    let stageMessage = 'Extracting article content...';
+    if (inputMethod === 'text') stageMessage = 'Processing article text...';
+    if (inputMethod === 'markdown') stageMessage = 'Processing markdown content...';
+    setGenerationStage(stageMessage);
 
     try {
-      const response = await fetch('http://localhost:3003/api/cta-generation/generate-from-url', {
+            // Get VoC Kit data to send with request
+      let vocKitData = null;
+      try {
+        const storedVocKit = localStorage.getItem('apollo_voc_kit');
+        if (storedVocKit) {
+          vocKitData = JSON.parse(storedVocKit);
+        }
+      } catch (error) {
+        console.error('Error loading VoC Kit data:', error);
+      }
+
+      let endpoint = 'http://localhost:3003/api/cta-generation/generate-from-url';
+      let requestBody: any = { 
+        url: articleUrl, 
+        enhanced_analysis: enhancedAnalysis,
+        voc_kit_data: vocKitData
+      };
+
+      if (inputMethod === 'text') {
+        endpoint = 'http://localhost:3003/api/cta-generation/generate-from-text';
+        requestBody = { 
+          text: articleText, 
+          enhanced_analysis: enhancedAnalysis,
+          voc_kit_data: vocKitData
+        };
+      } else if (inputMethod === 'markdown') {
+        endpoint = 'http://localhost:3003/api/cta-generation/generate-from-markdown';
+        requestBody = { 
+          markdown: articleMarkdown, 
+          enhanced_analysis: enhancedAnalysis,
+          voc_kit_data: vocKitData
+        };
+      }
+
+      // Start the fetch request
+      const fetchPromise = fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          url: articleUrl,
-          enhanced_analysis: enhancedAnalysis
-        }),
+        body: JSON.stringify(requestBody),
       });
 
-      // Simulate stage updates for better UX
-      setTimeout(() => setGenerationStage('Analyzing content and detecting personas...'), 1000);
-      setTimeout(() => setGenerationStage('Matching to customer pain points...'), 2000);
-      setTimeout(() => setGenerationStage('Generating hyper-relevant CTAs...'), 3000);
+      // Simulate stage updates for better UX while processing
+      const stage1 = setTimeout(() => setGenerationStage('Identifying persona...'), 5000);
+      const stage2 = setTimeout(() => setGenerationStage('Matching persona to pain points...'), 10000);
+      const stage3 = setTimeout(() => setGenerationStage('Generating CTAs...'), 15000);
+
+      const response = await fetchPromise;
+      
+      // Clear any remaining timeouts since we got a response
+      clearTimeout(stage1);
+      clearTimeout(stage2);
+      clearTimeout(stage3);
 
       const result = await response.json();
 
       if (result.success) {
         setGeneratedCTAs(result.data);
+        setShowSkeletons(false);
         setGenerationStage('');
+        
+        // Save to localStorage for persistence
+        saveCTAsToStorage(result.data);
       } else {
         setError(result.error || 'Failed to generate CTAs');
+        setShowSkeletons(false);
       }
     } catch (error: any) {
       console.error('Error generating CTAs:', error);
       setError('Failed to connect to CTA generation service');
+      setShowSkeletons(false);
     } finally {
       setIsGenerating(false);
       setGenerationStage('');
@@ -175,6 +347,50 @@ const CTACreatorPage: React.FC = () => {
   };
 
   /**
+   * Cycle CTA button text to a random different option
+   * Why this matters: Allows users to test different CTA buttons without regenerating entire CTAs.
+   */
+  const cycleCTAButton = (position: 'beginning' | 'middle' | 'end') => {
+    if (!generatedCTAs) return;
+
+    const currentButton = generatedCTAs.cta_variants[position].cta.action_button;
+    
+    // Get options excluding the current one
+    const availableOptions = approvedCTAButtons.filter(button => button !== currentButton);
+    
+    // Select random option from remaining choices
+    const randomIndex = Math.floor(Math.random() * availableOptions.length);
+    const newButton = availableOptions[randomIndex];
+    
+    // Update the CTA data
+    const updatedCTAs = {
+      ...generatedCTAs,
+      cta_variants: {
+        ...generatedCTAs.cta_variants,
+        [position]: {
+          ...generatedCTAs.cta_variants[position],
+          cta: {
+            ...generatedCTAs.cta_variants[position].cta,
+            action_button: newButton
+          },
+          // Update shortcode with new button text
+          shortcode: generatedCTAs.cta_variants[position].shortcode.replace(
+            /\[cta-action\].*?\[\/cta-action\]/,
+            `[cta-action]${newButton}[/cta-action]`
+          )
+        }
+      }
+    };
+    
+    setGeneratedCTAs(updatedCTAs);
+    
+    // Update localStorage with new CTA data
+    saveCTAsToStorage(updatedCTAs);
+    
+    console.log(`🔄 CTA button changed from "${currentButton}" to "${newButton}" for ${position} position`);
+  };
+
+  /**
    * Download all CTAs as a text file
    * Why this matters: Provides a convenient way to save all generated CTAs.
    */
@@ -185,7 +401,6 @@ const CTACreatorPage: React.FC = () => {
 # Generated CTAs for ${generatedCTAs.persona}
 Generated on: ${new Date(generatedCTAs.generation_metadata.generation_timestamp).toLocaleString()}
 Confidence Score: ${generatedCTAs.generation_metadata.confidence_score}%
-Pain Points Matched: ${generatedCTAs.matched_pain_points}
 
 ## Beginning CTA (Awareness Strategy)
 Category: ${generatedCTAs.cta_variants.beginning.cta.category_header}
@@ -263,7 +478,7 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
             margin: '0 auto',
             maxWidth: '48rem'
           }}>
-            Generate hyper-relevant CTAs that convert using Apollo's Voice of Customer insights. Input any article URL and get position-optimized CTAs with actual customer language.
+            Generate hyper-relevant CTAs that convert using Apollo's Voice of Customer insights.
           </p>
         </div>
 
@@ -271,20 +486,20 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
         {!vocKitReady && (
           <div style={{
             padding: '1.5rem',
-            backgroundColor: '#fef3c7',
-            border: '1px solid #f59e0b',
+            backgroundColor: '#E0DBFF',
+            border: '0.125rem solid #B8B0E8',
             borderRadius: '0.75rem',
             marginBottom: '2rem',
             display: 'flex',
             alignItems: 'center',
             gap: '1rem'
           }}>
-            <AlertCircle size={24} style={{ color: '#d97706' }} />
+            <AlertCircle size={24} style={{ color: '#3b82f6' }} />
             <div>
-              <h3 style={{ fontSize: '1rem', fontWeight: '600', margin: '0 0 0.25rem 0', color: '#92400e' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', margin: '0 0 0.25rem 0', color: '#1e40af' }}>
                 VoC Kit Setup Required
               </h3>
-              <p style={{ fontSize: '0.875rem', color: '#92400e', margin: 0 }}>
+              <p style={{ fontSize: '0.875rem', color: '#374151', margin: 0 }}>
                 Please extract customer pain points in the VoC Kit before generating CTAs.
               </p>
             </div>
@@ -292,12 +507,12 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
               href="/voc-kit" 
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: '#d97706',
-                color: 'white',
+                backgroundColor: '#EBF212',
+                color: 'black',
                 textDecoration: 'none',
                 borderRadius: '0.375rem',
                 fontSize: '0.875rem',
-                fontWeight: '500',
+                fontWeight: '700',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem'
@@ -318,16 +533,18 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
             marginBottom: '2rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.75rem'
+            gap: '0.75rem',
+            width: 'fit-content',
+            margin: '0 auto 2rem auto'
           }}>
             <CheckCircle size={20} style={{ color: '#16a34a' }} />
             <span style={{ fontSize: '0.875rem', color: '#16a34a', fontWeight: '500' }}>
-              VoC Kit ready with {painPointsCount} customer pain points
+              VoC Kit is ready!
             </span>
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: generatedCTAs ? '1fr 1fr' : '1fr', gap: '3rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: (generatedCTAs || showSkeletons) ? '1fr 1fr' : '1fr', gap: '3rem' }}>
           {/* Input Section */}
           <div style={{
             backgroundColor: 'white',
@@ -344,93 +561,226 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
               </h2>
             </div>
 
+            {/* Input Method Toggle */}
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '0.875rem', 
-                fontWeight: '500', 
-                color: '#374151', 
-                marginBottom: '0.5rem' 
-              }}>
-                Article URL
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="url"
-                  value={articleUrl}
-                  onChange={(e) => setArticleUrl(e.target.value)}
-                  placeholder="https://example.com/article-about-sales"
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => !isGenerating && setInputMethod('url')}
                   disabled={isGenerating}
                   style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    paddingLeft: '2.5rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
+                    padding: '0.5rem 1rem',
                     fontSize: '0.875rem',
-                    outline: 'none',
-                    backgroundColor: isGenerating ? '#f9fafb' : 'white',
-                    transition: 'border-color 0.2s ease',
-                    boxSizing: 'border-box'
+                    fontWeight: '500',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    backgroundColor: inputMethod === 'url' ? '#3b82f6' : (isGenerating ? '#f9fafb' : 'white'),
+                    color: inputMethod === 'url' ? 'white' : (isGenerating ? '#9ca3af' : '#374151'),
+                    cursor: isGenerating ? 'not-allowed' : 'pointer',
+                    opacity: isGenerating ? 0.6 : 1,
+                    transition: 'all 0.2s ease'
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
-                />
-                <ExternalLink 
-                  size={16} 
-                  style={{ 
-                    position: 'absolute',
-                    left: '0.75rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: '#9ca3af'
-                  }} 
-                />
+                >
+                  Article URL
+                </button>
+                <button
+                  onClick={() => !isGenerating && setInputMethod('text')}
+                  disabled={isGenerating}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    backgroundColor: inputMethod === 'text' ? '#3b82f6' : (isGenerating ? '#f9fafb' : 'white'),
+                    color: inputMethod === 'text' ? 'white' : (isGenerating ? '#9ca3af' : '#374151'),
+                    cursor: isGenerating ? 'not-allowed' : 'pointer',
+                    opacity: isGenerating ? 0.6 : 1,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Paste Text/HTML
+                </button>
+                <button
+                  onClick={() => !isGenerating && setInputMethod('markdown')}
+                  disabled={isGenerating}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    backgroundColor: inputMethod === 'markdown' ? '#3b82f6' : (isGenerating ? '#f9fafb' : 'white'),
+                    color: inputMethod === 'markdown' ? 'white' : (isGenerating ? '#9ca3af' : '#374151'),
+                    cursor: isGenerating ? 'not-allowed' : 'pointer',
+                    opacity: isGenerating ? 0.6 : 1,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Paste Markdown
+                </button>
               </div>
+
+              {/* URL Input */}
+              {inputMethod === 'url' && (
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: '#374151', 
+                    marginBottom: '0.5rem' 
+                  }}>
+                    Article URL
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="url"
+                      value={articleUrl}
+                      onChange={(e) => setArticleUrl(e.target.value)}
+                      placeholder="https://example.com/article-about-sales"
+                      disabled={isGenerating}
+                      style={{
+                        width: '100%',
+                        padding: '0.875rem 1rem',
+                        paddingLeft: '2.5rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        outline: 'none',
+                        backgroundColor: isGenerating ? '#f9fafb' : 'white',
+                        transition: 'border-color 0.2s ease',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                      onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                    />
+                    <ExternalLink 
+                      size={16} 
+                      style={{ 
+                        position: 'absolute',
+                        left: '0.75rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#9ca3af'
+                      }} 
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Text Input */}
+              {inputMethod === 'text' && (
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: '#374151', 
+                    marginBottom: '0.5rem' 
+                  }}>
+                    Article Text or HTML
+                  </label>
+                  <textarea
+                    value={articleText}
+                    onChange={(e) => setArticleText(e.target.value)}
+                    placeholder="Paste your article content here (supports plain text or HTML)..."
+                    disabled={isGenerating}
+                    rows={8}
+                    style={{
+                      width: '100%',
+                      padding: '0.875rem 1rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      outline: 'none',
+                      backgroundColor: isGenerating ? '#f9fafb' : 'white',
+                      transition: 'border-color 0.2s ease',
+                      boxSizing: 'border-box',
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                  />
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#6b7280', 
+                    margin: '0.5rem 0 0 0',
+                    lineHeight: '1.4'
+                  }}>
+                    You can paste plain text, HTML, or rich content. The system will extract the key information for analysis.
+                  </p>
+                </div>
+              )}
+
+              {/* Markdown Input */}
+              {inputMethod === 'markdown' && (
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: '#374151', 
+                    marginBottom: '0.5rem' 
+                  }}>
+                    Markdown Content
+                  </label>
+                  <textarea
+                    value={articleMarkdown}
+                    onChange={(e) => setArticleMarkdown(e.target.value)}
+                    placeholder="# Your Article Title
+
+## Introduction
+Paste your markdown content here...
+
+- Supports all standard markdown syntax
+- Headers, lists, links, etc.
+- Perfect for technical content and documentation"
+                    disabled={isGenerating}
+                    rows={8}
+                    style={{
+                      width: '100%',
+                      padding: '0.875rem 1rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      outline: 'none',
+                      backgroundColor: isGenerating ? '#f9fafb' : 'white',
+                      transition: 'border-color 0.2s ease',
+                      boxSizing: 'border-box',
+                      resize: 'vertical',
+                      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                  />
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#6b7280', 
+                    margin: '0.5rem 0 0 0',
+                    lineHeight: '1.4'
+                  }}>
+                    Paste standard markdown content. Supports headers, lists, links, code blocks, and all common markdown syntax.
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div style={{ marginBottom: '2rem' }}>
-              <label style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                cursor: 'pointer'
-              }}>
-                <input 
-                  type="checkbox" 
-                  checked={enhancedAnalysis}
-                  onChange={(e) => setEnhancedAnalysis(e.target.checked)}
-                  disabled={isGenerating}
-                  style={{ cursor: 'pointer' }}
-                />
-                Enhanced persona analysis
-              </label>
-              <p style={{ 
-                fontSize: '0.75rem', 
-                color: '#6b7280', 
-                margin: '0.25rem 0 0 1.5rem',
-                lineHeight: '1.4'
-              }}>
-                Provides deeper buying context and sophisticated persona insights for better CTA targeting
-              </p>
-            </div>
+
 
             <button
               onClick={generateCTAs}
-              disabled={isGenerating || !articleUrl.trim() || !vocKitReady}
+              disabled={isGenerating || !vocKitReady || (inputMethod === 'url' && !articleUrl.trim()) || (inputMethod === 'text' && !articleText.trim()) || (inputMethod === 'markdown' && !articleMarkdown.trim())}
               style={{
                 width: '100%',
                 padding: '1rem 1.5rem',
-                backgroundColor: (isGenerating || !articleUrl.trim() || !vocKitReady) ? '#9ca3af' : '#EBF212',
-                color: (isGenerating || !articleUrl.trim() || !vocKitReady) ? 'white' : 'black',
+                backgroundColor: (isGenerating || !vocKitReady || (inputMethod === 'url' && !articleUrl.trim()) || (inputMethod === 'text' && !articleText.trim()) || (inputMethod === 'markdown' && !articleMarkdown.trim())) ? '#9ca3af' : '#EBF212',
+                color: (isGenerating || !vocKitReady || (inputMethod === 'url' && !articleUrl.trim()) || (inputMethod === 'text' && !articleText.trim()) || (inputMethod === 'markdown' && !articleMarkdown.trim())) ? 'white' : 'black',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '1rem',
                 fontWeight: '700',
-                cursor: (isGenerating || !articleUrl.trim() || !vocKitReady) ? 'not-allowed' : 'pointer',
+                cursor: (isGenerating || !vocKitReady || (inputMethod === 'url' && !articleUrl.trim()) || (inputMethod === 'text' && !articleText.trim()) || (inputMethod === 'markdown' && !articleMarkdown.trim())) ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -448,29 +798,15 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
                     borderRadius: '50%',
                     animation: 'spin 1s linear infinite'
                   }} />
-                  Generating CTAs...
+                  {generationStage || 'Generating CTAs...'}
                 </>
               ) : (
                 <>
                   <Zap size={20} strokeWidth={3} />
-                  Generate Hyper-Relevant CTAs
+                  {generatedCTAs ? 'Generate New CTAs' : 'Generate CTAs'}
                 </>
               )}
             </button>
-
-            {generationStage && (
-              <div style={{
-                marginTop: '1rem',
-                padding: '0.75rem',
-                backgroundColor: '#eff6ff',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
-                color: '#1d4ed8',
-                textAlign: 'center'
-              }}>
-                {generationStage}
-              </div>
-            )}
 
             {error && (
               <div style={{
@@ -490,8 +826,98 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
             )}
           </div>
 
+          {/* Skeleton Loading Section */}
+          {showSkeletons && (
+            <div style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '1rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e2e8f0'
+            }}>
+              {/* Skeleton Header */}
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <Skeleton style={{ height: '2rem', width: '12rem' }} />
+                  <Skeleton style={{ height: '2.5rem', width: '8rem' }} />
+                </div>
+                
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  <Skeleton style={{ height: '1.5rem', width: '8rem' }} />
+                  <Skeleton style={{ height: '1.5rem', width: '10rem' }} />
+                </div>
+              </div>
+
+              {/* Skeleton CTA Variants */}
+              <div style={{ display: 'grid', gap: '2rem' }}>
+                {['beginning', 'middle', 'end'].map((position) => (
+                  <div key={position} style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '0.75rem',
+                    padding: '1.5rem',
+                    backgroundColor: '#fafafa'
+                  }}>
+                    {/* Skeleton Position Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <Skeleton style={{ height: '1.5rem', width: '6rem' }} />
+                        <Skeleton style={{ height: '1rem', width: '8rem' }} />
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <Skeleton style={{ height: '2rem', width: '6rem' }} />
+                        <Skeleton style={{ height: '2rem', width: '6rem' }} />
+                      </div>
+                    </div>
+
+                    {/* Skeleton CTA Preview */}
+                    <div style={{ 
+                      backgroundColor: 'white',
+                      padding: '1.5rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #e5e7eb',
+                      marginBottom: '1rem'
+                    }}>
+                      <Skeleton style={{ height: '1rem', width: '8rem', marginBottom: '0.5rem' }} />
+                      <Skeleton style={{ height: '1.5rem', width: '100%', marginBottom: '0.75rem' }} />
+                      <Skeleton style={{ height: '1rem', width: '90%', marginBottom: '1rem' }} />
+                      <Skeleton style={{ height: '2.5rem', width: '8rem' }} />
+                    </div>
+
+                    {/* Skeleton Shortcode */}
+                    <div>
+                      <Skeleton style={{ height: '0.75rem', width: '5rem', marginBottom: '0.5rem' }} />
+                      <Skeleton style={{ height: '4rem', width: '100%' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Skeleton Pain Point Context */}
+              <div style={{ 
+                marginTop: '2rem',
+                padding: '1rem',
+                backgroundColor: '#f9fafb',
+                borderRadius: '0.5rem',
+                border: '1px solid #e5e7eb'
+              }}>
+                <Skeleton style={{ height: '1rem', width: '12rem', marginBottom: '0.75rem' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(16rem, 1fr))', gap: '1rem' }}>
+                  <div>
+                    <Skeleton style={{ height: '0.75rem', width: '8rem', marginBottom: '0.25rem' }} />
+                    <Skeleton style={{ height: '3rem', width: '100%' }} />
+                  </div>
+                  <div>
+                    <Skeleton style={{ height: '0.75rem', width: '10rem', marginBottom: '0.25rem' }} />
+                    <Skeleton style={{ height: '3rem', width: '100%' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Results Section */}
-          {generatedCTAs && (
+          {generatedCTAs && !showSkeletons && (
             <div style={{
               backgroundColor: 'white',
               padding: '2rem',
@@ -505,56 +931,49 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
                   <h2 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#1e293b' }}>
                     Generated CTAs
                   </h2>
-                  <button
-                    onClick={downloadCTAs}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#f1f5f9',
-                      color: '#475569',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}
-                  >
-                    <Download size={16} />
-                    Download All
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={downloadCTAs}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#f1f5f9',
+                        color: '#475569',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <Download size={16} />
+                      Download All
+                    </button>
+                    
+                    <button
+                      onClick={() => setShowClearModal(true)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#fef2f2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      Clear Results
+                    </button>
+                  </div>
                 </div>
                 
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                  <span style={{ 
-                    fontSize: '0.875rem', 
-                    color: '#6b7280',
-                    backgroundColor: '#f3f4f6',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '0.375rem'
-                  }}>
-                    👤 {generatedCTAs.persona}
-                  </span>
-                  <span style={{ 
-                    fontSize: '0.875rem', 
-                    color: '#16a34a',
-                    backgroundColor: '#dcfce7',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '0.375rem'
-                  }}>
-                    🎯 {generatedCTAs.generation_metadata.confidence_score}% confidence
-                  </span>
-                  <span style={{ 
-                    fontSize: '0.875rem', 
-                    color: '#0369a1',
-                    backgroundColor: '#e0f2fe',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '0.375rem'
-                  }}>
-                    📊 {generatedCTAs.matched_pain_points} pain points
-                  </span>
-                </div>
+
               </div>
 
               {/* CTA Variants */}
@@ -580,9 +999,6 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
                         }}>
                           {position}
                         </div>
-                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                          {ctaData.strategy} strategy
-                        </span>
                       </div>
                       
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -674,16 +1090,50 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
                         {ctaData.cta.description}
                       </p>
 
-                      <div style={{
-                        display: 'inline-block',
-                        padding: '0.75rem 1.5rem',
-                        backgroundColor: '#EBF212',
-                        color: 'black',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
-                        fontWeight: '700'
-                      }}>
-                        {ctaData.cta.action_button}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{
+                          display: 'inline-block',
+                          padding: '0.75rem 1.5rem',
+                          backgroundColor: '#EBF212',
+                          color: 'black',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '700'
+                        }}>
+                          {ctaData.cta.action_button}
+                        </div>
+                        
+                        <button
+                          onClick={() => cycleCTAButton(position as 'beginning' | 'middle' | 'end')}
+                          style={{
+                            padding: '0.5rem 0.75rem',
+                            backgroundColor: '#e0f2fe',
+                            color: '#0369a1',
+                            border: '1px solid #0ea5e9',
+                            borderRadius: '0.375rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.backgroundColor = '#0ea5e9';
+                            e.currentTarget.style.color = 'white';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = '#e0f2fe';
+                            e.currentTarget.style.color = '#0369a1';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                          title="Change to a different CTA button"
+                        >
+                          <RotateCcw size={12} />
+                          Change CTA
+                        </button>
                       </div>
                     </div>
 
@@ -747,27 +1197,61 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
                                   {parsed.description}
                                 </p>
 
-                                <div style={{
-                                  display: 'inline-block',
-                                  padding: '0.75rem 1.5rem',
-                                  backgroundColor: '#EBF212',
-                                  color: 'black',
-                                  borderRadius: '0.5rem',
-                                  fontSize: '0.875rem',
-                                  fontWeight: '700',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease'
-                                }}
-                                onMouseOver={(e) => {
-                                  e.currentTarget.style.backgroundColor = '#d4e017';
-                                  e.currentTarget.style.transform = 'translateY(-1px)';
-                                }}
-                                onMouseOut={(e) => {
-                                  e.currentTarget.style.backgroundColor = '#EBF212';
-                                  e.currentTarget.style.transform = 'translateY(0)';
-                                }}
-                                >
-                                  {parsed.action}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  <div style={{
+                                    display: 'inline-block',
+                                    padding: '0.75rem 1.5rem',
+                                    backgroundColor: '#EBF212',
+                                    color: 'black',
+                                    borderRadius: '0.5rem',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                  onMouseOver={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#d4e017';
+                                    e.currentTarget.style.transform = 'translateY(-1px)';
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#EBF212';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                  }}
+                                  >
+                                    {parsed.action}
+                                  </div>
+                                  
+                                  <button
+                                    onClick={() => cycleCTAButton(position as 'beginning' | 'middle' | 'end')}
+                                    style={{
+                                      padding: '0.5rem 0.75rem',
+                                      backgroundColor: '#e0f2fe',
+                                      color: '#0369a1',
+                                      border: '1px solid #0ea5e9',
+                                      borderRadius: '0.375rem',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.375rem',
+                                      fontSize: '0.75rem',
+                                      fontWeight: '500',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseOver={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#0ea5e9';
+                                      e.currentTarget.style.color = 'white';
+                                      e.currentTarget.style.transform = 'translateY(-1px)';
+                                    }}
+                                    onMouseOut={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#e0f2fe';
+                                      e.currentTarget.style.color = '#0369a1';
+                                      e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
+                                    title="Change to a different CTA button"
+                                  >
+                                    <RotateCcw size={12} />
+                                    Change CTA
+                                  </button>
                                 </div>
                               </div>
                             );
@@ -809,75 +1293,58 @@ Customer Quotes Used: ${generatedCTAs.pain_point_context.customer_quotes_used.jo
                 ))}
               </div>
 
-              {/* Pain Point Context */}
-              <div style={{ 
-                marginTop: '2rem',
-                padding: '1rem',
-                backgroundColor: '#f9fafb',
-                borderRadius: '0.5rem',
-                border: '1px solid #e5e7eb'
-              }}>
-                <h5 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', margin: '0 0 0.75rem 0' }}>
-                  📊 Customer Insights Used
-                </h5>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(16rem, 1fr))', gap: '1rem' }}>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', marginBottom: '0.25rem' }}>
-                      Primary Pain Points:
-                    </div>
-                    <ul style={{ fontSize: '0.75rem', color: '#4b5563', margin: 0, paddingLeft: '1rem' }}>
-                      {generatedCTAs.pain_point_context.primary_pain_points.map((point: string, idx: number) => (
-                        <li key={idx}>{point}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', marginBottom: '0.25rem' }}>
-                      Customer Language Used:
-                    </div>
-                    <ul style={{ fontSize: '0.75rem', color: '#4b5563', margin: 0, paddingLeft: '1rem' }}>
-                      {generatedCTAs.pain_point_context.customer_quotes_used.slice(0, 3).map((quote: string, idx: number) => (
-                        <li key={idx} style={{ fontStyle: 'italic' }}>"{quote}"</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
+
             </div>
           )}
         </div>
 
-        {/* Processing Stats */}
-        {generatedCTAs?.pipeline_metadata && (
-          <div style={{
-            marginTop: '2rem',
-            padding: '1rem',
-            backgroundColor: 'white',
-            borderRadius: '0.5rem',
-            border: '1px solid #e5e7eb',
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '2rem',
-            flexWrap: 'wrap'
-          }}>
-            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-              ⚡ {generatedCTAs.pipeline_metadata.processing_time_ms}ms processing
-            </span>
-            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-              📝 {generatedCTAs.pipeline_metadata.article_word_count} words analyzed
-            </span>
-            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-              🔬 {generatedCTAs.pipeline_metadata.enhanced_analysis_used ? 'Enhanced' : 'Basic'} analysis
-            </span>
-          </div>
-        )}
+
       </div>
+
+      {/* Clear Results Confirmation Modal */}
+      {showClearModal && (
+        <div className={`confirmation-modal-backdrop ${showClearModal ? 'open' : ''}`}>
+          <div className={`confirmation-modal ${showClearModal ? 'open' : ''}`}>
+            <div className="confirmation-modal-header">
+              <div className="confirmation-modal-icon">
+                <AlertTriangle style={{width: '1.5rem', height: '1.5rem'}} />
+              </div>
+              <h3 className="confirmation-modal-title">Clear Generated CTAs?</h3>
+              <p className="confirmation-modal-message">
+                This action will permanently delete all your generated CTAs and saved inputs. This cannot be undone.
+              </p>
+            </div>
+            <div className="confirmation-modal-actions">
+              <button
+                onClick={cancelClearResults}
+                className="confirmation-modal-btn confirmation-modal-btn-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmClearResults}
+                className="confirmation-modal-btn confirmation-modal-btn-confirm"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CSS Animation */}
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
         }
       `}</style>
     </div>
