@@ -246,7 +246,7 @@ const CTACreatorPage: React.FC = () => {
         console.error('Error loading VoC Kit data:', error);
       }
 
-      let endpoint = 'http://localhost:3003/api/cta-generation/generate-from-url';
+      let endpoint = `${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/cta-generation/generate-from-url`;
       let requestBody: any = { 
         url: articleUrl, 
         enhanced_analysis: enhancedAnalysis,
@@ -254,14 +254,14 @@ const CTACreatorPage: React.FC = () => {
       };
 
       if (inputMethod === 'text') {
-        endpoint = 'http://localhost:3003/api/cta-generation/generate-from-text';
+        endpoint = `${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/cta-generation/generate-from-text`;
         requestBody = { 
           text: articleText, 
           enhanced_analysis: enhancedAnalysis,
           voc_kit_data: vocKitData
         };
       } else if (inputMethod === 'markdown') {
-        endpoint = 'http://localhost:3003/api/cta-generation/generate-from-markdown';
+        endpoint = `${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/cta-generation/generate-from-markdown`;
         requestBody = { 
           markdown: articleMarkdown, 
           enhanced_analysis: enhancedAnalysis,
