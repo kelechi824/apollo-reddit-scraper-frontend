@@ -65,8 +65,7 @@ const VoCKitPage: React.FC = () => {
   const [hasGeneratedAnalysis, setHasGeneratedAnalysis] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   const [showExcerptModal, setShowExcerptModal] = useState<{painPoint: VoCPainPoint} | null>(null);
-  const [analysisJobId, setAnalysisJobId] = useState<string | null>(null);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
 
   const isInitialLoadRef = useRef(true);
 
@@ -124,160 +123,7 @@ const VoCKitPage: React.FC = () => {
     };
   }, [vocKit]);
 
-  /**
-   * Check for ongoing analysis job with improved error handling
-   * Why this matters: Restores analysis state if user left page during extraction.
-   */
-  const checkOngoingAnalysis = async () => {
-    const jobId = localStorage.getItem('apollo_voc_analysis_job_id');
-    if (jobId) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-        
-        const response = await fetch(
-          `${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/voc-extraction/job-status/${jobId}`,
-          { 
-            signal: controller.signal,
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          }
-        );
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          if (response.status === 404) {
-            // Job expired or not found
-            console.log('Previous analysis job not found, starting fresh');
-            localStorage.removeItem('apollo_voc_analysis_job_id');
-            return;
-          }
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          if (result.status === 'processing') {
-            // Resume the extracting state
-            setAnalysisJobId(jobId);
-            setIsExtracting(true);
-            setMessage('Resuming analysis in progress...');
-            startPolling(jobId);
-          } else if (result.status === 'completed' && result.data) {
-            // Analysis completed while user was away
-            const { variables, painPoints, metadata } = result.data;
-            handleAnalysisComplete(variables, painPoints, metadata);
-            localStorage.removeItem('apollo_voc_analysis_job_id');
-          } else if (result.status === 'failed') {
-            // Analysis failed
-            setMessage(`Previous analysis failed: ${result.error || 'Unknown error'}. Please try again.`);
-            localStorage.removeItem('apollo_voc_analysis_job_id');
-          }
-        } else {
-          localStorage.removeItem('apollo_voc_analysis_job_id');
-        }
-      } catch (error: any) {
-        console.error('Error checking ongoing analysis:', error);
-        if (error.name === 'AbortError') {
-          setMessage('Connection timeout. Please check your internet connection.');
-        }
-        localStorage.removeItem('apollo_voc_analysis_job_id');
-      }
-    }
-  };
 
-  /**
-   * Start polling for job completion with improved error handling
-   * Why this matters: Continuously checks if analysis is complete while handling network failures gracefully.
-   */
-  const startPolling = (jobId: string) => {
-    let attemptCount = 0;
-    const maxAttempts = 180; // 15 minutes max polling time for production environment
-    
-    const interval = setInterval(async () => {
-      attemptCount++;
-      
-      // Stop polling after max attempts
-      if (attemptCount >= maxAttempts) {
-        console.error('Polling timeout: Analysis took longer than expected (15 minutes)');
-        setMessage('Analysis is taking longer than usual (15+ minutes). The job may still be running in the background. Please try refreshing the page in a few minutes or start a new analysis.');
-        setIsExtracting(false);
-        clearInterval(interval);
-        setPollingInterval(null);
-        // Don't remove job ID - let user check again by refreshing
-        return;
-      }
-      
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout per request
-        
-        const response = await fetch(
-          `${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/voc-extraction/job-status/${jobId}`,
-          { 
-            signal: controller.signal,
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          }
-        );
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          if (response.status === 404) {
-            console.error('Job not found on server');
-            setMessage('Analysis job not found. Please try starting a new analysis.');
-            setIsExtracting(false);
-            clearInterval(interval);
-            setPollingInterval(null);
-            localStorage.removeItem('apollo_voc_analysis_job_id');
-            return;
-          }
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success && result.status === 'completed' && result.data) {
-          const { variables, painPoints, metadata } = result.data;
-          handleAnalysisComplete(variables, painPoints, metadata);
-          clearInterval(interval);
-          setPollingInterval(null);
-          localStorage.removeItem('apollo_voc_analysis_job_id');
-        } else if (result.success && result.status === 'failed') {
-          setMessage(`Analysis failed: ${result.error || 'Unknown error'}. Please try again.`);
-          setIsExtracting(false);
-          clearInterval(interval);
-          setPollingInterval(null);
-          localStorage.removeItem('apollo_voc_analysis_job_id');
-        }
-        // If still processing, continue polling
-        
-      } catch (error: any) {
-        console.error('Error polling job status:', error);
-        
-        // Don't show error for every failed poll attempt, just log it
-        if (error.name === 'AbortError') {
-          console.warn('Request timeout during polling');
-        } else if (attemptCount % 10 === 0) {
-          // Only show error message every 10 attempts (50 seconds)
-          setMessage(`Connection issues detected. Retrying... (attempt ${attemptCount}/${maxAttempts})`);
-        }
-      }
-      
-      // Show progress updates for long-running analysis
-      if (attemptCount % 12 === 0) { // Every minute
-        const minutesElapsed = Math.floor(attemptCount / 12);
-        setMessage(`Analysis in progress... ${minutesElapsed} minute(s) elapsed. This may take up to 15 minutes.`);
-      }
-    }, 5000); // Poll every 5 seconds
-    
-    setPollingInterval(interval);
-  };
 
   /**
    * Handle analysis completion
@@ -341,67 +187,49 @@ const VoCKitPage: React.FC = () => {
       }
     }
 
-    // Check for ongoing analysis
-    checkOngoingAnalysis();
-
     setTimeout(() => {
       isInitialLoadRef.current = false;
     }, 100);
   }, []);
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
-    };
-  }, [pollingInterval]);
-
   /**
-   * Extract pain points from Gong calls
-   * Why this matters: Uses the VoC analysis API to get fresh customer pain points.
+   * Extract pain points from Gong calls (synchronous)
+   * Why this matters: Uses direct synchronous VoC analysis optimized for serverless environments.
    */
   const extractPainPoints = async () => {
     setIsExtracting(true);
-    setMessage('');
+    setMessage('Analyzing customer calls... This may take 2-3 minutes.');
     
     try {
-      // Start async analysis job
-      const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/voc-extraction/start-analysis`, {
+      // Direct synchronous analysis call
+      const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/voc-extraction/analyze-synchronous`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          daysBack: 180,
-          maxCalls: 250
+          daysBack: 90,  // Optimized for serverless timeout
+          maxCalls: 100  // Optimized for serverless timeout
         }),
       });
 
       const result = await response.json();
 
-      if (result.success && result.jobId) {
-        // Store job ID for persistence
-        localStorage.setItem('apollo_voc_analysis_job_id', result.jobId);
-        setAnalysisJobId(result.jobId);
-        
-        // Start polling for completion
-        startPolling(result.jobId);
-        
-        setMessage('Analysis started. This may take 3-5 minutes...');
-        
+      if (result.success && result.data) {
+        const { variables, painPoints, metadata } = result.data;
+        handleAnalysisComplete(variables, painPoints, metadata);
+        setMessage(`Successfully extracted ${metadata.totalPainPoints} pain points from ${metadata.callsAnalyzed} calls in ${Math.round(result.processingTime / 1000)}s`);
       } else {
-        setMessage(`Error: ${result.error || 'Failed to start analysis'}`);
+        setMessage(`Error: ${result.error || 'Failed to complete analysis'}`);
         setIsExtracting(false);
-        setTimeout(() => setMessage(''), 5000);
       }
     } catch (error: any) {
-      console.error('Error starting analysis:', error);
+      console.error('Error in VoC analysis:', error);
       setMessage('Error: Failed to connect to VoC extraction service');
       setIsExtracting(false);
-      setTimeout(() => setMessage(''), 5000);
     }
+    
+    setTimeout(() => setMessage(''), 5000);
   };
 
   /**
@@ -409,12 +237,6 @@ const VoCKitPage: React.FC = () => {
    * Why this matters: Allows users to start fresh with a new analysis.
    */
   const handleClearAll = () => {
-    // Stop any ongoing polling
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
-    }
-    
     // Reset all state
     const freshVoCKit: VoCKit = {
       painPoints: {},
@@ -428,14 +250,12 @@ const VoCKitPage: React.FC = () => {
     setExtractedPainPoints([]);
     setHasGeneratedAnalysis(false);
     setIsExtracting(false);
-    setAnalysisJobId(null);
     setShowClearModal(false);
     
     // Clear from localStorage
     try {
       localStorage.setItem('apollo_voc_kit', JSON.stringify(freshVoCKit));
       localStorage.removeItem('apollo_voc_kit_draft');
-      localStorage.removeItem('apollo_voc_analysis_job_id');
       window.dispatchEvent(new CustomEvent('apollo-voc-kit-updated'));
       console.log('✅ VoC analysis cleared successfully');
     } catch (error) {
@@ -656,8 +476,8 @@ const VoCKitPage: React.FC = () => {
                 fontStyle: 'italic',
                 textAlign: 'center'
               }}>
-                Estimated time: 3-5 minutes<br />
-                You can visit other pages and return to check progress
+                Estimated time: 2-3 minutes<br />
+                Please keep this page open during analysis
               </div>
             )}
 
