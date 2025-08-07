@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target } from 'lucide-react';
+import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target, MessageCircle, Workflow } from 'lucide-react';
 import { FEATURE_FLAGS, FeatureFlags } from '../utils/featureFlags';
 
 interface NavigationProps {
@@ -55,18 +55,22 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             onMouseEnter={() => handleRedditAnalysisInteraction(true)}
             onMouseLeave={() => handleRedditAnalysisInteraction(false)}
           >
-            <NavLink 
-              to="/app" 
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              onClick={onItemClick}
-            >
-              <BarChart3 className="nav-icon" />
+            <div className="nav-item nav-item-unclickable">
+              <MessageCircle className="nav-icon" />
               Reddit Analysis
               <ChevronRight className={`nav-submenu-icon ${showRedditAnalysisSubMenu ? 'rotated' : ''}`} />
-            </NavLink>
+            </div>
             
             {showRedditAnalysisSubMenu && (
               <div className="nav-submenu">
+                <NavLink 
+                  to="/app" 
+                  className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
+                  onClick={onItemClick}
+                >
+                  <BarChart3 className="nav-icon" />
+                  Insights Generator
+                </NavLink>
                 <NavLink 
                   to="/reddit-analysis-history" 
                   className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
@@ -84,25 +88,29 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             onMouseEnter={() => handleBlogCreatorInteraction(true)}
             onMouseLeave={() => handleBlogCreatorInteraction(false)}
           >
-            <NavLink 
-              to="/blog-creator" 
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              onClick={onItemClick}
-            >
+            <div className="nav-item nav-item-unclickable">
               <PenTool className="nav-icon" />
               Blog Creator
               <ChevronRight className={`nav-submenu-icon ${showBlogSubMenu ? 'rotated' : ''}`} />
-            </NavLink>
+            </div>
             
             {showBlogSubMenu && (
               <div className="nav-submenu">
+                <NavLink 
+                  to="/blog-creator" 
+                  className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
+                  onClick={onItemClick}
+                >
+                  <Workflow className="nav-icon" />
+                  Create
+                </NavLink>
                 <NavLink 
                   to="/blog-history" 
                   className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
                   onClick={onItemClick}
                 >
                   <Clock className="nav-icon" />
-                  Blogs History
+                  Blog Content History
                 </NavLink>
               </div>
             )}
@@ -268,6 +276,18 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
           .nav-submenu-item .nav-icon {
             width: 1rem;
             height: 1rem;
+          }
+
+          .nav-item-unclickable {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #374151;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            cursor: default;
           }
 
           .nav-section-title.clickable {
