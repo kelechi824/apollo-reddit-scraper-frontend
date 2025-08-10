@@ -45,6 +45,11 @@ interface BackendDetailsPopupProps {
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   onMobileClose?: () => void;
+  /**
+   * Dismiss behavior control
+   * Why this matters: Competitor Conquesting requires X-only close; other pages keep hover-delay.
+   */
+  dismissBehavior?: 'manual' | 'hover-delay';
 }
 
 /**
@@ -59,7 +64,8 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
   position,
   onMouseEnter,
   onMouseLeave,
-  onMobileClose
+  onMobileClose,
+  dismissBehavior = 'hover-delay'
 }) => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['current']));
 
@@ -189,7 +195,7 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
       <div
         style={popupStyle}
         onMouseEnter={onMouseEnter}
-        onMouseLeave={isMobile ? undefined : onMouseLeave} // Disable auto-hide on mobile
+        onMouseLeave={isMobile || dismissBehavior === 'manual' ? undefined : onMouseLeave} // Disable auto-hide on mobile or manual mode
         onClick={(e) => e.stopPropagation()} // Prevent mobile overlay from closing when clicking popup
       >
       {/* Header */}
@@ -226,7 +232,7 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
           )}
           
           {/* Close button for better mobile experience */}
-          {isMobile && (
+          {(isMobile || dismissBehavior === 'manual') && (
             <button
               onClick={onMobileClose || onMouseLeave}
               style={{

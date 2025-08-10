@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target, MessageCircle, Workflow } from 'lucide-react';
+import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target, MessageCircle, Workflow, Swords } from 'lucide-react';
 import { FEATURE_FLAGS, FeatureFlags } from '../utils/featureFlags';
 
 interface NavigationProps {
@@ -103,6 +103,14 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
                 >
                   <Workflow className="nav-icon" />
                   Create
+                </NavLink>
+                <NavLink 
+                  to="/competitor-conquesting" 
+                  className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
+                  onClick={onItemClick}
+                >
+                  <Swords className="nav-icon" />
+                  Competitor Conquesting
                 </NavLink>
                 <NavLink 
                   to="/blog-history" 

@@ -191,13 +191,12 @@ const BrandKitPage: React.FC = () => {
   const addCustomVariable = () => {
     if (newVariableName.trim()) {
       const snakeCaseName = toSnakeCase(newVariableName.trim());
-      const liquidSyntax = `{{ brand_kit.${snakeCaseName} }}`;
       
       setBrandKit(prev => ({
         ...prev,
         customVariables: {
           ...prev.customVariables,
-          [snakeCaseName]: liquidSyntax
+          [snakeCaseName]: '' // Store empty value initially, user will fill it in
         }
       }));
       setNewVariableName('');
@@ -235,17 +234,17 @@ const BrandKitPage: React.FC = () => {
   const saveEditedVariable = (oldKey: string) => {
     if (editingVariableName.trim()) {
       const newKey = toSnakeCase(editingVariableName.trim());
-      const newValue = `{{ brand_kit.${newKey} }}`;
       
       // Only update if the key actually changed
       if (newKey !== oldKey) {
         setBrandKit(prev => {
+          const oldValue = prev.customVariables[oldKey] || '';
           const { [oldKey]: removed, ...rest } = prev.customVariables;
           return {
             ...prev,
             customVariables: {
               ...rest,
-              [newKey]: newValue
+              [newKey]: oldValue // Preserve the old value
             }
           };
         });
@@ -1112,7 +1111,8 @@ const BrandKitPage: React.FC = () => {
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       fontFamily: 'inherit',
-                      fontSize: '0.875rem'
+                      fontSize: '0.875rem',
+                      fontWeight: '600'
                     }}
                     onMouseOver={(e) => (e.currentTarget.style.borderColor = '#d1d5db')}
                     onMouseOut={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
@@ -1141,19 +1141,49 @@ const BrandKitPage: React.FC = () => {
                 </button>
               </div>
               
+              {/* Variable value input */}
+              <input
+                type="text"
+                value={value || ''}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setBrandKit(prev => ({
+                    ...prev,
+                    customVariables: {
+                      ...prev.customVariables,
+                      [key]: newValue
+                    }
+                  }));
+                }}
+                placeholder={`Enter value for ${key.replace(/_/g, ' ')}`}
+                className="brand-kit-input"
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  border: '0.0625rem solid #e5e7eb',
+                  borderRadius: '0.25rem',
+                  backgroundColor: 'white',
+                  transition: 'all 0.2s ease',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                  fontSize: '0.875rem'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+              />
+              
               {/* Liquid syntax display */}
               <code className="liquid-syntax" style={{ 
                 display: 'block',
-                padding: '0.5rem 0.75rem', 
+                padding: '0.25rem 0.5rem', 
                 backgroundColor: '#f3f4f6', 
                 borderRadius: '0.25rem',
                 fontFamily: 'monospace',
                 color: '#6b7280',
                 border: '0.0625rem solid #e5e7eb',
-                wordBreak: 'break-all',
-                whiteSpace: 'pre-wrap'
+                fontSize: '0.75rem'
               }}>
-                {value}
+                {`{{ brand_kit.${key} }}`}
               </code>
             </div>
           ))}
