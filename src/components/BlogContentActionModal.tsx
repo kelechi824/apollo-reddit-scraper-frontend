@@ -1733,9 +1733,8 @@ Return ONLY the JSON object with the three required fields. No additional text o
       const secondaryCategory = determineSecondaryCategory(keywordRow.keyword, contentToCopy);
       const author = selectRandomAuthor();
 
-      // Prepare blog content data for logging with new fields
+      // Prepare blog content data for logging with new fields (keyword removed)
       const blogData = {
-        keyword: keywordRow.keyword,
         metaSeoTitle: metaSeoTitle || `${keywordRow.keyword} - Complete Guide`,
         metaDescription: metaDescription || `Comprehensive guide about ${keywordRow.keyword} with expert insights and actionable tips.`,
         htmlContent: contentToCopy,

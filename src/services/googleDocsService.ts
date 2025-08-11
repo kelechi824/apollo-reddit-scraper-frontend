@@ -617,11 +617,11 @@ class GoogleDocsService {
           try {
             const headerResponse = await window.gapi.client.sheets.spreadsheets.values.get({
               spreadsheetId: storedSpreadsheetId,
-              range: 'Blog Content Tracking!A1:I1'
+              range: 'Blog Content Tracking!A1:H1'
             });
             
             // If no headers exist or headers are different, add/update them
-            const expectedHeaders = ['Publish Date', 'Keyword', 'Content', 'Article Title', 'SEO Title', 'Meta Description', 'URL Slug', 'Secondary Category', 'Author'];
+            const expectedHeaders = ['Publish Date', 'Content', 'Article Title', 'SEO Title', 'Meta Description', 'URL Slug', 'Secondary Category', 'Author'];
             const currentHeaders = headerResponse.result.values && headerResponse.result.values[0];
             
             if (!currentHeaders || !this.arraysEqual(currentHeaders, expectedHeaders)) {
@@ -817,7 +817,7 @@ class GoogleDocsService {
               index: 0,
               gridProperties: {
                 rowCount: 1000,
-                columnCount: 9,
+                columnCount: 8,
                 frozenRowCount: 1
               }
             }
@@ -873,11 +873,11 @@ class GoogleDocsService {
           try {
             const headerResponse = await window.gapi.client.sheets.spreadsheets.values.get({
               spreadsheetId: storedSpreadsheetId,
-              range: 'Competitor Content Tracking!A1:I1'
+              range: 'Competitor Content Tracking!A1:H1'
             });
             
             // If no headers exist or headers are different, add/update them
-            const expectedHeaders = ['Publish Date', 'Keyword', 'Content', 'Article Title', 'SEO Title', 'Meta Description', 'URL Slug', 'Secondary Category', 'Author'];
+            const expectedHeaders = ['Publish Date', 'Content', 'Article Title', 'SEO Title', 'Meta Description', 'URL Slug', 'Secondary Category', 'Author'];
             const currentHeaders = headerResponse.result.values && headerResponse.result.values[0];
             
             if (!currentHeaders || !this.arraysEqual(currentHeaders, expectedHeaders)) {
@@ -934,7 +934,7 @@ class GoogleDocsService {
               title: 'Blog Content Tracking',
               gridProperties: {
                 rowCount: 1000,
-                columnCount: 9
+                columnCount: 8
               }
             }
           }]
@@ -947,10 +947,9 @@ class GoogleDocsService {
         throw new Error('Failed to create blog content spreadsheet');
       }
 
-      // Add headers for blog content in specified order
+      // Add headers for blog content in specified order (keyword removed)
       const headers = [
         'Publish Date',
-        'Keyword',
         'Content',
         'Article Title',
         'SEO Title',
@@ -962,7 +961,7 @@ class GoogleDocsService {
 
       await window.gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: spreadsheetId,
-        range: 'Blog Content Tracking!A1:I1',
+        range: 'Blog Content Tracking!A1:H1',
         valueInputOption: 'RAW',
         resource: {
           values: [headers]
@@ -1155,7 +1154,6 @@ class GoogleDocsService {
    * Why this matters: Logs all generated competitor content with metadata for tracking and analytics.
    */
   async appendCompetitorData(blogData: {
-    keyword: string;
     metaSeoTitle: string;
     metaDescription: string;
     htmlContent: string;
@@ -1179,10 +1177,9 @@ class GoogleDocsService {
       // Format timestamp as YYYY-MM-DD
       const formattedDate = new Date().toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
       
-      // Prepare row data for competitor content in specified order
+      // Prepare row data for competitor content in specified order (keyword removed)
       const rowData = [
         formattedDate,
-        blogData.keyword,
         blogData.htmlContent, // Content
         h1Title,
         blogData.metaSeoTitle,
@@ -1195,7 +1192,7 @@ class GoogleDocsService {
       // Get current row count to know where the new data will be inserted
       const dataResponse = await window.gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
-        range: 'Competitor Content Tracking!A:I'
+        range: 'Competitor Content Tracking!A:H'
       });
       const currentRowCount = dataResponse.result.values ? dataResponse.result.values.length : 1;
       const newRowIndex = currentRowCount; // 0-indexed, so this will be the new row
@@ -1203,7 +1200,7 @@ class GoogleDocsService {
       // Append data to spreadsheet
       await window.gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: spreadsheetId,
-        range: 'Competitor Content Tracking!A:I',
+        range: 'Competitor Content Tracking!A:H',
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         resource: {
@@ -1259,7 +1256,6 @@ class GoogleDocsService {
    * Why this matters: Logs all generated blog content with metadata for tracking and analytics.
    */
   async appendBlogData(blogData: {
-    keyword: string;
     metaSeoTitle: string;
     metaDescription: string;
     htmlContent: string;
@@ -1283,10 +1279,9 @@ class GoogleDocsService {
       // Format timestamp as YYYY-MM-DD
       const formattedDate = new Date().toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
       
-      // Prepare row data for blog content in specified order
+      // Prepare row data for blog content in specified order (keyword removed)
       const rowData = [
         formattedDate,
-        blogData.keyword,
         blogData.htmlContent, // Content
         h1Title,
         blogData.metaSeoTitle,
@@ -1299,7 +1294,7 @@ class GoogleDocsService {
       // Get current row count to know where the new data will be inserted
       const dataResponse = await window.gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
-        range: 'Blog Content Tracking!A:I'
+        range: 'Blog Content Tracking!A:H'
       });
       const currentRowCount = dataResponse.result.values ? dataResponse.result.values.length : 1;
       const newRowIndex = currentRowCount; // 0-indexed, so this will be the new row
@@ -1307,7 +1302,7 @@ class GoogleDocsService {
       // Append data to spreadsheet
       await window.gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: spreadsheetId,
-        range: 'Blog Content Tracking!A:I',
+        range: 'Blog Content Tracking!A:H',
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         resource: {
@@ -1481,10 +1476,9 @@ class GoogleDocsService {
     try {
       window.gapi.client.setToken({ access_token: this.accessToken });
 
-      // Add headers for blog content in specified order
+      // Add headers for blog content in specified order (keyword removed)
       const headers = [
         'Publish Date',
-        'Keyword',
         'Content',
         'Article Title',
         'SEO Title',
@@ -1497,7 +1491,7 @@ class GoogleDocsService {
       // Update headers
       await window.gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: spreadsheetId,
-        range: `${sheetName}!A1:I1`,
+        range: `${sheetName}!A1:H1`,
         valueInputOption: 'RAW',
         resource: {
           values: [headers]
