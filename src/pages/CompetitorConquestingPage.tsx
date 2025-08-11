@@ -130,7 +130,11 @@ const CompetitorConquestingPage: React.FC = () => {
     const candidates: string[] = (() => {
       const list: string[] = [];
       if (csvUrl.includes('/competitors/cognism.csv')) {
-        list.push('http://localhost:3003/api/competitor-conquesting/csv/cognism');
+        // Use appropriate backend URL for dev vs production
+        const backendUrl = process.env.NODE_ENV === 'production' 
+          ? 'https://apollo-reddit-scraper-backend.vercel.app/api/competitor-conquesting/csv/cognism'
+          : 'http://localhost:3003/api/competitor-conquesting/csv/cognism';
+        list.push(backendUrl);
         list.push(new URL('/competitors/cognism.csv', window.location.origin).toString());
       } else if (/^https?:\/\//i.test(csvUrl)) {
         list.push(csvUrl);
