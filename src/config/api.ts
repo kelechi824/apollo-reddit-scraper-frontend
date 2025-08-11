@@ -43,6 +43,8 @@ export const API_ENDPOINTS = {
   
   // Competitor conquesting endpoints
   competitorGenerateContent: buildApiUrl('/api/competitor-conquesting/generate-content'),
+  competitorGenerateContentAsync: buildApiUrl('/api/competitor-conquesting/generate-content-async'),
+  competitorJobStatus: (jobId: string) => buildApiUrl(`/api/competitor-conquesting/job-status/${jobId}`),
   competitorCsvCognism: buildApiUrl('/api/competitor-conquesting/csv/cognism'),
   
   // Add other endpoints as needed

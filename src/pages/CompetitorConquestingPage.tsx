@@ -16,6 +16,7 @@ interface CompetitorRow {
   avgDifficulty?: number;
   status: RowStatus;
   output?: string;
+  progressInfo?: string; // Stores the current pipeline stage and progress
   createdAt: string;
   metadata?: {
     title: string;
@@ -595,10 +596,12 @@ const CompetitorConquestingPage: React.FC = () => {
 
 
         
-      // Use a 55-second timeout for Vercel's 60-second limit
-      // Why this matters: Vercel functions have a max duration of 60 seconds,
-      // so we set client timeout to 55 seconds to avoid gateway timeouts
-      const resp = await axios.post(API_ENDPOINTS.competitorGenerateContent, {
+      // Use async generation to avoid Vercel's 60-second timeout
+      // Why this matters: Content generation often takes longer than 60 seconds,
+      // so we use async endpoints with job polling for reliable generation
+      
+      // Start async generation
+      const asyncResp = await axios.post(API_ENDPOINTS.competitorGenerateContentAsync, {
         keyword: row.keyword,
         url: row.url,
         brand_kit: brandKit,
@@ -606,32 +609,101 @@ const CompetitorConquestingPage: React.FC = () => {
         content_length: 'medium',
         focus_areas: []
       }, {
-        signal: controller.signal,
-        timeout: 55000 // 55 seconds timeout
+        signal: controller.signal
       });
       
-      const data = resp.data?.data || resp.data;
-      const workflowDetails = buildWorkflowDetailsFromResult(data) || row.workflowDetails || {};
+      if (!asyncResp.data.success || !asyncResp.data.jobId) {
+        throw new Error('Failed to start content generation');
+      }
       
-      // Update with metadata structure matching BlogCreatorPage
-      const metadata = data?.metadata || {};
-      const updatedRow = {
-        ...row,
-        status: 'completed' as const,
-        output: String(data?.content || ''),
-        workflowDetails,
-        metadata: {
-          title: metadata.title || `${row.keyword} - Competitor Conquesting`,
-          description: metadata.description || `Outranking competitor for ${row.keyword}`,
-          word_count: metadata.word_count || 0,
-          seo_optimized: metadata.seo_optimized || true,
-          citations_included: metadata.citations_included || false,
-          brand_variables_processed: metadata.brand_variables_processed || 0,
-          aeo_optimized: metadata.aeo_optimized || true
+      const jobId = asyncResp.data.jobId;
+      console.log(`📋 Started async job ${jobId} for ${row.keyword}`);
+      
+      // Poll for job completion
+      // Why this matters: With deep research, firecrawl, gap analysis, and content generation,
+      // the full pipeline can take 3-5 minutes or more depending on content complexity
+      let attempts = 0;
+      const maxAttempts = 600; // 10 minutes max polling (enough for complex content)
+      const pollInterval = 1000; // Poll every 1 second for responsive progress updates
+      
+      while (attempts < maxAttempts) {
+        if (controller.signal.aborted) {
+          throw new Error('Operation cancelled');
         }
-      };
+        
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        
+        const statusResp = await axios.get(API_ENDPOINTS.competitorJobStatus(jobId), {
+          signal: controller.signal
+        });
+        
+        const jobData = statusResp.data.data;
+        
+        // Update progress in UI with pipeline stage information
+        if (jobData.progress !== undefined) {
+          const stage = jobData.stage || '';
+          const message = jobData.message || '';
+          
+          // Map stages to user-friendly descriptions
+          let stageDescription = '';
+          if (stage.includes('research')) {
+            stageDescription = '🔬 Deep Research';
+          } else if (stage.includes('firecrawl') || stage.includes('competitor')) {
+            stageDescription = '🔍 Analyzing Competitor Content';
+          } else if (stage.includes('gap')) {
+            stageDescription = '📊 Gap Analysis';
+          } else if (stage.includes('content') || stage.includes('generation')) {
+            stageDescription = '✍️ Content Generation';
+          } else {
+            stageDescription = '⚙️ Processing';
+          }
+          
+          console.log(`📊 Job ${jobId} [${stageDescription}] ${jobData.progress}% - ${message}`);
+          
+          // Update the row with progress information for UI display
+          const progressText = `${stageDescription}: ${jobData.progress}% - ${message}`;
+          setRows(prev => prev.map(r => 
+            r.id === rowId 
+              ? { ...r, status: 'running' as const, progressInfo: progressText, output: progressText }
+              : r
+          ));
+        }
+        
+        if (jobData.status === 'completed' && jobData.result) {
+          // Job completed successfully
+          const resp = { data: { success: true, data: jobData.result } };
+          const data = resp.data?.data || resp.data;
+          const workflowDetails = buildWorkflowDetailsFromResult(data) || row.workflowDetails || {};
+          
+          // Update with metadata structure matching BlogCreatorPage
+          const metadata = data?.metadata || {};
+          const updatedRow = {
+            ...row,
+            status: 'completed' as const,
+            output: String(data?.content || ''),
+            workflowDetails,
+            metadata: {
+              title: metadata.title || `${row.keyword} - Competitor Conquesting`,
+              description: metadata.description || `Outranking competitor for ${row.keyword}`,
+              word_count: metadata.word_count || 0,
+              seo_optimized: metadata.seo_optimized || true,
+              citations_included: metadata.citations_included || false,
+              brand_variables_processed: metadata.brand_variables_processed || 0,
+              aeo_optimized: metadata.aeo_optimized || true
+            }
+          };
+          
+          setRows(prev => prev.map(r => (r.id === rowId ? updatedRow : r)));
+          return; // Success - exit the function
+        } else if (jobData.status === 'error') {
+          throw new Error(jobData.error || 'Content generation failed');
+        }
+        
+        attempts++;
+      }
       
-      setRows(prev => prev.map(r => (r.id === rowId ? updatedRow : r)));
+      // If we get here, polling timed out after 10 minutes
+      throw new Error('Content generation is taking longer than 10 minutes. This can happen with very complex content. Please try with simpler settings or contact support.');
     } catch (err: any) {
       // Check if the error is due to abort
       if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') {
@@ -643,8 +715,10 @@ const CompetitorConquestingPage: React.FC = () => {
         
         // Enhanced error handling like BlogCreatorPage
         let errorMessage = 'Generation failed';
-        if (err?.response?.status === 504 || err?.code === 'ECONNABORTED') {
-          errorMessage = 'Request timed out. Content generation takes longer than 60 seconds. Please try with shorter content or simpler prompts.';
+        if (err?.message?.includes('taking longer than expected')) {
+          errorMessage = err.message;
+        } else if (err?.response?.status === 504 || err?.code === 'ECONNABORTED') {
+          errorMessage = 'Request timed out. The system is now using async generation to handle longer operations.';
         } else if (err?.response?.status === 429) {
           errorMessage = 'Rate limit exceeded. Please try again in a moment.';
         } else if (err?.response?.status >= 500) {
@@ -726,7 +800,23 @@ const CompetitorConquestingPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '2rem 1rem' }}>
+    <>
+      <style>
+        {`
+          @keyframes pulse {
+            0% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0.5;
+            }
+            100% {
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
+      <div style={{ padding: '2rem 1rem' }}>
       <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem' }}>
         Competitor Conquesting
       </h1>
@@ -891,11 +981,32 @@ const CompetitorConquestingPage: React.FC = () => {
                         background: r.status === 'running' ? '#e5e7eb' : r.status === 'error' ? '#fef2f2' : '#ffffff',
                         color: r.status === 'error' ? '#dc2626' : '#111827',
                         cursor: r.status === 'running' ? 'not-allowed' : 'pointer',
-                        fontSize: 'inherit'
+                        fontSize: 'inherit',
+                        position: 'relative'
                       }}
-                      title={r.status === 'error' ? 'Click to retry generation' : r.status === 'completed' ? 'Re-run content generation' : 'Run content generation'}
+                      title={
+                        r.status === 'running' && r.progressInfo 
+                          ? r.progressInfo 
+                          : r.status === 'error' 
+                            ? 'Click to retry generation' 
+                            : r.status === 'completed' 
+                              ? 'Re-run content generation' 
+                              : 'Run content generation'
+                      }
                     >
-                      {r.status === 'running' ? 'Running…' : r.status === 'error' ? 'Retry' : r.status === 'completed' ? 'Re-run' : 'Run'}
+                      {r.status === 'running' ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: '#10b981',
+                            animation: 'pulse 1.5s ease-in-out infinite'
+                          }} />
+                          Running…
+                        </span>
+                      ) : r.status === 'error' ? 'Retry' : r.status === 'completed' ? 'Re-run' : 'Run'}
                     </button>
                   </td>
                   <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
@@ -1086,6 +1197,7 @@ const CompetitorConquestingPage: React.FC = () => {
         `}
       </style>
     </div>
+    </>
   );
 };
 
