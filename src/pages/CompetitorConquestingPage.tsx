@@ -623,6 +623,8 @@ const CompetitorConquestingPage: React.FC = () => {
       // Why this matters: With deep research, firecrawl, gap analysis, and content generation,
       // the full pipeline can take 3-5 minutes or more depending on content complexity
       let attempts = 0;
+      let transientErrorStreak = 0; // Why this matters: tolerates brief network blips without failing the run
+      const maxTransientErrorStreak = 8;
       const maxAttempts = 600; // 10 minutes max polling (enough for complex content)
       const pollInterval = 1000; // Poll every 1 second for responsive progress updates
       
@@ -633,70 +635,96 @@ const CompetitorConquestingPage: React.FC = () => {
         
         await new Promise(resolve => setTimeout(resolve, pollInterval));
         
-        const statusResp = await axios.get(API_ENDPOINTS.competitorJobStatus(jobId), {
-          signal: controller.signal
-        });
-        
-        const jobData = statusResp.data.data;
-        
-        // Update progress in UI with pipeline stage information
-        if (jobData.progress !== undefined) {
-          const stage = jobData.stage || '';
-          const message = jobData.message || '';
+        // Resilient poll: tolerate transient network issues and brief 404s right after job creation
+        try {
+          const statusResp = await axios.get(API_ENDPOINTS.competitorJobStatus(jobId), {
+            signal: controller.signal
+          });
+          transientErrorStreak = 0; // reset on success
+          const jobData = statusResp.data.data;
           
-          // Map stages to user-friendly descriptions
-          let stageDescription = '';
-          if (stage.includes('research')) {
-            stageDescription = '🔬 Deep Research';
-          } else if (stage.includes('firecrawl') || stage.includes('competitor')) {
-            stageDescription = '🔍 Analyzing Competitor Content';
-          } else if (stage.includes('gap')) {
-            stageDescription = '📊 Gap Analysis';
-          } else if (stage.includes('content') || stage.includes('generation')) {
-            stageDescription = '✍️ Content Generation';
-          } else {
-            stageDescription = '⚙️ Processing';
+          // Update progress in UI with pipeline stage information
+          if (jobData.progress !== undefined) {
+            const stage = jobData.stage || '';
+            const message = jobData.message || '';
+            
+            // Map stages to user-friendly descriptions
+            let stageDescription = '';
+            if (stage.includes('research')) {
+              stageDescription = '🔬 Deep Research';
+            } else if (stage.includes('firecrawl') || stage.includes('competitor')) {
+              stageDescription = '🔍 Analyzing Competitor Content';
+            } else if (stage.includes('gap')) {
+              stageDescription = '📊 Gap Analysis';
+            } else if (stage.includes('content') || stage.includes('generation')) {
+              stageDescription = '✍️ Content Generation';
+            } else {
+              stageDescription = '⚙️ Processing';
+            }
+            
+            console.log(`📊 Job ${jobId} [${stageDescription}] ${jobData.progress}% - ${message}`);
+            
+            // Update the row with progress information for UI display
+            const progressText = `${stageDescription}: ${jobData.progress}% - ${message}`;
+            setRows(prev => prev.map(r => 
+              r.id === rowId 
+                ? { ...r, status: 'running' as const, progressInfo: progressText, output: progressText }
+                : r
+            ));
           }
           
-          console.log(`📊 Job ${jobId} [${stageDescription}] ${jobData.progress}% - ${message}`);
-          
-          // Update the row with progress information for UI display
-          const progressText = `${stageDescription}: ${jobData.progress}% - ${message}`;
-          setRows(prev => prev.map(r => 
-            r.id === rowId 
-              ? { ...r, status: 'running' as const, progressInfo: progressText, output: progressText }
-              : r
-          ));
-        }
-        
-        if (jobData.status === 'completed' && jobData.result) {
-          // Job completed successfully
-          const resp = { data: { success: true, data: jobData.result } };
-          const data = resp.data?.data || resp.data;
-          const workflowDetails = buildWorkflowDetailsFromResult(data) || row.workflowDetails || {};
-          
-          // Update with metadata structure matching BlogCreatorPage
-          const metadata = data?.metadata || {};
-          const updatedRow = {
-            ...row,
-            status: 'completed' as const,
-            output: String(data?.content || ''),
-            workflowDetails,
-            metadata: {
-              title: metadata.title || `${row.keyword} - Competitor Conquesting`,
-              description: metadata.description || `Outranking competitor for ${row.keyword}`,
-              word_count: metadata.word_count || 0,
-              seo_optimized: metadata.seo_optimized || true,
-              citations_included: metadata.citations_included || false,
-              brand_variables_processed: metadata.brand_variables_processed || 0,
-              aeo_optimized: metadata.aeo_optimized || true
+          if (jobData.status === 'completed') {
+            // Prefer structured result; fall back to raw_content when content is empty
+            const resultPayload = jobData.result || jobData.data || jobData;
+            const completedContent = String(
+              resultPayload?.content ?? resultPayload?.raw_content ?? ''
+            );
+            if (completedContent.length > 0) {
+            // Job completed successfully
+            const resp = { data: { success: true, data: resultPayload } };
+            const data = resp.data?.data || resp.data;
+            const workflowDetails = buildWorkflowDetailsFromResult(data) || row.workflowDetails || {};
+            
+            // Update with metadata structure matching BlogCreatorPage
+            const metadata = data?.metadata || {};
+            const updatedRow = {
+              ...row,
+              status: 'completed' as const,
+              output: completedContent,
+              workflowDetails,
+              metadata: {
+                title: metadata.title || `${row.keyword} - Competitor Conquesting`,
+                description: metadata.description || `Outranking competitor for ${row.keyword}`,
+                word_count: metadata.word_count || 0,
+                seo_optimized: metadata.seo_optimized || true,
+                citations_included: metadata.citations_included || false,
+                brand_variables_processed: metadata.brand_variables_processed || 0,
+                aeo_optimized: metadata.aeo_optimized || true
+              }
+            };
+            
+            setRows(prev => prev.map(r => (r.id === rowId ? updatedRow : r)));
+            return; // Success - exit the function
             }
-          };
-          
-          setRows(prev => prev.map(r => (r.id === rowId ? updatedRow : r)));
-          return; // Success - exit the function
-        } else if (jobData.status === 'error') {
-          throw new Error(jobData.error || 'Content generation failed');
+          } else if (jobData.status === 'error') {
+            throw new Error(jobData.error || 'Content generation failed');
+          }
+        } catch (pollErr: any) {
+          const status = pollErr?.response?.status;
+          const message = pollErr?.message || '';
+          const isNetworkFlap = message.includes('Network Error') || message.includes('net::ERR_NETWORK_CHANGED');
+          const isTransientStatus = status === 404 || status === 425 || status === 429 || status === 502 || status === 503 || status === 504;
+          const withinWarmup = attempts < 10 && status === 404; // tolerate early 404s within first 10 polls
+          if (isNetworkFlap || isTransientStatus || withinWarmup) {
+            transientErrorStreak++;
+            console.warn(`[poll] transient issue (attempt ${attempts}, streak ${transientErrorStreak}) — ${status || ''} ${message || ''}`);
+            if (transientErrorStreak <= maxTransientErrorStreak) {
+              // continue loop silently
+              attempts++;
+              continue;
+            }
+          }
+          throw pollErr; // Non-transient (or exceeded streak): surface to main catch
         }
         
         attempts++;
