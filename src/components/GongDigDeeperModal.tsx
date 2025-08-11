@@ -9,6 +9,7 @@ import {
   GongAnalyzedCall 
 } from '../types';
 import { chatHistoryService } from '../services/chatHistoryService';
+import { API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 interface GongDigDeeperModalProps {
   isOpen: boolean;
@@ -56,11 +57,9 @@ const GongDigDeeperModal: React.FC<GongDigDeeperModalProps> = ({ isOpen, onClose
       // Send a test message to see if conversation exists
       // Determine backend URL based on environment
       // Why this matters: Ensures production deployments use the correct backend URL
-      const backendUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://apollo-reddit-scraper-backend.vercel.app'
-        : 'http://localhost:3003';
+      // Use centralized API configuration
       
-      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/gong-chat/message`, {
+      const response = await fetch(buildApiUrl('/api/gong-chat/message'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,11 +124,9 @@ const GongDigDeeperModal: React.FC<GongDigDeeperModalProps> = ({ isOpen, onClose
 
       // Determine backend URL based on environment  
       // Why this matters: Ensures production deployments use the correct backend URL
-      const backendUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://apollo-reddit-scraper-backend.vercel.app'
-        : 'http://localhost:3003';
+      // Use centralized API configuration
       
-      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/gong-chat/start-conversation`, {
+      const response = await fetch(buildApiUrl('/api/gong-chat/start-conversation'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -211,9 +208,7 @@ const GongDigDeeperModal: React.FC<GongDigDeeperModalProps> = ({ isOpen, onClose
     try {
       // Determine backend URL based on environment
     // Why this matters: Ensures production deployments use the correct backend URL
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://apollo-reddit-scraper-backend.vercel.app'
-      : 'http://localhost:3003';
+    const baseUrl = API_BASE_URL;
       const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/gong-chat/message`, {
         method: 'POST',
         headers: {
@@ -382,9 +377,7 @@ const GongDigDeeperModal: React.FC<GongDigDeeperModalProps> = ({ isOpen, onClose
     try {
       // Determine backend URL based on environment
     // Why this matters: Ensures production deployments use the correct backend URL
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://apollo-reddit-scraper-backend.vercel.app'
-      : 'http://localhost:3003';
+    const baseUrl = API_BASE_URL;
       await fetch(`${baseUrl.replace(/\/$/, '')}/api/gong-chat/feedback`, {
         method: 'POST',
         headers: {

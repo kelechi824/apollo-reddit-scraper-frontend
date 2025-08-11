@@ -4,6 +4,7 @@ import Papa, { ParseResult } from 'papaparse';
 import axios from 'axios';
 import BackendDetailsPopup from '../components/BackendDetailsPopup';
 import CompetitorContentActionModal from '../components/CompetitorContentActionModal';
+import { API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 type RowStatus = 'idle' | 'queued' | 'running' | 'completed' | 'error';
 
@@ -130,10 +131,8 @@ const CompetitorConquestingPage: React.FC = () => {
     const candidates: string[] = (() => {
       const list: string[] = [];
       if (csvUrl.includes('/competitors/cognism.csv')) {
-        // Use appropriate backend URL for dev vs production
-        const backendUrl = process.env.NODE_ENV === 'production' 
-          ? 'https://apollo-reddit-scraper-backend.vercel.app/api/competitor-conquesting/csv/cognism'
-          : 'http://localhost:3003/api/competitor-conquesting/csv/cognism';
+        // Use centralized API configuration
+        const backendUrl = API_ENDPOINTS.competitorCsvCognism;
         list.push(backendUrl);
         list.push(new URL('/competitors/cognism.csv', window.location.origin).toString());
       } else if (/^https?:\/\//i.test(csvUrl)) {
@@ -591,11 +590,9 @@ const CompetitorConquestingPage: React.FC = () => {
         console.warn('Failed to load brand kit:', e);
       }
 
-      const backendUrl = process.env.NODE_ENV === 'production'
-        ? 'https://apollo-reddit-scraper-backend.vercel.app'
-        : 'http://localhost:3003';
+
         
-      const resp = await axios.post(`${backendUrl}/api/competitor-conquesting/generate-content`, {
+      const resp = await axios.post(API_ENDPOINTS.competitorGenerateContent, {
         keyword: row.keyword,
         url: row.url,
         brand_kit: brandKit,

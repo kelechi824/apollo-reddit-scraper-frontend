@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Copy, Check, CheckCircle, RefreshCw, Wand2, ChevronDown, Search, Clock, Globe } from 'lucide-react';
 import { BrandKit } from '../types';
 import googleDocsService from '../services/googleDocsService';
+import { API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 interface CompetitorRowBasic {
   id: string;
@@ -288,10 +289,7 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
     return (async () => {
       try {
         const contentPreview = content.replace(/<[^>]*>/g, '').substring(0, 500);
-        const backendUrl = process.env.NODE_ENV === 'production'
-          ? 'https://apollo-reddit-scraper-backend.vercel.app'
-          : 'http://localhost:3003';
-        const apiUrl = `${backendUrl.replace(/\/$/, '')}/api/content/generate-meta`;
+        const apiUrl = API_ENDPOINTS.generateMeta;
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1889,13 +1887,10 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     try {
       console.log('📰 Publishing content to CMS:', customCMSConfig);
 
-      // Determine backend URL based on environment
-      // Why this matters: Ensures production deployments use the correct backend URL  
-      const backendUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://apollo-reddit-scraper-backend.vercel.app'
-        : 'http://localhost:3003';
+      // Use centralized API configuration
+      // Why this matters: Ensures all deployments (Netlify, Vercel, local) use the correct backend URL
         
-      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/content/publish-to-cms`, {
+      const response = await fetch(buildApiUrl('/api/content/publish-to-cms'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1995,11 +1990,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       console.log('📝 User prompt preview:', userPrompt.substring(0, 200));
       console.log('🎯 Brand kit:', kit);
 
-      const backendUrl = process.env.NODE_ENV === 'production'
-        ? 'https://apollo-reddit-scraper-backend.vercel.app'
-        : 'http://localhost:3003';
-
-      const resp = await fetch(`${backendUrl.replace(/\/$/, '')}/api/competitor-conquesting/generate-content`, {
+      const resp = await fetch(API_ENDPOINTS.competitorGenerateContent, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

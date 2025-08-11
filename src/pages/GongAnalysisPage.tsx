@@ -3,14 +3,13 @@ import GongAnalysisInterface from '../components/GongAnalysisInterface';
 import GongAnalysisResultPanel from '../components/GongAnalysisResultPanel';
 import { GongFetchCallsWithDetailsResponse } from '../types';
 import { FEATURE_FLAGS } from '../utils/featureFlags';
+import { API_BASE_URL, buildApiUrl } from '../config/api';
 
 const GongAnalysisPage: React.FC = () => {
   const [currentResults, setCurrentResults] = useState<GongFetchCallsWithDetailsResponse | null>(null);
   // Determine backend URL based on environment
 // Why this matters: Ensures production deployments use the correct backend URL
-const apiUrl = process.env.NODE_ENV === 'production' 
-  ? 'https://apollo-reddit-scraper-backend.vercel.app'
-  : 'http://localhost:3003';
+const apiUrl = API_BASE_URL;
 
   /**
    * Load saved Gong fetch results from localStorage on component mount

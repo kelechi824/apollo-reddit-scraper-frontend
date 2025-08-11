@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import PlaybooksInterface from '../components/PlaybooksInterface';
 import PlaybookGenerationModal from '../components/PlaybookGenerationModal';
+import { API_BASE_URL } from '../config/api';
 
 const PlaybooksPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedJobTitle, setSelectedJobTitle] = useState('');
   const [markdownData, setMarkdownData] = useState('');
 
-  // Determine backend URL based on environment
-// Why this matters: Ensures production deployments use the correct backend URL
-const apiUrl = process.env.NODE_ENV === 'production' 
-  ? 'https://apollo-reddit-scraper-backend.vercel.app'
-  : 'http://localhost:3003';
+  // Use centralized API configuration
+  // Why this matters: Ensures all deployments (Netlify, Vercel, local) use the correct backend URL
+  const apiUrl = API_BASE_URL;
 
   /**
    * Handle playbook generation trigger

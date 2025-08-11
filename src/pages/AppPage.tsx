@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import AnalysisInterface from '../components/AnalysisInterface';
 import AnalysisResultPanel from '../components/AnalysisResultPanel';
 import { WorkflowResponse } from '../types';
+import { API_BASE_URL, buildApiUrl } from '../config/api';
 
 const AppPage: React.FC = () => {
   const [currentResults, setCurrentResults] = useState<WorkflowResponse | null>(null);
   // Determine backend URL based on environment
 // Why this matters: Ensures production deployments use the correct backend URL
-const apiUrl = process.env.NODE_ENV === 'production' 
-  ? 'https://apollo-reddit-scraper-backend.vercel.app'
-  : 'http://localhost:3003';
+const apiUrl = API_BASE_URL;
 
   /**
    * Load saved results from localStorage on component mount

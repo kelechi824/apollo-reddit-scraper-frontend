@@ -3,6 +3,7 @@ import { Play, Upload, MoreHorizontal, FileText, ExternalLink, Copy, RefreshCw, 
 import BlogContentActionModal from '../components/BlogContentActionModal';
 import BackendDetailsPopup from '../components/BackendDetailsPopup';
 import { autoSaveBlogIfReady } from '../services/blogHistoryService';
+import { API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 
 // Define interfaces for our data structure
@@ -1063,9 +1064,7 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
       }
 
       // Determine backend URL based on environment
-      const backendUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://apollo-reddit-scraper-backend.vercel.app'
-        : 'http://localhost:3003';
+      // Use centralized API configuration
 
       console.log(`🚀 Starting content generation for keyword: "${keyword.keyword}"`);
       console.log(`🔗 Backend URL: ${backendUrl}`);
@@ -1078,7 +1077,7 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
       });
 
       // Start synchronous content generation with default prompts (no polling needed)
-      const response = await fetch(`${backendUrl}/api/blog-creator/generate-content`, {
+      const response = await fetch(buildApiUrl('/api/blog-creator/generate-content'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

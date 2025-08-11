@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, CheckCircle, Copy, Check, Table } from 'lucide-react';
 import { AnalyzedPost, BrandKit, ContentCreationRequest } from '../types';
 import googleDocsService from '../services/googleDocsService';
+import { API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 interface ContentCreationModalProps {
   isOpen: boolean;
@@ -1169,14 +1170,11 @@ Return ONLY the JSON object, no additional text.`;
         user_prompt: processedUserPrompt
       };
 
-      // Determine backend URL based on environment
-      // Why this matters: Ensures production deployments use the correct backend URL
-      const backendUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://apollo-reddit-scraper-backend.vercel.app'
-        : 'http://localhost:3003';
+      // Use centralized API configuration
+      // Why this matters: Ensures all deployments (Netlify, Vercel, local) use the correct backend URL
       
       // Call the content generation API
-      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/content/generate`, {
+      const response = await fetch(API_ENDPOINTS.generateContent, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

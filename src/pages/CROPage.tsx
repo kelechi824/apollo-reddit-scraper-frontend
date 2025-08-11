@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Zap, AlertCircle, Clock, ExternalLink, TrendingUp, Target, MessageSquare } from 'lucide-react';
 import { CROAnalysisResponse, CopyAnalysisResult } from '../types';
+import { API_BASE_URL, buildApiUrl } from '../config/api';
 
 const CROPage: React.FC = () => {
   const [url, setUrl] = useState<string>('');
@@ -10,9 +11,7 @@ const CROPage: React.FC = () => {
   const [screenshotId, setScreenshotId] = useState<string>('');
   // Determine backend URL based on environment
 // Why this matters: Ensures production deployments use the correct backend URL
-const apiUrl = process.env.NODE_ENV === 'production' 
-  ? 'https://apollo-reddit-scraper-backend.vercel.app'
-  : 'http://localhost:3003';
+const apiUrl = API_BASE_URL;
 
   /**
    * Load saved CRO results from localStorage on component mount
@@ -70,9 +69,9 @@ const apiUrl = process.env.NODE_ENV === 'production'
       };
       
       console.log('🔍 CRO Analysis request:', requestData);
-      console.log('📡 API URL:', `${apiUrl}/api/cro/analyze`);
+      console.log('📡 API URL:', buildApiUrl('/api/cro/analyze'));
       
-      const response = await fetch(`${apiUrl}/api/cro/analyze`, {
+      const response = await fetch(buildApiUrl('/api/cro/analyze'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -588,7 +587,7 @@ const apiUrl = process.env.NODE_ENV === 'production'
                 <div className="screenshot-analysis">
                   <div className="screenshot-container">
                     <img 
-                      src={`${apiUrl}/api/cro/screenshot/${screenshotId}`}
+                      src={buildApiUrl('/api/cro/screenshot/${screenshotId}')}
                       alt={`Screenshot of ${currentResults.url}`}
                       className="page-screenshot"
                     />

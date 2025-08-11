@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Monitor, TrendingUp, AlertCircle, CheckCircle, Loader2, ExternalLink, Copy, ZoomIn, ZoomOut, Play, Calendar, Clock, AlertTriangle } from 'lucide-react';
+import { buildApiUrl } from '../config/api';
 
 // Types for our step-by-step workflow
 type WorkflowStep = 'url-input' | 'screenshot-analysis' | 'content-extraction' | 'gong-analysis' | 'cro-recommendations';
@@ -299,7 +300,7 @@ const LandingPageAnalyzer: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/gong-analysis/analyze-landing-page`, {
+      const response = await fetch(buildApiUrl('/api/gong-analysis/analyze-landing-page'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -345,7 +346,7 @@ const LandingPageAnalyzer: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/gong-analysis/analyze-landing-page`, {
+      const response = await fetch(buildApiUrl('/api/gong-analysis/analyze-landing-page'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -388,7 +389,7 @@ const LandingPageAnalyzer: React.FC = () => {
 
     try {
       // First fetch Gong calls
-      const gongResponse = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/gong-analysis/fetch-calls`, {
+      const gongResponse = await fetch(buildApiUrl('/api/gong-analysis/fetch-calls'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -406,7 +407,7 @@ const LandingPageAnalyzer: React.FC = () => {
       const gongData = await gongResponse.json();
       
       // Now run analysis to get Gong insights (without full CRO analysis yet)
-      const analysisResponse = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/gong-analysis/analyze-landing-page`, {
+      const analysisResponse = await fetch(buildApiUrl('/api/gong-analysis/analyze-landing-page'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -449,7 +450,7 @@ const LandingPageAnalyzer: React.FC = () => {
 
     try {
       // Use existing Gong insights to generate full CRO recommendations
-      const analysisResponse = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/gong-analysis/analyze-landing-page`, {
+      const analysisResponse = await fetch(buildApiUrl('/api/gong-analysis/analyze-landing-page'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

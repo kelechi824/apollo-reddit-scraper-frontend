@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Wand2, Clock, CheckCircle, Copy, Check, ChevronDown, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AnalyzedPost, BrandKit, ContentCreationRequest } from '../types';
+import { API_BASE_URL, buildApiUrl } from '../config/api';
 
 interface LinkedInPostModalProps {
   isOpen: boolean;
