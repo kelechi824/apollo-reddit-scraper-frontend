@@ -3,7 +3,7 @@ import { Play, Upload, MoreHorizontal, FileText, ExternalLink, Copy, RefreshCw, 
 import BlogContentActionModal from '../components/BlogContentActionModal';
 import BackendDetailsPopup from '../components/BackendDetailsPopup';
 import { autoSaveBlogIfReady } from '../services/blogHistoryService';
-import { API_ENDPOINTS, buildApiUrl } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 
 // Define interfaces for our data structure
@@ -1067,7 +1067,7 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
       // Use centralized API configuration
 
       console.log(`🚀 Starting content generation for keyword: "${keyword.keyword}"`);
-      console.log(`🔗 Backend URL: ${backendUrl}`);
+      console.log(`🔗 Backend URL: ${API_BASE_URL}`);
       console.log(`📦 Request payload:`, { 
         keyword: keyword.keyword, 
         content_length: 'medium', 
