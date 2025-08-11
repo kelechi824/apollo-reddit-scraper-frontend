@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, MapPin, CheckCircle, Edit3, ArrowLeft, ArrowRight, Zap, Target, Download, FileText, Code, Hash } from 'lucide-react';
+import { buildApiUrl } from '../config/api';
 
 interface CTAInsertionPoint {
   position: number;
@@ -194,7 +195,7 @@ const ArticlePreviewInterface: React.FC<ArticlePreviewProps> = ({
 
     try {
       // Generate the specific format on-demand
-      const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/cta-generation/apply-placements`, {
+      const response = await fetch(buildApiUrl('/api/cta-generation/apply-placements'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

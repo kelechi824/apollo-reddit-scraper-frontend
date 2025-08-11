@@ -3,6 +3,7 @@ import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, Ch
 import { BrandKit } from '../types';
 import googleDocsService from '../services/googleDocsService';
 import { autoSaveBlogIfReady } from '../services/blogHistoryService';
+import { API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 // Import the KeywordRow interface from BlogCreatorPage
 interface KeywordRow {
@@ -1034,12 +1035,9 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       const contentPreview = content.replace(/<[^>]*>/g, '').substring(0, 500);
       console.log('📝 Content preview length:', contentPreview.length);
       
-      // Determine backend URL based on environment
-    // Why this matters: Ensures production deployments use the correct backend URL
-    const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://apollo-reddit-scraper-backend.vercel.app'
-      : 'http://localhost:3003';
-    const apiUrl = `${backendUrl.replace(/\/$/, '')}/api/content/generate-meta`;
+      // Use centralized API configuration
+    // Why this matters: Ensures all deployments (Netlify, Vercel, local) use the correct backend URL
+    const apiUrl = API_ENDPOINTS.generateMeta;
       console.log('🌐 API URL:', apiUrl);
       
       const requestBody = {

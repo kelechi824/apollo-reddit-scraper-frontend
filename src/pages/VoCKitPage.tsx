@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Plus, Trash2, RefreshCw, CheckCircle, XCircle, AlertCircle, Trash, Search } from 'lucide-react';
+import { buildApiUrl } from '../config/api';
 
 interface VoCPainPoint {
   id: string;
@@ -202,7 +203,7 @@ const VoCKitPage: React.FC = () => {
     
     try {
       // Direct synchronous analysis call
-      const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/voc-extraction/analyze-synchronous`, {
+      const response = await fetch(buildApiUrl('/api/voc-extraction/analyze-synchronous'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

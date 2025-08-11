@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ExternalLink, Zap, Target, Sparkles, CheckCircle, AlertCircle, ArrowRight, Copy, Download, AlertTriangle, RotateCcw, X } from 'lucide-react';
 import ArticlePreviewInterface from '../components/ArticlePreviewInterface';
 import { FEATURE_FLAGS } from '../utils/featureFlags';
+import { buildApiUrl } from '../config/api';
 
 // Skeleton component for loading states
 const Skeleton = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -326,7 +327,7 @@ const CTACreatorPage: React.FC = () => {
         console.error('Error loading VoC Kit data:', error);
       }
 
-      let endpoint = `${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/cta-generation/generate-from-url`;
+      let endpoint = buildApiUrl('/api/cta-generation/generate-from-url');
       let requestBody: any = { 
         url: articleUrl, 
         enhanced_analysis: enhancedAnalysis,
@@ -334,14 +335,14 @@ const CTACreatorPage: React.FC = () => {
       };
 
       if (inputMethod === 'text') {
-        endpoint = `${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/cta-generation/generate-from-text`;
+        endpoint = buildApiUrl('/api/cta-generation/generate-from-text');
         requestBody = { 
           text: articleText, 
           enhanced_analysis: enhancedAnalysis,
           voc_kit_data: vocKitData
         };
       } else if (inputMethod === 'markdown') {
-        endpoint = `${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/cta-generation/generate-from-markdown`;
+        endpoint = buildApiUrl('/api/cta-generation/generate-from-markdown');
         requestBody = { 
           markdown: articleMarkdown, 
           enhanced_analysis: enhancedAnalysis,
@@ -697,7 +698,7 @@ ${generatedCTAs.cta_variants.end.shortcode}
       setGenerationStage('Generating final HTML...');
       
       // Call backend to generate final HTML with selected placements
-      const endpoint = `${process.env.NODE_ENV === 'production' ? 'https://apollo-reddit-scraper-backend.vercel.app' : 'http://localhost:3003'}/api/cta-generation/apply-placements`;
+      const endpoint = buildApiUrl('/api/cta-generation/apply-placements');
       
       const response = await fetch(endpoint, {
         method: 'POST',

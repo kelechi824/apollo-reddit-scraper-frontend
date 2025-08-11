@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Globe, Camera, Copy, Check, ExternalLink, TrendingUp, Target, Lightbulb } from 'lucide-react';
 import { LandingPageAnalysisRequest, LandingPageAnalysisResult, GongAnalyzedCall } from '../types';
+import { API_BASE_URL, buildApiUrl } from '../config/api';
 
 interface LandingPageAnalysisModalProps {
   isOpen: boolean;

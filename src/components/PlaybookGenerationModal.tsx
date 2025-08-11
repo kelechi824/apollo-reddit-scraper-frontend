@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, CheckCircle, Copy, Check, Table } from 'lucide-react';
 import { BrandKit } from '../types';
 import googleDocsService from '../services/googleDocsService';
+import { API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 interface PlaybookGenerationModalProps {
   isOpen: boolean;
@@ -1458,13 +1459,10 @@ Ready to implement these strategies? Try Apollo free to access our complete suit
       const processedSystemPrompt = processLiquidVariables(systemPrompt, brandKit);
       const processedUserPrompt = processLiquidVariables(userPrompt, brandKit);
 
-      // Determine backend URL based on environment
-      // Why this matters: Ensures production deployments use the correct backend URL
-      const backendUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://apollo-reddit-scraper-backend.vercel.app'
-        : 'http://localhost:3003';
+      // Use centralized API configuration
+      // Why this matters: Ensures all deployments (Netlify, Vercel, local) use the correct backend URL
       
-      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/playbooks/generate-content`, {
+      const response = await fetch(API_ENDPOINTS.generatePlaybook, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
