@@ -791,6 +791,124 @@ class GoogleDocsService {
   }
 
   /**
+   * Create new Apollo Competitor Conquesting Content tracking spreadsheet
+   * Why this matters: Creates a properly formatted spreadsheet with headers for tracking competitor content generation.
+   */
+  async createCompetitorSpreadsheet(): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    try {
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      const today = new Date().toLocaleDateString();
+      const spreadsheetTitle = `Apollo Competitor Conquesting Content - ${today}`;
+
+      // Create new spreadsheet
+      const createResponse = await window.gapi.client.sheets.spreadsheets.create({
+        resource: {
+          properties: {
+            title: spreadsheetTitle
+          },
+          sheets: [{
+            properties: {
+              title: 'Competitor Content Tracking',
+              index: 0,
+              gridProperties: {
+                rowCount: 1000,
+                columnCount: 9,
+                frozenRowCount: 1
+              }
+            }
+          }]
+        }
+      });
+
+      if (!createResponse.result.spreadsheetId) {
+        throw new Error('Failed to create spreadsheet');
+      }
+
+      const spreadsheetId = createResponse.result.spreadsheetId;
+      const sheetId = createResponse.result.sheets[0].properties.sheetId;
+
+      // Add headers to the new spreadsheet with the correct sheet name
+      await this.addBlogHeaders(spreadsheetId, sheetId, 'Competitor Content Tracking');
+
+      // Store the spreadsheet ID for future use
+      localStorage.setItem('apollo_competitor_spreadsheet_id', spreadsheetId);
+
+      return {
+        spreadsheetId: spreadsheetId,
+        spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`
+      };
+    } catch (error) {
+      console.error('Error creating competitor spreadsheet:', error);
+      throw new Error('Failed to create Google Spreadsheet for competitor content. Please try again.');
+    }
+  }
+
+  /**
+   * Get or create competitor content tracking spreadsheet
+   * Why this matters: Maintains a dedicated spreadsheet for competitor content separate from blog content.
+   */
+  async getOrCreateCompetitorSpreadsheet(): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    // Check if we have a stored spreadsheet ID for competitor content
+    const storedSpreadsheetId = localStorage.getItem('apollo_competitor_spreadsheet_id');
+    
+    if (storedSpreadsheetId) {
+      try {
+        // Verify the spreadsheet still exists and is accessible
+        window.gapi.client.setToken({ access_token: this.accessToken });
+        const response = await window.gapi.client.sheets.spreadsheets.get({
+          spreadsheetId: storedSpreadsheetId
+        });
+        
+        if (response.result) {
+          // Check if headers exist in the existing spreadsheet
+          try {
+            const headerResponse = await window.gapi.client.sheets.spreadsheets.values.get({
+              spreadsheetId: storedSpreadsheetId,
+              range: 'Competitor Content Tracking!A1:I1'
+            });
+            
+            // If no headers exist or headers are different, add/update them
+            const expectedHeaders = ['Publish Date', 'Keyword', 'Content', 'Article Title', 'SEO Title', 'Meta Description', 'URL Slug', 'Secondary Category', 'Author'];
+            const currentHeaders = headerResponse.result.values && headerResponse.result.values[0];
+            
+            if (!currentHeaders || !this.arraysEqual(currentHeaders, expectedHeaders)) {
+              console.log('Adding missing headers to existing competitor spreadsheet');
+              await this.addBlogHeaders(storedSpreadsheetId, response.result.sheets[0].properties.sheetId, 'Competitor Content Tracking');
+              // Clear bold formatting from existing content rows
+              await this.clearBoldFromExistingContent(storedSpreadsheetId, response.result.sheets[0].properties.sheetId);
+            }
+          } catch (headerError) {
+            console.log('Adding headers to existing spreadsheet');
+            await this.addBlogHeaders(storedSpreadsheetId, response.result.sheets[0].properties.sheetId, 'Competitor Content Tracking');
+            // Clear bold formatting from existing content rows
+            await this.clearBoldFromExistingContent(storedSpreadsheetId, response.result.sheets[0].properties.sheetId);
+          }
+          
+          return {
+            spreadsheetId: storedSpreadsheetId,
+            spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${storedSpreadsheetId}/edit`
+          };
+        }
+      } catch (error) {
+        console.log('Stored competitor spreadsheet not accessible, creating new one');
+        localStorage.removeItem('apollo_competitor_spreadsheet_id');
+      }
+    }
+
+    // Create new spreadsheet
+    return await this.createCompetitorSpreadsheet();
+  }
+
+  /**
    * Create new Apollo Blog Content tracking spreadsheet
    * Why this matters: Creates a properly formatted spreadsheet with headers for tracking all blog content generation.
    */
@@ -1033,6 +1151,110 @@ class GoogleDocsService {
   }
 
   /**
+   * Append competitor content data to tracking spreadsheet
+   * Why this matters: Logs all generated competitor content with metadata for tracking and analytics.
+   */
+  async appendCompetitorData(blogData: {
+    keyword: string;
+    metaSeoTitle: string;
+    metaDescription: string;
+    htmlContent: string;
+    urlSlug: string;
+    secondaryCategory: string;
+    author: string;
+  }): Promise<{ success: boolean; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    try {
+      // Get or create competitor spreadsheet
+      const { spreadsheetId, spreadsheetUrl } = await this.getOrCreateCompetitorSpreadsheet();
+      
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      // Extract H1 title from HTML content
+      const h1Title = this.extractH1Title(blogData.htmlContent);
+      
+      // Format timestamp as YYYY-MM-DD
+      const formattedDate = new Date().toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
+      
+      // Prepare row data for competitor content in specified order
+      const rowData = [
+        formattedDate,
+        blogData.keyword,
+        blogData.htmlContent, // Content
+        h1Title,
+        blogData.metaSeoTitle,
+        blogData.metaDescription,
+        blogData.urlSlug,
+        blogData.secondaryCategory,
+        blogData.author
+      ];
+
+      // Get current row count to know where the new data will be inserted
+      const dataResponse = await window.gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: 'Competitor Content Tracking!A:I'
+      });
+      const currentRowCount = dataResponse.result.values ? dataResponse.result.values.length : 1;
+      const newRowIndex = currentRowCount; // 0-indexed, so this will be the new row
+
+      // Append data to spreadsheet
+      await window.gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: spreadsheetId,
+        range: 'Competitor Content Tracking!A:I',
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        resource: {
+          values: [rowData]
+        }
+      });
+
+      // Get sheet info to access sheetId
+      const spreadsheetInfo = await window.gapi.client.sheets.spreadsheets.get({
+        spreadsheetId: spreadsheetId
+      });
+      const sheetId = spreadsheetInfo.result.sheets[0].properties.sheetId;
+
+      // Ensure the newly added row is not bold
+      await window.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: spreadsheetId,
+        resource: {
+          requests: [
+            {
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startRowIndex: newRowIndex,
+                  endRowIndex: newRowIndex + 1,
+                  startColumnIndex: 0,
+                  endColumnIndex: 9
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: false
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold'
+              }
+            }
+          ]
+        }
+      });
+
+      console.log('✅ Competitor content successfully logged to Google Sheets');
+      return { success: true, spreadsheetUrl };
+
+    } catch (error) {
+      console.error('Error appending competitor data to spreadsheet:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Append blog content data to tracking spreadsheet
    * Why this matters: Logs all generated blog content with metadata for tracking and analytics.
    */
@@ -1255,7 +1477,7 @@ class GoogleDocsService {
    * Add blog headers to an existing spreadsheet
    * Why this matters: Ensures existing spreadsheets have proper headers with correct formatting.
    */
-  private async addBlogHeaders(spreadsheetId: string, sheetId: number): Promise<void> {
+  private async addBlogHeaders(spreadsheetId: string, sheetId: number, sheetName: string = 'Blog Content Tracking'): Promise<void> {
     try {
       window.gapi.client.setToken({ access_token: this.accessToken });
 
@@ -1275,7 +1497,7 @@ class GoogleDocsService {
       // Update headers
       await window.gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: spreadsheetId,
-        range: 'Blog Content Tracking!A1:I1',
+        range: `${sheetName}!A1:I1`,
         valueInputOption: 'RAW',
         resource: {
           values: [headers]

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Copy, Check, CheckCircle, RefreshCw, Wand2, ExternalLink, ChevronDown, Search, Clock } from 'lucide-react';
+import { X, Copy, Check, CheckCircle, RefreshCw, Wand2, ChevronDown, Search, Clock, Globe } from 'lucide-react';
 import { BrandKit } from '../types';
 import googleDocsService from '../services/googleDocsService';
 
@@ -257,6 +257,18 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
   const [showSheetsMessage, setShowSheetsMessage] = useState<boolean>(false);
   const [sheetsSuccessMessage, setSheetsSuccessMessage] = useState<string>('');
 
+  // CMS Integration states
+  const [showCMSModal, setShowCMSModal] = useState(false);
+  const [showCustomCMSForm, setShowCustomCMSForm] = useState<boolean>(false);
+  const [isPublishing, setIsPublishing] = useState<boolean>(false);
+  const [publishResult, setPublishResult] = useState<any>(null);
+  const [showComingSoonMessage, setShowComingSoonMessage] = useState<string | null>(null);
+  const [customCMSConfig, setCustomCMSConfig] = useState({
+    api_endpoint: 'https://api.buttercms.com/v2',
+    api_key: '',
+    cms_type: 'buttercms'
+  });
+
   // Refs
   const systemRef = useRef<HTMLTextAreaElement | null>(null);
   const userRef = useRef<HTMLTextAreaElement | null>(null);
@@ -334,36 +346,28 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
       console.error('Failed to load workflow data:', e);
     }
     
-    // Generate meta fields for parity if content exists
+        // Load saved meta fields from localStorage if they exist
+    // We no longer auto-generate meta fields - they come from content generation
     const content = row.output || '';
-    if (content.trim().length > 0) {
-      // Persist once; do NOT regenerate every open. Load from localStorage first.
+    if (content.trim().length > 0 && !metaSeoTitle && !metaDescription) {
+      // Check if meta fields are already in row.metadata (from backend)
+      if ((row.metadata as any)?.metaSeoTitle || (row.metadata as any)?.metaDescription) {
+        // Already set from metadata, skip loading from localStorage
+        return;
+      }
+      
+      // Load from localStorage if previously saved
       try {
         const savedMeta = localStorage.getItem(`apollo_competitor_meta_${row.id}`);
         if (savedMeta) {
           const { metaSeoTitle: savedTitle, metaDescription: savedDesc } = JSON.parse(savedMeta);
-          setMetaSeoTitle(savedTitle || '');
-          setMetaDescription(savedDesc || '');
-          return;
+          if (savedTitle || savedDesc) {
+            setMetaSeoTitle(savedTitle || '');
+            setMetaDescription(savedDesc || '');
+            return;
+          }
         }
       } catch {}
-
-      // If not saved yet, generate once then store
-      generateAIMetaFields(row.keyword, content)
-        .then((meta: { metaSeoTitle: string; metaDescription: string }) => {
-          setMetaSeoTitle(meta.metaSeoTitle);
-          setMetaDescription(meta.metaDescription);
-          try { localStorage.setItem(`apollo_competitor_meta_${row.id}`, JSON.stringify(meta)); } catch {}
-        })
-        .catch(() => {
-          const fallback = {
-            metaSeoTitle: generateFallbackTitle(row.keyword),
-            metaDescription: generateFallbackDescription(row.keyword)
-          };
-          setMetaSeoTitle(fallback.metaSeoTitle);
-          setMetaDescription(fallback.metaDescription);
-          try { localStorage.setItem(`apollo_competitor_meta_${row.id}`, JSON.stringify(fallback)); } catch {}
-        });
     }
   }, [isOpen, row.output]);
 
@@ -831,55 +835,63 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     if (!isOpen) return;
     setCopied(false);
     
-    // Initialize content from row.output like BlogContentActionModal does
-    const content = row.output || '';
-    if (content.trim().length > 0) {
-      console.log('📊 Initializing CompetitorContentActionModal with existing content for keyword:', row.keyword);
-      console.log('🔄 Content length:', content.length, 'characters');
-      
-      // Parse the existing content to extract meta fields if present
-      const parsed = parseAIResponse(content);
-      console.log('🔍 Content format analysis:', {
-        originalLength: content.length,
-        parsedLength: parsed.content.length,
-        hasMarkdownHeaders: parsed.content.includes('# ') || parsed.content.includes('## '),
-        hasHTMLTags: parsed.content.includes('<h1>') || parsed.content.includes('<p>'),
-        originalSample: content.substring(0, 200),
-        parsedSample: parsed.content.substring(0, 200)
-      });
-      
-      // Convert to HTML if content appears to be in markdown format
-      let displayContent = parsed.content;
-      const hasMarkdownSyntax = parsed.content.includes('**') || 
-                               parsed.content.includes('# ') || 
-                               parsed.content.includes('## ') ||
-                               parsed.content.includes('* ') ||
-                               parsed.content.includes('[') && parsed.content.includes('](');
-      const hasHTMLTags = parsed.content.includes('<h1>') || 
-                         parsed.content.includes('<p>') || 
-                         parsed.content.includes('<strong>');
-      
-      console.log('🔄 Cleaning AI content using BlogContentActionModal logic');
-      console.log('🔍 Before cleaning (first 500 chars):', parsed.content.substring(0, 500));
-      displayContent = cleanAIContent(parsed.content);
-      console.log('🔍 After cleaning (first 500 chars):', displayContent.substring(0, 500));
-      
-      setGeneratedContent(displayContent);
-      setEditableContent(parsed.content); // Keep original format for editing
-      setIsEditingContent(false);
-      
-      // Set meta fields from parsed content or generate fallbacks
-      if (parsed.metaSeoTitle) {
-        setMetaSeoTitle(parsed.metaSeoTitle);
-      } else {
-        setMetaSeoTitle(generateFallbackTitle(row.keyword));
-      }
-      
-      if (parsed.metaDescription) {
-        setMetaDescription(parsed.metaDescription);
-      } else {
-        setMetaDescription(generateFallbackDescription(row.keyword));
-      }
+      // Initialize content from row.output like BlogContentActionModal does
+  const content = row.output || '';
+  if (content.trim().length > 0) {
+    console.log('📊 Initializing CompetitorContentActionModal with existing content for keyword:', row.keyword);
+    console.log('🔄 Content length:', content.length, 'characters');
+    
+    // Check if meta fields are already in row.metadata (from backend)
+    const metadataHasMeta = (row.metadata as any)?.metaSeoTitle || (row.metadata as any)?.metaDescription;
+    
+    // Parse the existing content to extract meta fields if present
+    const parsed = parseAIResponse(content);
+    console.log('🔍 Content format analysis:', {
+      originalLength: content.length,
+      parsedLength: parsed.content.length,
+      hasMarkdownHeaders: parsed.content.includes('# ') || parsed.content.includes('## '),
+      hasHTMLTags: parsed.content.includes('<h1>') || parsed.content.includes('<p>'),
+      originalSample: content.substring(0, 200),
+      parsedSample: parsed.content.substring(0, 200),
+      metadataHasMeta
+    });
+    
+    // Convert to HTML if content appears to be in markdown format
+    let displayContent = parsed.content;
+    const hasMarkdownSyntax = parsed.content.includes('**') || 
+                             parsed.content.includes('# ') || 
+                             parsed.content.includes('## ') ||
+                             parsed.content.includes('* ') ||
+                             parsed.content.includes('[') && parsed.content.includes('](');
+    const hasHTMLTags = parsed.content.includes('<h1>') || 
+                       parsed.content.includes('<p>') || 
+                       parsed.content.includes('<strong>');
+    
+    console.log('🔄 Cleaning AI content using BlogContentActionModal logic');
+    console.log('🔍 Before cleaning (first 500 chars):', parsed.content.substring(0, 500));
+    displayContent = cleanAIContent(parsed.content);
+    console.log('🔍 After cleaning (first 500 chars):', displayContent.substring(0, 500));
+    
+    setGeneratedContent(displayContent);
+    setEditableContent(parsed.content); // Keep original format for editing
+    setIsEditingContent(false);
+    
+    // Set meta fields from metadata first, then parsed content, then fallbacks
+    if ((row.metadata as any)?.metaSeoTitle) {
+      setMetaSeoTitle((row.metadata as any).metaSeoTitle);
+    } else if (parsed.metaSeoTitle) {
+      setMetaSeoTitle(parsed.metaSeoTitle);
+    } else {
+      setMetaSeoTitle(generateFallbackTitle(row.keyword));
+    }
+    
+    if ((row.metadata as any)?.metaDescription) {
+      setMetaDescription((row.metadata as any).metaDescription);
+    } else if (parsed.metaDescription) {
+      setMetaDescription(parsed.metaDescription);
+    } else {
+      setMetaDescription(generateFallbackDescription(row.keyword));
+    }
       
       console.log('✅ Content initialized:', {
         contentLength: parsed.content.length,
@@ -1306,9 +1318,179 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       alert('No content to display. Please generate content first.');
       return;
     }
+
+    // Create a simple HTML page showing the raw HTML source
+    const rawHtmlDisplay = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw HTML Source - ${metaSeoTitle || `${row.keyword} Content`}</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        
+        .header {
+            background-color: #2d2d30;
+            padding: 20px;
+            margin: -20px -20px 20px -20px;
+            border-bottom: 3px solid #007acc;
+        }
+        
+        .header h1 {
+            color: #4ec9b0;
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        
+        .header p {
+            color: #9cdcfe;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .meta-info {
+            background-color: #252526;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .meta-info h3 {
+            color: #f59e0b;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        
+        .meta-field {
+            margin: 8px 0;
+            color: #d4d4d4;
+            font-size: 13px;
+        }
+        
+        .meta-label {
+            color: #4fc1ff;
+            font-weight: bold;
+        }
+        
+        .code-container {
+            background-color: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 5px;
+            position: relative;
+        }
+        
+        .code-header {
+            background-color: #2d2d30;
+            padding: 10px 15px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-title {
+            color: #cccccc;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .copy-btn {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: inherit;
+        }
+        
+        .copy-btn:hover {
+            background-color: #1177bb;
+        }
+        
+        .code-content {
+            padding: 20px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .html-code {
+            color: #d4d4d4;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        /* HTML syntax highlighting */
+        .html-tag { color: #569cd6; }
+        .html-attr { color: #92c5f7; }
+        .html-value { color: #ce9178; }
+        .html-text { color: #d4d4d4; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Raw HTML Source</h1>
+        <p><strong>Keyword:</strong> ${row.keyword}</p>
+        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+        <p><strong>Word Count:</strong> ~${Math.round(contentToOpen.replace(/<[^>]*>/g, '').split(' ').length)} words</p>
+    </div>
+    
+    ${metaSeoTitle || metaDescription ? `
+    <div class="meta-info">
+        <h3>📊 SEO Metadata</h3>
+        ${metaSeoTitle ? `<div class="meta-field"><span class="meta-label">Title:</span> ${metaSeoTitle}</div>` : ''}
+        ${metaDescription ? `<div class="meta-field"><span class="meta-label">Description:</span> ${metaDescription}</div>` : ''}
+    </div>
+    ` : ''}
+    
+    <div class="code-container">
+        <div class="code-header">
+            <span class="code-title">HTML Source Code</span>
+            <button class="copy-btn" onclick="copyHtmlCode()">📋 Copy HTML</button>
+        </div>
+        <div class="code-content">
+            <pre class="html-code" id="htmlCode">${contentToOpen.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+        </div>
+    </div>
+
+    <script>
+        function copyHtmlCode() {
+            const htmlCode = \`${contentToOpen.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
+            navigator.clipboard.writeText(htmlCode).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.backgroundColor = '#10b981';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.backgroundColor = '#0e639c';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy HTML. Please select and copy manually.');
+            });
+        }
+    </script>
+</body>
+</html>`;
+
+    // Open in new window
     const newWindow = window.open('', '_blank');
     if (newWindow) {
-      newWindow.document.write(contentToOpen);
+      newWindow.document.write(rawHtmlDisplay);
       newWindow.document.close();
     } else {
       alert('Popup blocked. Please allow popups and try again.');
@@ -1573,6 +1755,71 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
   const generateUrlSlug = (keyword: string): string =>
     keyword.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
+  /**
+   * Determine secondary category based on content analysis
+   * Why this matters: Automatically categorizes content for better organization and content strategy.
+   */
+  const determineSecondaryCategory = (keyword: string, content: string): string => {
+    const keywordLower = keyword.toLowerCase();
+    const contentLower = content.toLowerCase();
+    const combinedText = `${keywordLower} ${contentLower}`;
+
+    // Define category keywords for matching
+    const categoryKeywords = {
+      'Sales': ['sales', 'selling', 'prospect', 'deal', 'revenue', 'quota', 'pipeline', 'conversion', 'closing', 'negotiation'],
+      'Prospecting': ['prospecting', 'outreach', 'cold email', 'cold call', 'lead generation', 'qualification', 'discovery'],
+      'Marketing': ['marketing', 'campaign', 'brand', 'advertising', 'promotion', 'content marketing', 'social media'],
+      'CRM': ['crm', 'customer relationship', 'salesforce', 'hubspot', 'pipedrive', 'contact management'],
+      'Revenue Operations': ['revops', 'revenue operations', 'sales ops', 'operations', 'process', 'workflow', 'automation'],
+      'GTM': ['gtm', 'go-to-market', 'market entry', 'launch', 'strategy', 'positioning'],
+      'Data': ['data', 'analytics', 'metrics', 'reporting', 'insights', 'intelligence', 'dashboard'],
+      'AI': ['ai', 'artificial intelligence', 'machine learning', 'automation', 'chatbot', 'predictive'],
+      'B2B': ['b2b', 'business to business', 'enterprise', 'saas', 'software'],
+      'Demand Generation': ['demand gen', 'lead gen', 'inbound', 'content', 'seo', 'paid ads'],
+      'Content Marketing': ['content', 'blog', 'article', 'video', 'podcast', 'webinar'],
+      'Marketing Strategy': ['strategy', 'planning', 'budget', 'roi', 'attribution'],
+      'Sales Intelligence': ['intelligence', 'research', 'data enrichment', 'contact discovery'],
+      'Compliance Data Strategy': ['compliance', 'gdpr', 'privacy', 'regulation', 'legal'],
+    };
+
+    // Count matches for each category
+    let maxMatches = 0;
+    let selectedCategory = 'General';
+
+    for (const [category, keywords] of Object.entries(categoryKeywords)) {
+      let matches = 0;
+      for (const keyword of keywords) {
+        if (combinedText.includes(keyword)) {
+          matches++;
+        }
+      }
+      if (matches > maxMatches) {
+        maxMatches = matches;
+        selectedCategory = category;
+      }
+    }
+
+    return selectedCategory;
+  };
+
+  /**
+   * Randomly select author from predefined list
+   * Why this matters: Ensures author attribution is distributed across the team for content variety.
+   */
+  const selectRandomAuthor = (): string => {
+    const authors = [
+      'shaun-hinklein',
+      'andy-mccotter-bicknell', 
+      'cam-thompson',
+      'kenny-keesee',
+      'maribeth-daytona',
+      'melanie-maecardeno'
+    ];
+    
+    const randomIndex = Math.floor(Math.random() * authors.length);
+    return authors[randomIndex];
+  };
+
   const openGoogleSheets = async () => {
     const contentToCopy = isEditingContent ? editableContent : generatedContent || row.output || '';
     if (!contentToCopy) {
@@ -1586,16 +1833,26 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
 
     setIsOpeningSheets(true);
     try {
+      // Generate the new metadata fields
+      const urlSlug = generateUrlSlug(row.keyword);
+      const secondaryCategory = determineSecondaryCategory(row.keyword, contentToCopy);
+      const author = selectRandomAuthor();
+
+      // Prepare blog content data for logging with new fields
       const blogData = {
         keyword: row.keyword,
         metaSeoTitle: metaSeoTitle || `${row.keyword} - Complete Guide`,
         metaDescription: metaDescription || `Comprehensive guide about ${row.keyword} with expert insights and actionable tips.`,
         htmlContent: contentToCopy,
-        urlSlug: generateUrlSlug(row.keyword),
-        secondaryCategory: 'General',
-        author: 'apollo-ai'
+        urlSlug: urlSlug,
+        secondaryCategory: secondaryCategory,
+        author: author
       };
-      const result = await googleDocsService.appendBlogData(blogData);
+      
+      // Use the competitor-specific function which creates/uses a spreadsheet titled
+      // "Apollo Competitor Conquesting Content - {date}"
+      const result = await (googleDocsService as any).appendCompetitorData(blogData);
+      
       if (result.success) {
         setSheetsSuccessMessage('Content logged to Google Sheets successfully!');
         setShowSheetsMessage(true);
@@ -1604,9 +1861,80 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       }
     } catch (error) {
       console.error('Error logging to Google Sheets:', error);
-      alert('Google Sheets error. Please try again.');
+      
+      // Show more detailed error message
+      if (error instanceof Error) {
+        alert(`Google Sheets error: ${error.message}`);
+      } else {
+        alert('Google Sheets error. Please try again.');
+      }
     } finally {
       setIsOpeningSheets(false);
+    }
+  };
+
+  /**
+   * publishToCustomCMS
+   * Why this matters: Enables publishing content directly to a CMS like ButterCMS, WordPress, etc.
+   * This gives users a seamless workflow from content generation to publication
+   */
+  const publishToCustomCMS = async (status: 'draft' | 'published' = 'draft') => {
+    if (!generatedContent || !metaSeoTitle) {
+      alert('Please generate content first');
+      return;
+    }
+
+    setIsPublishing(true);
+    setPublishResult(null);
+
+    try {
+      console.log('📰 Publishing content to CMS:', customCMSConfig);
+
+      // Determine backend URL based on environment
+      // Why this matters: Ensures production deployments use the correct backend URL  
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://apollo-reddit-scraper-backend.vercel.app'
+        : 'http://localhost:3003';
+        
+      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/content/publish-to-cms`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: metaSeoTitle,
+          content: generatedContent,
+          meta_title: metaSeoTitle,
+          meta_description: metaDescription,
+          api_endpoint: customCMSConfig.api_endpoint,
+          api_key: customCMSConfig.api_key,
+          cms_type: customCMSConfig.cms_type,
+          status: status
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to publish content');
+      }
+
+      const data = await response.json();
+      
+      setPublishResult({
+        success: true,
+        ...data.publication,
+        demo_mode: data.demo_mode
+      });
+
+      console.log('✅ Publish successful:', data);
+
+    } catch (error) {
+      console.error('Publication error:', error);
+      setPublishResult({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -1724,6 +2052,17 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       setIsEditingContent(false);
       setMetaSeoTitle(parsed.metaSeoTitle);
       setMetaDescription(parsed.metaDescription);
+      
+      // Save meta fields to localStorage for persistence
+      if (parsed.metaSeoTitle || parsed.metaDescription) {
+        try {
+          localStorage.setItem(`apollo_competitor_meta_${row.id}`, JSON.stringify({
+            metaSeoTitle: parsed.metaSeoTitle,
+            metaDescription: parsed.metaDescription
+          }));
+        } catch {}
+      }
+      
       onContentUpdate?.(row.id, parsed.content);
     } catch (e) {
       console.error('Regenerate failed:', e);
@@ -2018,38 +2357,184 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <button
                   onClick={toggleEditMode}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: isEditingContent ? '#10b981' : '#f59e0b', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    padding: '0.75rem 1rem', 
+                    backgroundColor: isEditingContent ? '#10b981' : '#f59e0b', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '0.5rem', 
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    minHeight: '2.75rem',
+                    minWidth: '7.5rem',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease'
+                  }}
                 >
-                  {isEditingContent ? (<><Check size={14} /> Save Changes</>) : (<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit Content</>)}
-                </button>
+                                  {isEditingContent ? (<><Check size={14} /> Save Changes</>) : (<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit Content</>)}
+              </button>
 
-                <button
-                  onClick={openGoogleDocs}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#84ADEA', color: 'black', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
+              {/* Publish to CMS Button */}
+              <button
+                onClick={() => setShowCMSModal(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  minHeight: '2.75rem',
+                  minWidth: '7.5rem',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+              >
+                <Globe size={14} />
+                Publish to CMS
+              </button>
+
+              {/* Open in HTML Button */}
+              <button
+                onClick={openInHTML}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem', 
+                  padding: '0.75rem 1rem', 
+                  backgroundColor: '#7c3aed', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '0.5rem', 
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  minHeight: '2.75rem',
+                  minWidth: '7.5rem',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#6d28d9';
+                  e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#7c3aed';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <svg 
+                    width="14" 
+                    height="14" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
+                    <path d="m6 16 6-12 6 12H6Z"/>
+                    <path d="m8 12 8 0"/>
+                  </svg>
+                  Open in HTML
+              </button>
+
+              <button
+                onClick={openGoogleDocs}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    padding: '0.75rem 1rem', 
+                    backgroundColor: '#84ADEA', 
+                    color: 'black', 
+                    border: 'none', 
+                    borderRadius: '0.5rem', 
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    minHeight: '2.75rem',
+                    minWidth: '12.5rem',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#6b96e8';
+                    e.currentTarget.style.color = 'black';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#84ADEA';
+                    e.currentTarget.style.color = 'black';
+                  }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>
+                  <img 
+                    src="/google-docs-logo.png" 
+                    alt="Google Docs"
+                    style={{
+                      width: '14px',
+                      height: '14px',
+                      objectFit: 'contain'
+                    }}
+                  />
                   Google Docs
                 </button>
 
                 <button
                   onClick={openGoogleSheets}
                   disabled={isOpeningSheets}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: isOpeningSheets ? 'not-allowed' : 'pointer', opacity: isOpeningSheets ? 0.6 : 1 }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    padding: '0.75rem 1rem', 
+                    backgroundColor: '#16a34a', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '0.5rem', 
+                    cursor: isOpeningSheets ? 'not-allowed' : 'pointer', 
+                    opacity: isOpeningSheets ? 0.6 : 1,
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    minHeight: '2.75rem',
+                    minWidth: '7.5rem',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease'
+                  }}
                 >
                   {isOpeningSheets ? <Clock className="animate-spin" size={14} /> : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg>}
                   {isOpeningSheets ? 'Logging to Sheets...' : 'Open in Google Sheets'}
                 </button>
 
                 <button
-                  onClick={openInHTML}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
-                >
-                  <ExternalLink size={14} /> Open in HTML
-            </button>
-
-                <button
                   onClick={copyToClipboard}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    padding: '0.75rem 1rem', 
+                    backgroundColor: '#6b7280', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '0.5rem', 
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    minHeight: '2.75rem',
+                    minWidth: '7.5rem',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease'
+                  }}
                 >
                   <Copy size={14} /> {showCopiedMessage ? 'Copied!' : 'Copy'}
             </button>
@@ -2122,24 +2607,142 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
                     onClick={toggleEditMode}
                     className="content-modal-btn"
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem',
-                      backgroundColor: isEditingContent ? '#10b981' : '#f59e0b', color: 'white', border: 'none',
-                      borderRadius: '0.5rem', cursor: 'pointer'
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem', 
+                      padding: '0.75rem 1rem',
+                      backgroundColor: isEditingContent ? '#10b981' : '#f59e0b', 
+                      color: 'white', 
+                      border: 'none',
+                      borderRadius: '0.5rem', 
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      minHeight: '2.75rem',
+                      minWidth: '7.5rem',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    {isEditingContent ? (<><Check size={14} /> Save Changes</>) : (<>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                      Edit Content
-                    </>)}
-                  </button>
+                                      {isEditingContent ? (<><Check size={14} /> Save Changes</>) : (<>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    Edit Content
+                  </>)}
+                </button>
 
-                  {/* Google Docs */}
+                {/* Publish to CMS Button */}
+                <button
+                  onClick={() => setShowCMSModal(true)}
+                  className="content-modal-btn"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    minHeight: '2.75rem',
+                    minWidth: '7.5rem',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+                >
+                  <Globe size={14} />
+                  Publish to CMS
+                </button>
+
+                {/* Open in HTML */}
+                <button
+                  onClick={openInHTML}
+                  className="content-modal-btn"
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    padding: '0.75rem 1rem', 
+                    backgroundColor: '#7c3aed', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '0.5rem', 
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    minHeight: '2.75rem',
+                    minWidth: '7.5rem',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#6d28d9';
+                    e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#7c3aed';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <svg 
+                    width="14" 
+                    height="14" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
+                    <path d="m6 16 6-12 6 12H6Z"/>
+                    <path d="m8 12 8 0"/>
+                  </svg>
+                  Open in HTML
+                </button>
+
+                {/* Google Docs */}
                   <button
                     onClick={openGoogleDocs}
                     className="content-modal-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#84ADEA', color: 'black', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem', 
+                      padding: '0.75rem 1rem', 
+                      backgroundColor: '#84ADEA', 
+                      color: 'black', 
+                      border: 'none', 
+                      borderRadius: '0.5rem', 
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      minHeight: '2.75rem',
+                      minWidth: '12.5rem',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#6b96e8';
+                      e.currentTarget.style.color = 'black';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#84ADEA';
+                      e.currentTarget.style.color = 'black';
+                    }}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>
+                    <img 
+                      src="/google-docs-logo.png" 
+                      alt="Google Docs"
+                      style={{
+                        width: '14px',
+                        height: '14px',
+                        objectFit: 'contain'
+                      }}
+                    />
                     Google Docs
                   </button>
 
@@ -2148,28 +2751,52 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
                     onClick={openGoogleSheets}
                     disabled={isOpeningSheets}
                     className="content-modal-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: isOpeningSheets ? 'not-allowed' : 'pointer', opacity: isOpeningSheets ? 0.6 : 1 }}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem', 
+                      padding: '0.75rem 1rem', 
+                      backgroundColor: '#16a34a', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '0.5rem', 
+                      cursor: isOpeningSheets ? 'not-allowed' : 'pointer', 
+                      opacity: isOpeningSheets ? 0.6 : 1,
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      minHeight: '2.75rem',
+                      minWidth: '7.5rem',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}
                   >
                     {isOpeningSheets ? <Clock className="animate-spin" size={14} /> : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg>}
                     {isOpeningSheets ? 'Logging to Sheets...' : 'Open in Google Sheets'}
-                  </button>
-
-                  {/* Open in HTML */}
-                  <button
-                    onClick={openInHTML}
-                    className="content-modal-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
-                  >
-                    <ExternalLink size={14} /> Open in HTML
                   </button>
 
                   {/* Copy */}
                   <button
                     onClick={copyToClipboard}
                     className="content-modal-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem', 
+                      padding: '0.75rem 1rem', 
+                      backgroundColor: '#6b7280', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '0.5rem', 
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      minHeight: '2.75rem',
+                      minWidth: '7.5rem',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}
                   >
-                    <Copy size={14} /> Copy
+                    <Copy size={14} /> {showCopiedMessage ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
 
@@ -2205,6 +2832,481 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
         brandKit={resolvedBrandKit}
         insertVariable={insertVariable}
       />
+
+      {/* CMS Integration Modal Component */}
+      {showCMSModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            padding: '2rem',
+            maxWidth: '31.25rem',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>Publish Content to CMS</h3>
+              <button
+                onClick={() => setShowCMSModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {[
+                  { name: 'Webflow', description: 'Publish directly to your Webflow site', logo: '/webflow-logo.png' },
+                  { name: 'Strapi', description: 'Add to your Strapi content library', logo: '/strapi-logo.png' },
+                  { name: 'Contentful', description: 'Create entry in Contentful space', logo: '/contenful-logo.png' },
+                  { name: 'Sanity', description: 'Publish to Sanity Studio', logo: '/sanity-logo.png' },
+                  { name: 'WordPress', description: 'Create WordPress post/page', logo: '/wordpress-logo.png' },
+                  { name: 'Custom', description: 'Configure your own API endpoint', logo: null }
+                ].map((cms) => (
+                  <div
+                    key={cms.name}
+                    style={{
+                      border: '0.0625rem solid #e5e7eb',
+                      borderRadius: '0.75rem',
+                      padding: '1.25rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: 'white',
+                      boxShadow: '0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.05)'
+                    }}
+                    onClick={() => {
+                      if (cms.name === 'Custom') {
+                        setShowCustomCMSForm(true);
+                        setShowCMSModal(false);
+                      } else {
+                        setShowComingSoonMessage(cms.name);
+                        setTimeout(() => setShowComingSoonMessage(null), 3000);
+                      }
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.boxShadow = '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.transform = 'translateY(-0.0625rem)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'white';
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                      e.currentTarget.style.boxShadow = '0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.05)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '1rem',
+                      marginBottom: '0.5rem'
+                    }}>
+                      {cms.logo ? (
+                        <div style={{
+                          width: '2rem',
+                          height: '2rem',
+                          borderRadius: '0.5rem',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: '#f8fafc',
+                          border: '0.0625rem solid #f1f5f9',
+                          flexShrink: 0
+                        }}>
+                          <img 
+                            src={cms.logo} 
+                            alt={`${cms.name} logo`}
+                            style={{
+                              width: '1.5rem',
+                              height: '1.5rem',
+                              objectFit: 'contain'
+                            }}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = `<span style="font-size: 0.75rem; font-weight: 600; color: #64748b;">${cms.name.charAt(0)}</span>`;
+                              }
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div style={{ 
+                          width: '2rem',
+                          height: '2rem',
+                          borderRadius: '0.5rem',
+                          backgroundColor: '#6366f1',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <span style={{
+                            color: 'white',
+                            fontSize: '0.875rem',
+                            fontWeight: '600'
+                          }}>
+                            {cms.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                      <h4 style={{ 
+                        fontWeight: '600', 
+                        margin: 0,
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>
+                        {cms.name}
+                      </h4>
+                    </div>
+                    <p style={{ 
+                      color: '#6b7280', 
+                      fontSize: '0.875rem', 
+                      margin: 0,
+                      paddingLeft: '3rem',
+                      lineHeight: '1.5'
+                    }}>
+                      {cms.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Coming Soon Message */}
+              {showComingSoonMessage && (
+                <div style={{ 
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '1.5rem 2rem',
+                  backgroundColor: '#EBF212',
+                  color: 'black',
+                  borderRadius: '0.75rem',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  boxShadow: '0 0.625rem 1.5625rem -0.1875rem rgba(0, 0, 0, 0.1), 0 0.25rem 0.375rem -0.125rem rgba(0, 0, 0, 0.05)',
+                  zIndex: 10002,
+                  minWidth: '15.625rem',
+                  textAlign: 'center', 
+                  animation: 'fadeInScale 0.2s ease-out'
+                }}>
+                  {showComingSoonMessage} integration coming soon!
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom CMS Form Modal */}
+      {showCustomCMSForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            padding: '2rem',
+            maxWidth: '31.25rem',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
+                🧈 Custom CMS Integration (Demo)
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCustomCMSForm(false);
+                  setPublishResult(null);
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {!publishResult ? (
+              <>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                    CMS Type
+                  </label>
+                  <input
+                    type="text"
+                    value={customCMSConfig.cms_type}
+                    onChange={(e) => setCustomCMSConfig({...customCMSConfig, cms_type: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '0.0625rem solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem'
+                    }}
+                    placeholder="e.g., Butter CMS, WordPress, Custom"
+                  />
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                    API Endpoint
+                  </label>
+                  <input
+                    type="text"
+                    value={customCMSConfig.api_endpoint}
+                    onChange={(e) => setCustomCMSConfig({...customCMSConfig, api_endpoint: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '0.0625rem solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem'
+                    }}
+                    placeholder="https://api.buttercms.com/v2"
+                  />
+                </div>
+
+                <div style={{ marginBottom: '2rem' }}>
+                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                    API Key
+                  </label>
+                  <input
+                    type="text"
+                    value={customCMSConfig.api_key}
+                    onChange={(e) => setCustomCMSConfig({...customCMSConfig, api_key: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '0.0625rem solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem'
+                    }}
+                    placeholder="demo-api-key-12345"
+                  />
+                </div>
+
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '1rem',
+                  justifyContent: 'flex-end'
+                }}>
+                  <button
+                    onClick={() => publishToCustomCMS('draft')}
+                    disabled={isPublishing}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontWeight: '500',
+                      cursor: isPublishing ? 'not-allowed' : 'pointer',
+                      opacity: isPublishing ? 0.6 : 1
+                    }}
+                  >
+                    {isPublishing ? 'Publishing...' : 'Save as Draft'}
+                  </button>
+                  
+                  <button
+                    onClick={() => publishToCustomCMS('published')}
+                    disabled={isPublishing}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontWeight: '500',
+                      cursor: isPublishing ? 'not-allowed' : 'pointer',
+                      opacity: isPublishing ? 0.6 : 1
+                    }}
+                  >
+                    {isPublishing ? 'Publishing...' : 'Publish Live'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                {publishResult.success ? (
+                  <div>
+                    <div style={{ 
+                      fontSize: '3rem', 
+                      marginBottom: '1rem',
+                      color: '#10b981'
+                    }}>
+                      ✅
+                    </div>
+                    <h4 style={{ 
+                      color: '#10b981', 
+                      marginBottom: '1rem',
+                      fontSize: '1.25rem',
+                      fontWeight: '600'
+                    }}>
+                      Content Published Successfully!
+                    </h4>
+                    {publishResult.demo_mode && (
+                      <div style={{ 
+                        backgroundColor: '#fef3c7', 
+                        padding: '1rem', 
+                        borderRadius: '0.5rem',
+                        marginBottom: '1.5rem',
+                        border: '0.0625rem solid #f59e0b'
+                      }}>
+                        <p style={{ 
+                          color: '#92400e', 
+                          margin: 0,
+                          fontSize: '0.875rem',
+                          fontWeight: '500'
+                        }}>
+                          🧈 Demo Mode: This is a simulated CMS publish for demonstration purposes.
+                        </p>
+                      </div>
+                    )}
+                    <div style={{ 
+                      backgroundColor: '#f9fafb', 
+                      padding: '1.5rem', 
+                      borderRadius: '0.5rem',
+                      textAlign: 'left',
+                      marginBottom: '1.5rem'
+                    }}>
+                      <h5 style={{ margin: '0 0 1rem 0', color: '#374151', fontSize: '1rem' }}>Publication Details:</h5>
+                      <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                        <p style={{ margin: '0.5rem 0' }}><strong>CMS:</strong> {publishResult.cms_type}</p>
+                        <p style={{ margin: '0.5rem 0' }}><strong>Status:</strong> {publishResult.status}</p>
+                        <p style={{ margin: '0.5rem 0' }}><strong>ID:</strong> {publishResult.id}</p>
+                        {publishResult.url && (
+                          <p style={{ margin: '0.5rem 0' }}>
+                            <strong>URL:</strong> 
+                            <a 
+                              href={publishResult.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ 
+                                color: '#3b82f6', 
+                                textDecoration: 'underline',
+                                marginLeft: '0.5rem'
+                              }}
+                            >
+                              {publishResult.url}
+                            </a>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        setShowCustomCMSForm(false);
+                        setPublishResult(null);
+                      }}
+                      style={{
+                        padding: '0.75rem 2rem',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ 
+                      fontSize: '3rem', 
+                      marginBottom: '1rem',
+                      color: '#dc2626'
+                    }}>
+                      ❌
+                    </div>
+                    <h4 style={{ 
+                      color: '#dc2626', 
+                      marginBottom: '1rem',
+                      fontSize: '1.25rem',
+                      fontWeight: '600'
+                    }}>
+                      Publication Failed
+                    </h4>
+                    <p style={{ 
+                      color: '#6b7280', 
+                      marginBottom: '2rem',
+                      fontSize: '0.875rem'
+                    }}>
+                      {publishResult.error || 'An unknown error occurred'}
+                    </p>
+                    
+                    <button
+                      onClick={() => setPublishResult(null)}
+                      style={{
+                        padding: '0.75rem 2rem',
+                        backgroundColor: '#dc2626',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        marginRight: '1rem'
+                      }}
+                    >
+                      Try Again
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setShowCustomCMSForm(false);
+                        setPublishResult(null);
+                      }}
+                      style={{
+                        padding: '0.75rem 2rem',
+                        backgroundColor: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 };
