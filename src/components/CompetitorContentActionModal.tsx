@@ -1838,9 +1838,8 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       const secondaryCategory = determineSecondaryCategory(row.keyword, contentToCopy);
       const author = selectRandomAuthor();
 
-      // Prepare blog content data for logging with new fields
+      // Prepare blog content data for logging with new fields (keyword removed)
       const blogData = {
-        keyword: row.keyword,
         metaSeoTitle: metaSeoTitle || `${row.keyword} - Complete Guide`,
         metaDescription: metaDescription || `Comprehensive guide about ${row.keyword} with expert insights and actionable tips.`,
         htmlContent: contentToCopy,
