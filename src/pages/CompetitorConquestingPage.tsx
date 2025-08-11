@@ -131,10 +131,13 @@ const CompetitorConquestingPage: React.FC = () => {
     const candidates: string[] = (() => {
       const list: string[] = [];
       if (csvUrl.includes('/competitors/cognism.csv')) {
-        // Use centralized API configuration
+        // Try direct public folder access first, then backend endpoint
+        // Why this matters: In production, we serve the CSV directly from frontend's public folder
+        // to avoid backend timeouts and cross-origin issues
+        list.push(new URL('/competitors/cognism.csv', window.location.origin).toString());
+        // Fallback to backend endpoint if direct access fails
         const backendUrl = API_ENDPOINTS.competitorCsvCognism;
         list.push(backendUrl);
-        list.push(new URL('/competitors/cognism.csv', window.location.origin).toString());
       } else if (/^https?:\/\//i.test(csvUrl)) {
         list.push(csvUrl);
       } else {
@@ -592,6 +595,9 @@ const CompetitorConquestingPage: React.FC = () => {
 
 
         
+      // Use a 55-second timeout for Vercel's 60-second limit
+      // Why this matters: Vercel functions have a max duration of 60 seconds,
+      // so we set client timeout to 55 seconds to avoid gateway timeouts
       const resp = await axios.post(API_ENDPOINTS.competitorGenerateContent, {
         keyword: row.keyword,
         url: row.url,
@@ -600,7 +606,8 @@ const CompetitorConquestingPage: React.FC = () => {
         content_length: 'medium',
         focus_areas: []
       }, {
-        signal: controller.signal
+        signal: controller.signal,
+        timeout: 55000 // 55 seconds timeout
       });
       
       const data = resp.data?.data || resp.data;
@@ -636,7 +643,9 @@ const CompetitorConquestingPage: React.FC = () => {
         
         // Enhanced error handling like BlogCreatorPage
         let errorMessage = 'Generation failed';
-        if (err?.response?.status === 429) {
+        if (err?.response?.status === 504 || err?.code === 'ECONNABORTED') {
+          errorMessage = 'Request timed out. Content generation takes longer than 60 seconds. Please try with shorter content or simpler prompts.';
+        } else if (err?.response?.status === 429) {
           errorMessage = 'Rate limit exceeded. Please try again in a moment.';
         } else if (err?.response?.status >= 500) {
           errorMessage = 'Server error. Please try again.';
