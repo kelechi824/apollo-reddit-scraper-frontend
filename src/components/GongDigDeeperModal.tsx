@@ -9,7 +9,7 @@ import {
   GongAnalyzedCall 
 } from '../types';
 import { chatHistoryService } from '../services/chatHistoryService';
-import { API_ENDPOINTS, buildApiUrl } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 interface GongDigDeeperModalProps {
   isOpen: boolean;
