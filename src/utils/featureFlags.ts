@@ -8,6 +8,7 @@ export interface FeatureFlags {
   showBrandKit: boolean;
   showGongFullConversationTab: boolean;
   showPreviewArticle: boolean;
+  showConcurrentExecution: boolean; // Controls visibility of "Run 5 Rows Concurrently" feature
 }
 
 export const FEATURE_FLAGS: FeatureFlags = {
@@ -19,4 +20,5 @@ export const FEATURE_FLAGS: FeatureFlags = {
   showBrandKit: true,
   showGongFullConversationTab: false, // Hide until transcript data is available
   showPreviewArticle: false, // Hide Preview Article button functionality
+  showConcurrentExecution: false, // Hide concurrent execution feature for now
 }; 

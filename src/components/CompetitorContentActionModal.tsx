@@ -14,6 +14,8 @@ interface CompetitorRowBasic {
   metadata?: {
     title: string;
     description: string;
+    metaSeoTitle?: string;
+    metaDescription?: string;
     word_count: number;
     seo_optimized: boolean;
     citations_included: boolean;
@@ -320,10 +322,33 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
    */
   function generateFallbackTitle(keyword: string): string {
     const k = keyword.trim();
-    return `${k.charAt(0).toUpperCase() + k.slice(1)} - Complete Guide | Apollo`;
+    // AEO-optimized fallback: question format or clear topic statement
+    // Why this matters: AI engines prefer clear, intent-matching titles without hyperbole
+    console.log('⚠️ Using fallback title generation for keyword:', k);
+    if (k.toLowerCase().startsWith('what') || k.toLowerCase().startsWith('how')) {
+      return `${k.charAt(0).toUpperCase() + k.slice(1)} | Apollo`;
+    }
+    // Use more varied, natural formats
+    const formats = [
+      `${k.charAt(0).toUpperCase() + k.slice(1)} for B2B Teams | Apollo`,
+      `Understanding ${k.charAt(0).toUpperCase() + k.slice(1)} in Sales | Apollo`,
+      `${k.charAt(0).toUpperCase() + k.slice(1)}: Practical Guide | Apollo`
+    ];
+    return formats[Math.floor(Math.random() * formats.length)];
   }
   function generateFallbackDescription(keyword: string): string {
-    return `Comprehensive guide to ${keyword} with expert insights and proven strategies. Learn data-driven approaches to drive results with Apollo.`;
+    // AEO-optimized fallback: direct value statement without made-up claims
+    // Why this matters: AI engines penalize unverifiable claims and prefer factual descriptions
+    const k = keyword.trim().toLowerCase();
+    console.log('⚠️ Using fallback description generation for keyword:', k);
+    // Use more varied, natural descriptions
+    const templates = [
+      `Explore ${k} strategies and implementation approaches for B2B sales teams. Apollo provides tools and insights to optimize your ${k} processes.`,
+      `Practical ${k} techniques for sales organizations. See how Apollo's platform enables teams to implement and scale ${k} effectively.`,
+      `${k.charAt(0).toUpperCase() + k.slice(1)} fundamentals and best practices for modern sales teams. Apollo helps streamline ${k} workflows and drive results.`
+    ];
+    // Note: For SEO, descriptions should ideally be 150-160 characters, but we show full content in UI for user review
+    return templates[Math.floor(Math.random() * templates.length)];
   }
 
   // Load initial content from row
@@ -810,9 +835,29 @@ CRITICAL CONTENT REQUIREMENTS:
 CRITICAL OUTPUT FORMAT: Respond with a JSON object containing exactly three fields:
 {
   "content": "Complete HTML article with proper structure, tables, and brand kit variables processed",
-  "metaSeoTitle": "SEO-optimized title (<= 70 characters including | Apollo)",
-  "metaDescription": "Compelling meta description (150-160 characters) that avoids formulaic phrases"
+  "metaSeoTitle": "AEO-optimized title for AI search engines (<= 60 characters + ' | Apollo')",
+  "metaDescription": "Natural, value-focused description (150-160 chars) optimized for AI search extraction"
 }
+
+META FIELD REQUIREMENTS FOR AI SEARCH OPTIMIZATION:
+- metaSeoTitle: Create titles that AI engines will cite as authoritative sources
+  * Format: "[Primary Keyword]: [Specific Context]" or "What is [Keyword]? [Clear Answer]"
+  * NEVER invent statistics or percentages
+  * Focus on clarity and search intent matching
+  * Maximum 60 characters plus " | Apollo" (total <= 70 chars)
+  
+- metaDescription: Write naturally for AI comprehension and extraction
+  * Start with a direct answer or value statement
+  * Include semantic keyword variations
+  * End with a specific, actionable insight
+  * NO made-up numbers, NO marketing hyperbole
+  * Exactly 150-160 characters
+
+FORBIDDEN IN META FIELDS:
+- Invented statistics ("3x growth", "47% increase")
+- Cliché openings ("Discover", "Learn how", "Master")
+- Vague promises ("proven strategies", "comprehensive guide")
+- Superlatives without evidence ("best", "ultimate", "revolutionary")
 
 CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
 - Start response with { and end with }
@@ -821,9 +866,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
 - NO explanations like "Here is your JSON:"
 - Put ALL HTML inside the content field as a properly escaped JSON string
 - Escape ALL quotes with backslashes (\\" not ")
-- Do NOT include literal newlines or unescaped quotes in JSON strings
-- metaSeoTitle MUST be <= 70 characters including "| Apollo"
-- metaDescription MUST be 150-160 characters`;
+- Do NOT include literal newlines or unescaped quotes in JSON strings`;
 
     setSystemPrompt(systemPromptTemplate);
     setUserPrompt(userPromptTemplate);
@@ -840,7 +883,14 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     console.log('🔄 Content length:', content.length, 'characters');
     
     // Check if meta fields are already in row.metadata (from backend)
-    const metadataHasMeta = (row.metadata as any)?.metaSeoTitle || (row.metadata as any)?.metaDescription;
+    const metadataHasMeta = row.metadata?.metaSeoTitle || row.metadata?.metaDescription;
+    console.log('🔍 Checking for meta fields in row.metadata:', {
+      hasMetaSeoTitle: !!row.metadata?.metaSeoTitle,
+      hasMetaDescription: !!row.metadata?.metaDescription,
+      metaSeoTitle: row.metadata?.metaSeoTitle,
+      metaDescription: row.metadata?.metaDescription,
+      fullMetadata: row.metadata
+    });
     
     // Parse the existing content to extract meta fields if present
     const parsed = parseAIResponse(content);
@@ -851,7 +901,9 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       hasHTMLTags: parsed.content.includes('<h1>') || parsed.content.includes('<p>'),
       originalSample: content.substring(0, 200),
       parsedSample: parsed.content.substring(0, 200),
-      metadataHasMeta
+      metadataHasMeta,
+      parsedMetaSeoTitle: parsed.metaSeoTitle,
+      parsedMetaDescription: parsed.metaDescription
     });
     
     // Convert to HTML if content appears to be in markdown format
@@ -875,19 +927,29 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     setIsEditingContent(false);
     
     // Set meta fields from metadata first, then parsed content, then fallbacks
-    if ((row.metadata as any)?.metaSeoTitle) {
-      setMetaSeoTitle((row.metadata as any).metaSeoTitle);
-    } else if (parsed.metaSeoTitle) {
+    // Why this matters: We prioritize AI-generated meta fields from the backend over fallbacks
+    const hasMetaTitle = row.metadata?.metaSeoTitle && row.metadata.metaSeoTitle.length > 0;
+    const hasMetaDesc = row.metadata?.metaDescription && row.metadata.metaDescription.length > 0;
+    
+    if (hasMetaTitle && row.metadata?.metaSeoTitle) {
+      console.log('✅ Using AI-generated meta title from metadata:', row.metadata.metaSeoTitle);
+      setMetaSeoTitle(row.metadata.metaSeoTitle);
+    } else if (parsed.metaSeoTitle && parsed.metaSeoTitle !== generateFallbackTitle(row.keyword)) {
+      console.log('✅ Using AI-generated meta title from parsed content:', parsed.metaSeoTitle);
       setMetaSeoTitle(parsed.metaSeoTitle);
     } else {
+      console.log('⚠️ Using fallback meta title - AI generation may have failed');
       setMetaSeoTitle(generateFallbackTitle(row.keyword));
     }
     
-    if ((row.metadata as any)?.metaDescription) {
-      setMetaDescription((row.metadata as any).metaDescription);
-    } else if (parsed.metaDescription) {
+    if (hasMetaDesc && row.metadata?.metaDescription) {
+      console.log('✅ Using AI-generated meta description from metadata:', row.metadata.metaDescription);
+      setMetaDescription(row.metadata.metaDescription);
+    } else if (parsed.metaDescription && parsed.metaDescription !== generateFallbackDescription(row.keyword)) {
+      console.log('✅ Using AI-generated meta description from parsed content:', parsed.metaDescription);
       setMetaDescription(parsed.metaDescription);
     } else {
+      console.log('⚠️ Using fallback meta description - AI generation may have failed');
       setMetaDescription(generateFallbackDescription(row.keyword));
     }
       
@@ -1681,8 +1743,8 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
           
           return {
             content: hasContent ? cleanAIContent(parsed.content) : cleanAIContent(responseText),
-            metaSeoTitle: hasTitle ? parsed.metaSeoTitle : '', // Let AI generate proper length titles
-            metaDescription: hasDescription ? parsed.metaDescription.substring(0, 160) : '' // Limit to 160 chars
+            metaSeoTitle: hasTitle ? parsed.metaSeoTitle : generateFallbackTitle(row.keyword), // Use fallback if no AI title
+            metaDescription: hasDescription ? parsed.metaDescription : generateFallbackDescription(row.keyword) // Use fallback if no AI description
           };
         } else {
           console.log('❌ Parsed object missing required fields');
@@ -1710,7 +1772,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     }
     
     if (descMatch) {
-      extractedDescription = descMatch[1].substring(0, 160);
+      extractedDescription = descMatch[1];
       console.log('🔍 Extracted description via regex:', extractedDescription);
     }
     
@@ -1720,8 +1782,8 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     
     return {
       content: cleanedContent,
-      metaSeoTitle: extractedTitle,
-      metaDescription: extractedDescription
+      metaSeoTitle: extractedTitle || generateFallbackTitle(row.keyword),
+      metaDescription: extractedDescription || generateFallbackDescription(row.keyword)
     };
   };
 
@@ -2536,32 +2598,58 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
               <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.75rem', padding: '2rem', minHeight: '25rem', backgroundColor: 'white' }}>
                 {(metaSeoTitle || metaDescription) && (
                   <div style={{ marginBottom: '2rem' }}>
-                    {metaSeoTitle && (
+                                        {metaSeoTitle && (
                       <div style={{ marginBottom: '1rem', position: 'relative' }}>
-                        <strong>Meta SEO Title:</strong> {metaSeoTitle}
-                        <button
-                          onClick={copyMetaTitle}
-                          style={{ marginLeft: '0.5rem', padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: '#f3f4f6', border: '1px solid #10b981', borderRadius: '0.375rem', cursor: 'pointer', color: '#10b981' }}
-                        >
-                          Copy
-                        </button>
-                        {showMetaTitleCopied && (
-                          <span style={{ marginLeft: '0.5rem', color: '#10b981', fontSize: '0.75rem' }}>Copied!</span>
-            )}
-          </div>
+                        <div style={{ marginBottom: '0.5rem' }}>
+                          <strong>Meta SEO Title:</strong>
+                          <button
+                            onClick={copyMetaTitle}
+                            style={{ marginLeft: '0.5rem', padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: '#f3f4f6', border: '1px solid #10b981', borderRadius: '0.375rem', cursor: 'pointer', color: '#10b981' }}
+                          >
+                            Copy
+                          </button>
+                          {showMetaTitleCopied && (
+                            <span style={{ marginLeft: '0.5rem', color: '#10b981', fontSize: '0.75rem' }}>Copied!</span>
+                          )}
+                        </div>
+                        <div style={{ 
+                          padding: '0.75rem', 
+                          backgroundColor: '#f9fafb', 
+                          borderRadius: '0.375rem', 
+                          border: '1px solid #e5e7eb', 
+                          wordWrap: 'break-word', 
+                          whiteSpace: 'pre-wrap',
+                          lineHeight: '1.5'
+                        }}>
+                          {metaSeoTitle}
+                        </div>
+                      </div>
                     )}
                     {metaDescription && (
                       <div style={{ marginBottom: '1rem', position: 'relative' }}>
-                        <strong>Meta Description:</strong> {metaDescription}
-            <button
-                          onClick={copyMetaDescription}
-                          style={{ marginLeft: '0.5rem', padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: '#f3f4f6', border: '1px solid #10b981', borderRadius: '0.375rem', cursor: 'pointer', color: '#10b981' }}
-            >
-                          Copy
-            </button>
-                        {showMetaDescCopied && (
-                          <span style={{ marginLeft: '0.5rem', color: '#10b981', fontSize: '0.75rem' }}>Copied!</span>
-                        )}
+                        <div style={{ marginBottom: '0.5rem' }}>
+                          <strong>Meta Description:</strong>
+                          <button
+                            onClick={copyMetaDescription}
+                            style={{ marginLeft: '0.5rem', padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: '#f3f4f6', border: '1px solid #10b981', borderRadius: '0.375rem', cursor: 'pointer', color: '#10b981' }}
+                          >
+                            Copy
+                          </button>
+                          {showMetaDescCopied && (
+                            <span style={{ marginLeft: '0.5rem', color: '#10b981', fontSize: '0.75rem' }}>Copied!</span>
+                          )}
+                        </div>
+                        <div style={{ 
+                          padding: '0.75rem', 
+                          backgroundColor: '#f9fafb', 
+                          borderRadius: '0.375rem', 
+                          border: '1px solid #e5e7eb', 
+                          wordWrap: 'break-word', 
+                          whiteSpace: 'pre-wrap',
+                          lineHeight: '1.5'
+                        }}>
+                          {metaDescription}
+                        </div>
                       </div>
                     )}
                     <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '1.5rem 0' }} />

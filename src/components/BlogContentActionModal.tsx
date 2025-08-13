@@ -753,7 +753,7 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
           return {
             content: hasContent ? cleanAIContent(parsed.content) : cleanAIContent(responseText),
             metaSeoTitle: hasTitle ? parsed.metaSeoTitle : '', // Let AI generate proper length titles
-            metaDescription: hasDescription ? parsed.metaDescription.substring(0, 160) : '' // Limit to 160 chars
+            metaDescription: hasDescription ? parsed.metaDescription : '' // Show full AI-generated description
           };
         } else {
           console.log('❌ Parsed object missing required fields');
@@ -781,7 +781,7 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
     }
     
     if (descMatch) {
-      extractedDescription = descMatch[1].substring(0, 160);
+      extractedDescription = descMatch[1];
       console.log('🔍 Extracted description via regex:', extractedDescription);
     }
     
@@ -2918,92 +2918,118 @@ Return ONLY the JSON object with the three required fields. No additional text o
                     <div style={{ marginBottom: '2rem' }}>
                       {metaSeoTitle && (
                         <div style={{ marginBottom: '1rem', position: 'relative' }}>
-                          <strong>Meta SEO Title:</strong> {metaSeoTitle}
-                          <button
-                            onClick={copyMetaTitle}
-                            style={{
-                              marginLeft: '0.5rem',
-                              padding: '0.25rem 0.5rem',
-                              fontSize: '0.75rem',
-                              backgroundColor: '#f3f4f6',
-                              border: '0.0625rem solid #10b981',
-                              borderRadius: '0.375rem',
-                              cursor: 'pointer',
-                              color: '#10b981'
-                            }}
-                          >
-                            Copy
-                          </button>
-                          
-                          {/* Copied message for meta title */}
-                          {showMetaTitleCopied && (
-                            <div style={{
-                              position: 'absolute',
-                              top: '50%',
-                              left: '100%',
-                              transform: 'translate(0.5rem, -50%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.375rem',
-                              padding: '0.5rem 0.75rem',
-                              backgroundColor: '#10b981',
-                              color: 'white',
-                              borderRadius: '0.375rem',
-                              fontSize: '0.75rem',
-                              fontWeight: '500',
-                              whiteSpace: 'nowrap',
-                              boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
-                              zIndex: 1000
-                            }}>
-                              <Check style={{ width: '0.875rem', height: '0.875rem' }} />
-                              Copied!
-                            </div>
-                          )}
+                          <div style={{ marginBottom: '0.5rem' }}>
+                            <strong>Meta SEO Title:</strong>
+                            <button
+                              onClick={copyMetaTitle}
+                              style={{
+                                marginLeft: '0.5rem',
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.75rem',
+                                backgroundColor: '#f3f4f6',
+                                border: '0.0625rem solid #10b981',
+                                borderRadius: '0.375rem',
+                                cursor: 'pointer',
+                                color: '#10b981'
+                              }}
+                            >
+                              Copy
+                            </button>
+                            
+                            {/* Copied message for meta title */}
+                            {showMetaTitleCopied && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '100%',
+                                transform: 'translate(0.5rem, -50%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                padding: '0.5rem 0.75rem',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                borderRadius: '0.375rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                                zIndex: 1000
+                              }}>
+                                <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                                Copied!
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ 
+                            padding: '0.75rem', 
+                            backgroundColor: '#f9fafb', 
+                            borderRadius: '0.375rem', 
+                            border: '1px solid #e5e7eb', 
+                            wordWrap: 'break-word', 
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: '1.5'
+                          }}>
+                            {metaSeoTitle}
+                          </div>
                         </div>
                       )}
                       {metaDescription && (
                         <div style={{ marginBottom: '1rem', position: 'relative' }}>
-                          <strong>Meta Description:</strong> {metaDescription}
-                          <button
-                            onClick={copyMetaDescription}
-                            style={{
-                              marginLeft: '0.5rem',
-                              padding: '0.25rem 0.5rem',
-                              fontSize: '0.75rem',
-                              backgroundColor: '#f3f4f6',
-                              border: '0.0625rem solid #10b981',
-                              borderRadius: '0.375rem',
-                              cursor: 'pointer',
-                              color: '#10b981'
-                            }}
-                          >
-                            Copy
-                          </button>
-                          
-                          {/* Copied message for meta description */}
-                          {showMetaDescCopied && (
-                            <div style={{
-                              position: 'absolute',
-                              top: '50%',
-                              left: '100%',
-                              transform: 'translate(0.5rem, -50%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.375rem',
-                              padding: '0.5rem 0.75rem',
-                              backgroundColor: '#10b981',
-                              color: 'white',
-                              borderRadius: '0.375rem',
-                              fontSize: '0.75rem',
-                              fontWeight: '500',
-                              whiteSpace: 'nowrap',
-                              boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
-                              zIndex: 1000
-                            }}>
-                              <Check style={{ width: '0.875rem', height: '0.875rem' }} />
-                              Copied!
-                            </div>
-                          )}
+                          <div style={{ marginBottom: '0.5rem' }}>
+                            <strong>Meta Description:</strong>
+                            <button
+                              onClick={copyMetaDescription}
+                              style={{
+                                marginLeft: '0.5rem',
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.75rem',
+                                backgroundColor: '#f3f4f6',
+                                border: '0.0625rem solid #10b981',
+                                borderRadius: '0.375rem',
+                                cursor: 'pointer',
+                                color: '#10b981'
+                              }}
+                            >
+                              Copy
+                            </button>
+                            
+                            {/* Copied message for meta description */}
+                            {showMetaDescCopied && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '100%',
+                                transform: 'translate(0.5rem, -50%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                padding: '0.5rem 0.75rem',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                borderRadius: '0.375rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1)',
+                                zIndex: 1000
+                              }}>
+                                <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                                Copied!
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ 
+                            padding: '0.75rem', 
+                            backgroundColor: '#f9fafb', 
+                            borderRadius: '0.375rem', 
+                            border: '1px solid #e5e7eb', 
+                            wordWrap: 'break-word', 
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: '1.5'
+                          }}>
+                            {metaDescription}
+                          </div>
                         </div>
                       )}
                       <hr style={{ border: 'none', borderTop: '0.0625rem solid #e5e7eb', margin: '1.5rem 0' }} />

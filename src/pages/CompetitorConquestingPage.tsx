@@ -5,6 +5,7 @@ import axios from 'axios';
 import BackendDetailsPopup from '../components/BackendDetailsPopup';
 import CompetitorContentActionModal from '../components/CompetitorContentActionModal';
 import { API_ENDPOINTS, buildApiUrl } from '../config/api';
+import { FEATURE_FLAGS } from '../utils/featureFlags';
 
 type RowStatus = 'idle' | 'queued' | 'running' | 'completed' | 'error';
 
@@ -21,6 +22,8 @@ interface CompetitorRow {
   metadata?: {
     title: string;
     description: string;
+    metaSeoTitle?: string;
+    metaDescription?: string;
     word_count: number;
     seo_optimized: boolean;
     citations_included: boolean;
@@ -392,6 +395,11 @@ const CompetitorConquestingPage: React.FC = () => {
    * Why this matters: Processes many rows efficiently while respecting API limits (max 3 concurrent).
    */
   const runBulkExecution = async (targetRowIds?: string[]) => {
+    // Debug logging for concurrent bulk execution
+    console.log('🔍 [CONCURRENT BULK DEBUG] Starting concurrent bulk execution:');
+    console.log(`  • selectedCompetitor: "${selectedCompetitor}" (type: ${typeof selectedCompetitor})`);
+    console.log(`  • targetRowIds:`, targetRowIds);
+    
     const queue = (targetRowIds && targetRowIds.length > 0 ? targetRowIds : rows.map(r => r.id)).filter(id => {
       const row = rows.find(r => r.id === id);
       // Only process rows that are not running AND not completed (idle, error, or queued)
@@ -399,6 +407,8 @@ const CompetitorConquestingPage: React.FC = () => {
     });
     // Only process up to 5 at a time even if more were passed in
     const limitedQueue = queue.slice(0, 5);
+    
+    console.log(`🔍 [CONCURRENT BULK DEBUG] Queue processed: ${limitedQueue.length} rows to execute`);
     if (limitedQueue.length === 0) return;
 
     setBulkStatus({ isRunning: true, total: limitedQueue.length, completed: 0, failed: 0 });
@@ -441,11 +451,18 @@ const CompetitorConquestingPage: React.FC = () => {
    * "Run Selected" so long, multi-row batches don’t overwhelm the backend.
    */
   const runBulkExecutionSequential = async (targetRowIds?: string[]) => {
+    // Debug logging for bulk execution
+    console.log('🔍 [BULK DEBUG] Starting bulk execution:');
+    console.log(`  • selectedCompetitor: "${selectedCompetitor}" (type: ${typeof selectedCompetitor})`);
+    console.log(`  • targetRowIds:`, targetRowIds);
+    
     const queue = (targetRowIds && targetRowIds.length > 0 ? targetRowIds : rows.map(r => r.id)).filter(id => {
       const row = rows.find(r => r.id === id);
       // Only process rows that are not running AND not completed (idle, error, or queued)
       return row && row.status !== 'running' && row.status !== 'completed';
     });
+    
+    console.log(`🔍 [BULK DEBUG] Queue processed: ${queue.length} rows to execute`);
     if (queue.length === 0) return;
 
     setBulkStatus({ isRunning: true, total: queue.length, completed: 0, failed: 0 });
@@ -600,15 +617,26 @@ const CompetitorConquestingPage: React.FC = () => {
       // Why this matters: Content generation often takes longer than 60 seconds,
       // so we use async endpoints with job polling for reliable generation
       
+      // Debug logging to trace UTM parameter flow
+      console.log('🔍 [FRONTEND DEBUG] About to send request:');
+      console.log(`  • selectedCompetitor: "${selectedCompetitor}" (type: ${typeof selectedCompetitor})`);
+      console.log(`  • keyword: "${row.keyword}"`);
+      console.log(`  • url: "${row.url}"`);
+
       // Start async generation
-      const asyncResp = await axios.post(API_ENDPOINTS.competitorGenerateContentAsync, {
+      const requestPayload = {
         keyword: row.keyword,
         url: row.url,
+        competitor: selectedCompetitor, // Pass competitor for UTM tracking
         brand_kit: brandKit,
         target_audience: '',
         content_length: 'medium',
         focus_areas: []
-      }, {
+      };
+      
+      console.log('🔍 [FRONTEND DEBUG] Full request payload:', requestPayload);
+      
+      const asyncResp = await axios.post(API_ENDPOINTS.competitorGenerateContentAsync, requestPayload, {
         signal: controller.signal
       });
       
@@ -695,6 +723,8 @@ const CompetitorConquestingPage: React.FC = () => {
               metadata: {
                 title: metadata.title || `${row.keyword} - Competitor Conquesting`,
                 description: metadata.description || `Outranking competitor for ${row.keyword}`,
+                metaSeoTitle: metadata.metaSeoTitle || undefined, // Include AI-generated meta title
+                metaDescription: metadata.metaDescription || undefined, // Include AI-generated meta description
                 word_count: metadata.word_count || 0,
                 seo_optimized: metadata.seo_optimized || true,
                 citations_included: metadata.citations_included || false,
@@ -933,9 +963,11 @@ const CompetitorConquestingPage: React.FC = () => {
               Resume ({sequentialRemaining.length})
             </button>
           ) : null}
-          <button onClick={() => runBulkExecution()} disabled={bulkStatus.isRunning || rows.length === 0} style={{ padding: '0.4rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', background: bulkStatus.isRunning ? '#e5e7eb' : '#fff', cursor: bulkStatus.isRunning ? 'not-allowed' : 'pointer' }}>
-            Run 5 Rows Concurrently
-          </button>
+          {FEATURE_FLAGS.showConcurrentExecution && (
+            <button onClick={() => runBulkExecution()} disabled={bulkStatus.isRunning || rows.length === 0} style={{ padding: '0.4rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', background: bulkStatus.isRunning ? '#e5e7eb' : '#fff', cursor: bulkStatus.isRunning ? 'not-allowed' : 'pointer' }}>
+              Run 5 Rows Concurrently
+            </button>
+          )}
           {bulkStatus.isRunning && (
             <span style={{ fontSize: '0.8rem', color: '#2563eb' }}>
               {bulkStatus.completed + bulkStatus.failed}/{bulkStatus.total} done
