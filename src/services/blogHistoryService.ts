@@ -41,12 +41,12 @@ export const saveBlogToHistory = (blogData: {
     // Generate word count
     const wordCount = countWords(blogData.content);
     
-    // Create history item
+    // Create history item with truncated content to save space
     const historyItem: BlogHistoryItem = {
       id: generateHistoryId(),
       keyword: blogData.keyword,
       title: blogData.title || `Blog Post: ${blogData.keyword}`,
-      content: blogData.content,
+      content: blogData.content.length > 2000 ? blogData.content.substring(0, 2000) + '...[truncated for storage]' : blogData.content,
       metaDescription: blogData.metaDescription || '',
       timestamp: new Date().toISOString(),
       wordCount,
@@ -67,10 +67,25 @@ export const saveBlogToHistory = (blogData: {
     );
 
     if (!isDuplicate) {
-      const updatedHistory = [historyItem, ...existingHistory];
-      localStorage.setItem(BLOG_HISTORY_KEY, JSON.stringify(updatedHistory));
+      // Limit history to 30 items max to prevent quota issues
+      const limitedHistory = existingHistory.slice(0, 29);
+      const updatedHistory = [historyItem, ...limitedHistory];
       
-      console.log(`Blog content saved to history: ${blogData.keyword}`);
+      try {
+        localStorage.setItem(BLOG_HISTORY_KEY, JSON.stringify(updatedHistory));
+        console.log(`Blog content saved to history: ${blogData.keyword} (content truncated for storage)`);
+      } catch (storageError) {
+        if (storageError instanceof Error && storageError.name === 'QuotaExceededError') {
+          console.log('Storage quota exceeded, clearing old history items and retrying...');
+          // Keep only 10 most recent items and retry
+          const clearHistory = existingHistory.slice(0, 9);
+          const retryHistory = [historyItem, ...clearHistory];
+          localStorage.setItem(BLOG_HISTORY_KEY, JSON.stringify(retryHistory));
+          console.log('Cleared old history items and saved successfully');
+        } else {
+          throw storageError;
+        }
+      }
     } else {
       console.log(`Duplicate blog content not saved: ${blogData.keyword}`);
     }

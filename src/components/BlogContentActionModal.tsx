@@ -16,6 +16,8 @@ interface KeywordRow {
   metadata?: {
     title: string;
     description: string;
+    metaSeoTitle?: string;
+    metaDescription?: string;
     word_count: number;
     seo_optimized: boolean;
     citations_included: boolean;
@@ -817,26 +819,31 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       console.log('📊 Initializing BlogContentActionModal with fresh content for keyword:', keywordRow.keyword);
       console.log('🔄 Fresh content length:', content.length, 'characters');
       
-      // Generate AI-powered meta fields from keyword and content
-      // Why this matters: Creates dynamic, contextually relevant meta fields instead of templates
-      console.log('🚀 Starting AI meta field generation...');
-      generateAIMetaFields(keywordRow.keyword, content).then(metaFields => {
-        console.log('✅ Generated AI meta fields:', metaFields);
-        setMetaSeoTitle(metaFields.metaSeoTitle);
-        setMetaDescription(metaFields.metaDescription);
-        // Auto-save the generated meta fields
-        autoSaveContent(content, metaFields.metaSeoTitle, metaFields.metaDescription);
-      }).catch(error => {
-        console.error('❌ Failed to generate AI meta fields - falling back to templates:', error);
-        console.error('❌ Error details:', error.message || error);
-        // Use simple fallbacks if AI generation fails
-        const fallbackTitle = generateFallbackTitle(keywordRow.keyword);
-        const fallbackDescription = generateFallbackDescription(keywordRow.keyword);
-        setMetaSeoTitle(fallbackTitle);
-        setMetaDescription(fallbackDescription);
-        // Auto-save the fallback meta fields
-        autoSaveContent(content, fallbackTitle, fallbackDescription);
-      });
+      // Check if meta fields are already available (from row.metadata or localStorage)
+      // Why this matters: Avoids redundant API calls and prevents modal lag
+      const existingMetaTitle = keywordRow.metadata?.metaSeoTitle || keywordRow.metadata?.title || '';
+      const existingMetaDesc = keywordRow.metadata?.metaDescription || keywordRow.metadata?.description || '';
+      
+      if (existingMetaTitle || existingMetaDesc) {
+        console.log('✅ Loading existing meta fields from row.metadata');
+        setMetaSeoTitle(existingMetaTitle);
+        setMetaDescription(existingMetaDesc);
+      } else {
+        // Try loading from localStorage as fallback
+        try {
+          const savedMeta = localStorage.getItem(`apollo_blog_meta_${keywordRow.id}`);
+          if (savedMeta) {
+            const { metaSeoTitle: savedTitle, metaDescription: savedDesc } = JSON.parse(savedMeta);
+            if (savedTitle || savedDesc) {
+              console.log('✅ Loading existing meta fields from localStorage');
+              setMetaSeoTitle(savedTitle || '');
+              setMetaDescription(savedDesc || '');
+            }
+          }
+        } catch (error) {
+          console.log('⚠️ Could not load saved meta fields:', error);
+        }
+      }
     } else {
       // Fallback to cached content only if no fresh content exists
       const savedContent = localStorage.getItem(`apollo_blog_content_draft_${keywordRow.id}`);
@@ -1148,11 +1155,61 @@ Respond with JSON:
   };
 
   /**
+   * Get random CTA anchor text to ensure even distribution
+   * Why this matters: Prevents LLM bias toward first option in the list
+   */
+  const getRandomCTAAnchorText = (): string => {
+    const ctaOptions = [
+      "Start Your Free Trial",
+      "Try Apollo Free", 
+      "Start a Trial",
+      "Schedule a Demo",
+      "Request a Demo", 
+      "Start Prospecting",
+      "Get Leads Now"
+    ];
+    
+    // Use random selection to ensure even distribution
+    const randomIndex = Math.floor(Math.random() * ctaOptions.length);
+    const selectedCTA = ctaOptions[randomIndex];
+    console.log(`🎯 [BlogModal] Selected CTA anchor text: "${selectedCTA}" (${randomIndex + 1}/${ctaOptions.length})`);
+    return selectedCTA;
+  };
+
+  /**
+   * Generate UTM-tracked Apollo signup URL for blog creator campaigns
+   * Why this matters: Tracks campaign effectiveness for specific keywords like competitor conquesting does
+   */
+  const generateBlogCreatorSignupURL = (keyword: string): string => {
+    const baseURL = 'https://www.apollo.io/sign-up';
+    
+    if (!keyword) {
+      return baseURL;
+    }
+    
+    // Generate UTM campaign parameter from keyword (sanitize for URL)
+    const sanitizedKeyword = keyword.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/_+/g, '_') // Replace multiple underscores with single underscore
+      .replace(/^_|_$/g, '') // Remove leading/trailing underscores
+      .trim();
+      
+    const utmCampaign = `blog_creator_${sanitizedKeyword}`;
+    const url = `${baseURL}?utm_campaign=${utmCampaign}`;
+    
+    return url;
+  };
+
+  /**
    * Generate system and user prompts for Blog Creator context
    * Why this matters: Creates targeted prompts for regenerating or editing existing content.
    */
   const generateInitialPrompts = () => {
     const currentYear = 2025;
+    // Generate UTM-tracked Apollo signup URL for this keyword and select random CTA
+    const apolloSignupURL = generateBlogCreatorSignupURL(keywordRow.keyword);
+    const selectedCTA = getRandomCTAAnchorText();
     const systemPromptTemplate = `You are a world-class SEO, AEO, and LLM SEO content marketer for Apollo with deep expertise in creating comprehensive, AI-optimized articles that rank highly and get cited by AI answer engines (ChatGPT, Perplexity, Gemini, Claude, etc.). Your specialty is transforming content briefs into definitive resources that become the go-to sources for specific topics.
 
 CRITICAL CONTENT PHILOSOPHY:
@@ -1201,7 +1258,7 @@ FORMATTING REQUIREMENTS:
    - Use {{ brand_kit.ideal_customer_profile }} for testimonials and customer examples
    - Include {{ brand_kit.competitors }} when discussing competitive landscape
    - Reference {{ brand_kit.brand_point_of_view }} in strategic sections
-   - End with strong CTA using {{ brand_kit.cta_text }} and {{ brand_kit.cta_destination }}
+   - End with strong CTA using this exact anchor text: "${selectedCTA}" linked to ${apolloSignupURL}
    - Apply {{ brand_kit.tone_of_voice }} consistently throughout
    - Follow {{ brand_kit.writing_rules }} for style and approach
 
@@ -1259,7 +1316,7 @@ Remember: Create the definitive resource that makes other content feel incomplet
    - Apply {{ brand_kit.brand_point_of_view }} in strategic sections
    - Follow {{ brand_kit.tone_of_voice }} throughout the content
    - Implement {{ brand_kit.writing_rules }} for style consistency
-   - End with the mandatory 4-part conclusion structure including CTA using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }} (target="_blank")
+   - End with a contextual conclusion section (NOT "Getting Started with ${keywordRow.keyword}") and CTA linked to ${apolloSignupURL}
 
 4. **Content Depth & Value:**
    - Provide comprehensive coverage that serves as the definitive resource
@@ -1290,28 +1347,35 @@ Remember: Create the definitive resource that makes other content feel incomplet
 6. Use {{ brand_kit.ideal_customer_profile }} to inject customer testimonials only once within the body content where appropriate
 7. CRITICAL COMPLETION REQUIREMENT: MUST end with complete conclusion and call-to-action, reserve final 15-20% of content for proper conclusion, NEVER end mid-sentence or mid-paragraph
 
-📝 CONCLUSION EXAMPLES TO FOLLOW:
+📝 CONCLUSION REQUIREMENTS:
 
-EXAMPLE 1 (Implementation Focus):
-Getting Started with [Topic]
-Organizations looking to implement [topic] should begin with a pilot program focused on their highest-value [relevant area]. This approach allows for learning and optimization before broader rollout.
-Recommended Starting Steps:
-1. [Specific step with concrete details]
-2. [Specific step with concrete details]
-3. [Specific step with concrete details]
-The key to [topic] success lies in consistent execution, continuous optimization, and unwavering focus on [key principle]. Organizations that master these principles will create sustainable competitive advantages and drive superior business outcomes.
-Ready to implement [topic] for your organization? Apollo's integrated platform provides the [relevant features] needed to execute sophisticated [topic] strategies. Try Apollo for free and discover how [specific benefits].
+REQUIRED: End with a contextual conclusion section that includes:
 
-EXAMPLE 2 (Feature/Benefits Focus):
-How Apollo Supports [Topic] Success
-Modern [target audience] require comprehensive [relevant tools] to maximize their effectiveness. Apollo serves [specific audience types] who aim to [specific goals].
-Key Apollo Features for [Topic]:
-• [Feature]: [Specific description]
-• [Feature]: [Specific description]  
-• [Feature]: [Specific description]
-For [target audience] looking to [specific goal], Apollo provides the [tools/data/insights] needed to succeed in today's competitive environment. Try Apollo for free and discover how the platform can transform your [topic] results.
+1. **Key takeaways** - summarize the most important points from the article
+2. **Implementation guidance** - practical next steps readers can take
+3. **Success factors** - what determines outcomes in this area
+4. **Apollo integration** - naturally position how Apollo supports the topic
+5. **Strong CTA** - compelling call-to-action using this exact anchor text: "${selectedCTA}" linked to ${apolloSignupURL} (target="_blank")
 
-[Adapt one of these conclusion styles to your specific topic, including concrete steps, Apollo features, and strong CTAs using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }}]
+EXAMPLE CONCLUSION APPROACHES:
+
+**Option 1 (Implementation Focus):**
+<h2>[Topic] Implementation Best Practices</h2>
+<p>Successful [topic] implementation requires [key principle]. Organizations that prioritize [specific approach] see [specific benefits] while avoiding [common pitfalls].</p>
+
+<p>The most effective [topic] strategies combine [elements] with [other elements]. This balanced approach ensures [outcome] while maintaining [important factor].</p>
+
+<p>Ready to enhance your [topic] results? <a href="${apolloSignupURL}" target="_blank">${selectedCTA}</a> and discover how Apollo's platform can accelerate your success.</p>
+
+**Option 2 (Strategic Focus):**
+<h2>Maximizing [Topic] Effectiveness</h2>
+<p>[Topic] success depends on [key factors]. Teams that focus on [approach] while [additional consideration] achieve [specific outcomes].</p>
+
+<p>The future of [topic] involves [trend or development]. Organizations preparing for these changes will [competitive advantage].</p>
+
+<p><a href="${apolloSignupURL}" target="_blank">${selectedCTA}</a> and transform how your team approaches [topic] with Apollo's comprehensive platform.</p>
+
+[Use a contextual conclusion that flows naturally from your content - avoid formulaic "Getting Started" headers]
 
 8. DO NOT use emdashes (—) in the content
 9. AVOID AI-detectable phrases like "It's not just about..., it's..." or "This doesn't just mean..., it also means..."
@@ -1992,11 +2056,33 @@ Return ONLY the JSON object with the three required fields. No additional text o
       setGeneratedContent(parsedResponse.content);
       setEditableContent(parsedResponse.content);
       setIsEditingContent(false);
-      setMetaSeoTitle(parsedResponse.metaSeoTitle);
-      setMetaDescription(parsedResponse.metaDescription);
+      
+      // Set meta fields from API response or parsed content
+      // Why this matters: Uses meta fields from backend API response if available, otherwise from parsed content
+      const metaTitle = data.metaSeoTitle || parsedResponse.metaSeoTitle || '';
+      const metaDesc = data.metaDescription || parsedResponse.metaDescription || '';
+      
+      if (metaTitle || metaDesc) {
+        console.log('✅ Setting meta fields from API response:', {
+          title: metaTitle,
+          description: metaDesc
+        });
+        setMetaSeoTitle(metaTitle);
+        setMetaDescription(metaDesc);
+        
+        // Save meta fields to localStorage for persistence
+        try {
+          localStorage.setItem(`apollo_blog_meta_${keywordRow.id}`, JSON.stringify({
+            metaSeoTitle: metaTitle,
+            metaDescription: metaDesc
+          }));
+        } catch (error) {
+          console.log('⚠️ Could not save meta fields to localStorage:', error);
+        }
+      }
 
       // Auto-save the newly generated content
-      autoSaveContent(parsedResponse.content, parsedResponse.metaSeoTitle, parsedResponse.metaDescription);
+      autoSaveContent(parsedResponse.content, metaTitle, metaDesc);
 
       // Update the original keyword row if callback provided
       if (onContentUpdate) {
@@ -2074,7 +2160,8 @@ Return ONLY the JSON object with the three required fields. No additional text o
     processed = processed.replace(/\{\{\s*brand_kit\.tone_of_voice\s*\}\}/g, brandKit.toneOfVoice || '');
     processed = processed.replace(/\{\{\s*brand_kit\.header_case_type\s*\}\}/g, brandKit.headerCaseType || '');
     processed = processed.replace(/\{\{\s*brand_kit\.writing_rules\s*\}\}/g, brandKit.writingRules || '');
-    processed = processed.replace(/\{\{\s*brand_kit\.cta_text\s*\}\}/g, brandKit.ctaText || '');
+    // Use random CTA instead of brand kit CTA to maintain even distribution
+    processed = processed.replace(/\{\{\s*brand_kit\.cta_text\s*\}\}/g, getRandomCTAAnchorText());
     processed = processed.replace(/\{\{\s*brand_kit\.cta_destination\s*\}\}/g, brandKit.ctaDestination || '');
     
     // Replace custom variables
@@ -2914,6 +3001,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
                   }}
                 >
                   {/* Meta SEO Fields - Show at the top */}
+
                   {(metaSeoTitle || metaDescription) && (
                     <div style={{ marginBottom: '2rem' }}>
                       {metaSeoTitle && (

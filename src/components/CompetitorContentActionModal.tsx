@@ -351,6 +351,28 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
+  /**
+   * Get random CTA anchor text to ensure even distribution
+   * Why this matters: Prevents LLM bias toward first option in the list
+   */
+  const getRandomCTAAnchorText = (): string => {
+    const ctaOptions = [
+      "Start Your Free Trial",
+      "Try Apollo Free", 
+      "Start a Trial",
+      "Schedule a Demo",
+      "Request a Demo", 
+      "Start Prospecting",
+      "Get Leads Now"
+    ];
+    
+    // Use random selection to ensure even distribution
+    const randomIndex = Math.floor(Math.random() * ctaOptions.length);
+    const selectedCTA = ctaOptions[randomIndex];
+    console.log(`🎯 [CompetitorModal] Selected CTA anchor text: "${selectedCTA}" (${randomIndex + 1}/${ctaOptions.length})`);
+    return selectedCTA;
+  };
+
   // Load initial content from row
   useEffect(() => {
     if (!isOpen) return;
@@ -510,6 +532,9 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
   }, []);
 
   const defaultUserPrompt = useMemo(() => {
+    // Select random CTA to prevent LLM bias
+    const selectedCTA = getRandomCTAAnchorText();
+    
     // Build deep research and gap analysis context if available
     let researchContext = '';
     if (workflowData?.deep_research) {
@@ -549,7 +574,7 @@ CONTENT REQUIREMENTS:
 6) Use markdown with proper headers, lists, and tables
 7) Include inline hyperlink citations
 8) End with "Getting Started with ${row.keyword}" section
-9) Include CTA: {{ brand_kit.cta_text }} with link to {{ brand_kit.cta_destination }}${workflowData ? '\n10) Address all identified gaps from the gap analysis above' : ''}
+9) Include CTA using this exact anchor text: "${selectedCTA}" - always link to the UTM-tracked Apollo signup URL${workflowData ? '\n10) Address all identified gaps from the gap analysis above' : ''}
 
 The content should be comprehensive, authoritative, and clearly superior to the competitor page.`;
   }, [row.keyword, row.url, workflowData]);
@@ -562,6 +587,8 @@ The content should be comprehensive, authoritative, and clearly superior to the 
    */
   const generateInitialPrompts = () => {
     const currentYear = 2025;
+    // Select random CTA to prevent LLM bias
+    const selectedCTA = getRandomCTAAnchorText();
     // Extract workflow data from the row
     const workflowData = row.workflowDetails ? {
       deep_research: row.workflowDetails.deepResearch,
@@ -631,7 +658,7 @@ FORMATTING REQUIREMENTS:
    - Use {{ brand_kit.ideal_customer_profile }} for testimonials and customer examples
    - Include {{ brand_kit.competitors }} when discussing competitive landscape
    - Reference {{ brand_kit.brand_point_of_view }} in strategic sections
-   - End with strong CTA using {{ brand_kit.cta_text }} and {{ brand_kit.cta_destination }}
+   - End with strong CTA using this exact anchor text: "${selectedCTA}"
    - Apply {{ brand_kit.tone_of_voice }} consistently throughout
    - Follow {{ brand_kit.writing_rules }} for style and approach
 
@@ -804,7 +831,7 @@ CRITICAL CONTENT REQUIREMENTS:
    - Apply {{ brand_kit.brand_point_of_view }} in strategic sections
    - Follow {{ brand_kit.tone_of_voice }} throughout the content
    - Implement {{ brand_kit.writing_rules }} for style consistency
-   - End with the mandatory conclusion structure including CTA using {{ brand_kit.cta_text }} <a href="{{ brand_kit.cta_destination }}" target="_blank">Learn More</a>
+   - End with the mandatory conclusion structure including CTA using this exact anchor text: "${selectedCTA}"
 
 4. Content Depth & Value:
    - Provide comprehensive coverage that serves as the definitive resource
@@ -1328,7 +1355,8 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     processed = processed.replace(/\{\{\s*brand_kit\.tone_of_voice\s*\}\}/g, kit.toneOfVoice || '');
     processed = processed.replace(/\{\{\s*brand_kit\.header_case_type\s*\}\}/g, kit.headerCaseType || '');
     processed = processed.replace(/\{\{\s*brand_kit\.writing_rules\s*\}\}/g, kit.writingRules || '');
-    processed = processed.replace(/\{\{\s*brand_kit\.cta_text\s*\}\}/g, kit.ctaText || '');
+    // Use random CTA instead of brand kit CTA to maintain even distribution
+    processed = processed.replace(/\{\{\s*brand_kit\.cta_text\s*\}\}/g, getRandomCTAAnchorText());
     processed = processed.replace(/\{\{\s*brand_kit\.cta_destination\s*\}\}/g, kit.ctaDestination || '');
 
     // Competitor-conquesting extras (optional; empty by default)

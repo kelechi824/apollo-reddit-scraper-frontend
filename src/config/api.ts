@@ -38,6 +38,11 @@ export const API_ENDPOINTS = {
   generateContent: buildApiUrl('/api/content/generate'),
   generateMeta: buildApiUrl('/api/content/generate-meta'),
   
+  // Blog creator endpoints
+  blogCreatorGenerateContent: buildApiUrl('/api/blog-creator/generate-content'),
+  blogCreatorGenerateContentAsync: buildApiUrl('/api/blog-creator/generate-content-async'),
+  blogCreatorJobStatus: (jobId: string) => buildApiUrl(`/api/blog-creator/job-status/${jobId}`),
+  
   // Playbook endpoints
   generatePlaybook: buildApiUrl('/api/playbooks/generate-content'),
   
