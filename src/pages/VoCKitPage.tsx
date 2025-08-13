@@ -202,6 +202,9 @@ const VoCKitPage: React.FC = () => {
     setMessage('Analyzing customer calls... This may take 2-3 minutes.');
     
     try {
+      console.log('🚀 Starting VoC extraction request...');
+      console.log('API URL:', buildApiUrl('/api/voc-extraction/analyze-synchronous'));
+      
       // Direct synchronous analysis call
       const response = await fetch(buildApiUrl('/api/voc-extraction/analyze-synchronous'), {
         method: 'POST',
@@ -214,19 +217,30 @@ const VoCKitPage: React.FC = () => {
         }),
       });
 
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', response.headers);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ HTTP Error Response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
       const result = await response.json();
+      console.log('✅ API Response:', result);
 
       if (result.success && result.data) {
         const { variables, painPoints, metadata } = result.data;
         handleAnalysisComplete(variables, painPoints, metadata);
         setMessage(`Successfully extracted ${metadata.totalPainPoints} pain points from ${metadata.callsAnalyzed} calls in ${Math.round(result.processingTime / 1000)}s`);
       } else {
+        console.error('❌ API returned error:', result);
         setMessage(`Error: ${result.error || 'Failed to complete analysis'}`);
         setIsExtracting(false);
       }
     } catch (error: any) {
-      console.error('Error in VoC analysis:', error);
-      setMessage('Error: Failed to connect to VoC extraction service');
+      console.error('❌ Error in VoC analysis:', error);
+      setMessage(`Error: ${error.message || 'Failed to connect to VoC extraction service'}`);
       setIsExtracting(false);
     }
     
