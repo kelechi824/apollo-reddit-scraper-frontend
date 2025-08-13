@@ -160,6 +160,82 @@ const extractWorkflowDetails = (workflowState: any): KeywordRow['workflowDetails
 };
 
 /**
+ * Parse AI response to extract content and meta fields from JSON
+ * Why this matters: Extracts metaSeoTitle and metaDescription from AI JSON responses
+ */
+const parseAIResponse = (responseText: string): { content: string; metaSeoTitle: string; metaDescription: string } => {
+  console.log('🔍 [BlogCreator] Parsing AI response for meta fields, length:', responseText.length);
+  
+  try {
+    // Try to parse as JSON directly first
+    let parsed;
+    try {
+      parsed = JSON.parse(responseText);
+    } catch (firstError) {
+      // If direct parsing fails, try to extract JSON from response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        throw firstError;
+      }
+    }
+
+    // Check if we have the expected JSON structure
+    if (parsed && typeof parsed === 'object') {
+      const hasContent = parsed.content && typeof parsed.content === 'string';
+      const hasTitle = parsed.metaSeoTitle && typeof parsed.metaSeoTitle === 'string';
+      const hasDescription = parsed.metaDescription && typeof parsed.metaDescription === 'string';
+      
+      console.log('🔍 [BlogCreator] Parsed object structure:', {
+        hasContent,
+        hasTitle,
+        hasDescription,
+        keys: Object.keys(parsed)
+      });
+      
+      if (hasContent || hasTitle || hasDescription) {
+        console.log('✅ [BlogCreator] Successfully parsed JSON response:', {
+          hasContent,
+          hasTitle,
+          hasDescription,
+          contentLength: hasContent ? parsed.content.length : 0,
+          titleLength: hasTitle ? parsed.metaSeoTitle.length : 0,
+          descLength: hasDescription ? parsed.metaDescription.length : 0
+        });
+        
+        return {
+          content: hasContent ? parsed.content : responseText,
+          metaSeoTitle: hasTitle ? parsed.metaSeoTitle : '',
+          metaDescription: hasDescription ? parsed.metaDescription : ''
+        };
+      }
+    }
+  } catch (error) {
+    console.log('❌ [BlogCreator] JSON parsing failed:', error);
+  }
+
+  console.log('⚠️ [BlogCreator] Falling back to content-only parsing');
+  
+  // Try to extract meta fields from the raw text if they exist
+  let extractedTitle = '';
+  let extractedDescription = '';
+  
+  // Look for patterns like "metaSeoTitle": "..."
+  const titleMatch = responseText.match(/"metaSeoTitle"\s*:\s*"([^"]+)"/);
+  const descMatch = responseText.match(/"metaDescription"\s*:\s*"([^"]+)"/);
+  
+  if (titleMatch) extractedTitle = titleMatch[1];
+  if (descMatch) extractedDescription = descMatch[1];
+  
+  return {
+    content: responseText,
+    metaSeoTitle: extractedTitle,
+    metaDescription: extractedDescription
+  };
+};
+
+/**
  * Extract workflow details from final result for completed jobs
  * Why this matters: Fallback method to get workflow data when polling has completed
  */
@@ -229,6 +305,7 @@ const BlogCreatorPage: React.FC = () => {
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
 
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [selectionMadeBySelectAll, setSelectionMadeBySelectAll] = useState<boolean>(false);
   const [showUploadErrorModal, setShowUploadErrorModal] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showIndividualDeleteModal, setShowIndividualDeleteModal] = useState(false);
@@ -269,6 +346,12 @@ const BlogCreatorPage: React.FC = () => {
     failed: number;
   }>({ isRunning: false, total: 0, completed: 0, failed: 0 });
 
+  // Sequential execution controls
+  const stopSequentialRef = useRef<boolean>(false);
+  const [isSequentialRunning, setIsSequentialRunning] = useState<boolean>(false);
+  const [sequentialRemaining, setSequentialRemaining] = useState<string[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Auto-save state and refs
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saving' | 'saved' | ''>('');
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -277,6 +360,101 @@ const BlogCreatorPage: React.FC = () => {
   // Sorting state
   const [sortField, setSortField] = useState<'monthlyVolume' | 'avgDifficulty' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Pagination state
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(200);
+
+  // Memoized sorted view to avoid re-sorting on every render
+  const sortedKeywords = React.useMemo(() => {
+    if (!sortField) return keywords;
+    const copy = [...keywords];
+    copy.sort((a, b) => {
+      const av = a[sortField] ?? (sortField === 'monthlyVolume' ? -Infinity : Infinity);
+      const bv = b[sortField] ?? (sortField === 'monthlyVolume' ? -Infinity : Infinity);
+      if (av === bv) return 0;
+      const base = (av as number) < (bv as number) ? -1 : 1;
+      return sortDirection === 'asc' ? base : -base;
+    });
+    return copy;
+  }, [keywords, sortField, sortDirection]);
+
+  /**
+   * Get random CTA anchor text to ensure even distribution
+   * Why this matters: Prevents LLM bias toward first option in the list
+   */
+  const getRandomCTAAnchorText = (): string => {
+    const ctaOptions = [
+      "Start Your Free Trial",
+      "Try Apollo Free", 
+      "Start a Trial",
+      "Schedule a Demo",
+      "Request a Demo", 
+      "Start Prospecting",
+      "Get Leads Now"
+    ];
+    
+    // Use random selection to ensure even distribution
+    const randomIndex = Math.floor(Math.random() * ctaOptions.length);
+    const selectedCTA = ctaOptions[randomIndex];
+    console.log(`🎯 Selected CTA anchor text: "${selectedCTA}" (${randomIndex + 1}/${ctaOptions.length})`);
+    return selectedCTA;
+  };
+
+  /**
+   * Generate UTM-tracked Apollo signup URL for blog creator
+   * Why this matters: Creates UTM-tracked URLs to measure blog creator campaign effectiveness for specific keywords
+   */
+  const generateBlogCreatorSignupURL = (keyword: string): string => {
+    const baseURL = 'https://www.apollo.io/sign-up';
+    
+    if (!keyword) {
+      return baseURL;
+    }
+    
+    // Generate UTM campaign parameter from keyword (sanitize for URL)
+    const sanitizedKeyword = keyword.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/_+/g, '_') // Replace multiple underscores with single underscore
+      .replace(/^_|_$/g, '') // Remove leading/trailing underscores
+      .trim();
+      
+    const utmCampaign = `blog_creator_${sanitizedKeyword}`;
+    const url = `${baseURL}?utm_campaign=${utmCampaign}`;
+    
+    console.log(`🔗 Generated Apollo signup URL with UTM: ${url}`);
+    return url;
+  };
+
+  // Calculate total pages and paginated keywords
+  const totalPages = React.useMemo(() => Math.max(1, Math.ceil(sortedKeywords.length / pageSize)), [sortedKeywords.length, pageSize]);
+  const paginatedKeywords = React.useMemo(() => {
+    const safePage = Math.min(page, totalPages);
+    const start = (safePage - 1) * pageSize;
+    return sortedKeywords.slice(start, start + pageSize);
+  }, [sortedKeywords, page, pageSize, totalPages]);
+
+  // Keep page in range when keywords/pageSize change
+  React.useEffect(() => {
+    setPage(p => Math.min(p, Math.max(1, Math.ceil(sortedKeywords.length / pageSize))));
+  }, [sortedKeywords.length, pageSize]);
+
+  /**
+   * Handle column sorting
+   * Why this matters: Allows users to prioritize by opportunity (high volume) or ease (low difficulty).
+   */
+  const handleSort = (field: 'monthlyVolume' | 'avgDifficulty') => {
+    let nextDirection: 'asc' | 'desc' = 'desc';
+    if (sortField === field) {
+      nextDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      nextDirection = field === 'monthlyVolume' ? 'desc' : 'asc';
+    }
+    setSortField(field);
+    setSortDirection(nextDirection);
+    setPage(1); // Reset to first page when sorting
+  };
 
   /**
    * Load saved progress from localStorage on mount
@@ -323,6 +501,11 @@ const BlogCreatorPage: React.FC = () => {
           setSortDirection(progress.sortDirection);
         }
         
+        // Restore sequential execution state
+        if (Array.isArray(progress.sequentialRemaining)) {
+          setSequentialRemaining(progress.sequentialRemaining);
+        }
+        
         console.log('Blog Creator progress restored from localStorage');
       } catch (error) {
         console.error('Error loading saved Blog Creator progress:', error);
@@ -361,11 +544,14 @@ const BlogCreatorPage: React.FC = () => {
         const progressData = {
           keywords: keywords.map(keyword => ({
             ...keyword,
+            // Store only essential data - truncate large output to save space
+            output: keyword.output.length > 1000 ? keyword.output.substring(0, 1000) + '...[truncated]' : keyword.output,
             createdAt: keyword.createdAt.toISOString() // Convert Date to ISO string for storage
           })),
           selectedRows: Array.from(selectedRows), // Convert Set to Array for storage
           sortField,
           sortDirection,
+          sequentialRemaining,
           timestamp: new Date().toISOString()
         };
         
@@ -389,48 +575,12 @@ const BlogCreatorPage: React.FC = () => {
         clearTimeout(timeout);
       }
     };
-  }, [keywords, selectedRows, sortField, sortDirection]);
+  }, [keywords, selectedRows, sortField, sortDirection, sequentialRemaining]);
 
-  /**
-   * Handle column sorting
-   * Why this matters: Allows users to sort keywords by volume (highest first) or difficulty (lowest first) for strategic prioritization
-   */
-  const handleSort = (field: 'monthlyVolume' | 'avgDifficulty') => {
-    let newDirection: 'asc' | 'desc' = 'desc';
-    
-    // If clicking the same field, toggle direction
-    if (sortField === field) {
-      newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-      // For new field, default to desc for volume (highest first) and asc for difficulty (lowest first)
-      newDirection = field === 'monthlyVolume' ? 'desc' : 'asc';
-    }
-    
-    setSortField(field);
-    setSortDirection(newDirection);
-  };
 
-  /**
-   * Get sorted keywords array
-   * Why this matters: Applies current sort settings to keywords, handling undefined values properly
-   */
-  const getSortedKeywords = () => {
-    if (!sortField) return keywords;
-    
-    return [...keywords].sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
-      
-      // Handle undefined values - put them at the end
-      if (aValue === undefined && bValue === undefined) return 0;
-      if (aValue === undefined) return 1;
-      if (bValue === undefined) return -1;
-      
-      // Normal numeric comparison
-      const comparison = aValue - bValue;
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-  };
+
+
+
 
   /**
    * Reset sorting to original upload order
@@ -451,6 +601,8 @@ const BlogCreatorPage: React.FC = () => {
     setSelectedRows(new Set());
     setSortField(null);
     setSortDirection('desc');
+    setSequentialRemaining([]);
+    setIsSequentialRunning(false);
     setUploadError(null);
     setUploadSuccess(null);
     console.log('Blog Creator progress cleared');
@@ -784,6 +936,25 @@ const BlogCreatorPage: React.FC = () => {
       }
       return newSelected;
     });
+    setSelectionMadeBySelectAll(false);
+  };
+
+  /**
+   * Select all keywords
+   * Why this matters: Allows users to quickly select all keywords for bulk operations
+   */
+  const selectAll = () => {
+    setSelectedRows(new Set(keywords.map(k => k.id)));
+    setSelectionMadeBySelectAll(true);
+  };
+
+  /**
+   * Clear all selections
+   * Why this matters: Allows users to quickly deselect all keywords
+   */
+  const clearSelection = () => {
+    setSelectedRows(new Set());
+    setSelectionMadeBySelectAll(false);
   };
 
   /**
@@ -791,12 +962,12 @@ const BlogCreatorPage: React.FC = () => {
    * Why this matters: Provides quick way to select/deselect all keywords for bulk operations
    */
   const toggleSelectAll = () => {
-    if (selectedRows.size === keywords.length) {
-      // If all are selected, deselect all
-      setSelectedRows(new Set());
+    const allSelected = selectedRows.size === keywords.length && keywords.length > 0;
+    if ((selectionMadeBySelectAll && allSelected) || selectedRows.size > 0) {
+      // Unselect All if selection came from Select All and all are still selected; otherwise unselect current selection
+      clearSelection();
     } else {
-      // Select all
-      setSelectedRows(new Set(keywords.map(k => k.id)));
+      selectAll();
     }
   };
 
@@ -895,6 +1066,10 @@ const BlogCreatorPage: React.FC = () => {
       // Generate default prompts with brand kit integration (same as BlogContentActionModal)
       const generateDefaultPrompts = () => {
         const currentYear = 2025;
+        // Select random CTA to prevent LLM bias
+        const selectedCTA = getRandomCTAAnchorText();
+        // Generate UTM-tracked Apollo signup URL for this keyword
+        const apolloSignupURL = generateBlogCreatorSignupURL(keyword.keyword);
         const systemPromptTemplate = `You are a world-class SEO, AEO, and LLM SEO content marketer for Apollo with deep expertise in creating comprehensive, AI-optimized articles that rank highly and get cited by AI answer engines (ChatGPT, Perplexity, Gemini, Claude, etc.). Your specialty is transforming content briefs into definitive resources that become the go-to sources for specific topics.
 
 CRITICAL CONTENT PHILOSOPHY:
@@ -934,17 +1109,47 @@ FORMATTING REQUIREMENTS:
    - Use {{ brand_kit.ideal_customer_profile }} for testimonials and customer examples
    - Include {{ brand_kit.competitors }} when discussing competitive landscape
    - Reference {{ brand_kit.brand_point_of_view }} in strategic sections
-   - End with strong CTA using {{ brand_kit.cta_text }} and {{ brand_kit.cta_destination }}
+   - End with strong CTA using this exact anchor text: "${selectedCTA}" linking to ${apolloSignupURL}
    - Apply {{ brand_kit.tone_of_voice }} consistently throughout
    - Follow {{ brand_kit.writing_rules }} for style and approach
 
 IMPORTANT: The current year is 2025. When referencing "current year," "this year," or discussing recent trends, always use 2025. Do not reference 2024 or earlier years as current.
 
-CRITICAL OUTPUT REQUIREMENTS:
-- Return ONLY clean HTML content without any markdown code blocks, explanatory text, or meta-commentary
-- DO NOT include phrases like "Here's the content:" or HTML code block markers
-- Start directly with the HTML content and end with the closing HTML tag
-- No markdown formatting, no code block indicators, no explanatory paragraphs
+CRITICAL OUTPUT FORMAT: Respond with a JSON object containing exactly three fields:
+{
+  "content": "Complete HTML article with proper structure, tables, and brand kit variables processed",
+  "metaSeoTitle": "AEO-optimized title for AI search engines (<= 60 characters + ' | Apollo')",
+  "metaDescription": "Natural, value-focused description (150-160 chars) optimized for AI search extraction"
+}
+
+META FIELD REQUIREMENTS FOR AI SEARCH OPTIMIZATION:
+- metaSeoTitle: Create titles that AI engines will cite as authoritative sources
+  * Format: "[Primary Keyword]: [Specific Context]" or "What is [Keyword]? [Clear Answer]"
+  * NEVER invent statistics or percentages
+  * Focus on clarity and search intent matching
+  * Maximum 60 characters plus " | Apollo" (total <= 70 chars)
+  
+- metaDescription: Write naturally for AI comprehension and extraction
+  * Start with a direct answer or value statement
+  * Include semantic keyword variations
+  * End with a specific, actionable insight
+  * NO made-up numbers, NO marketing hyperbole
+  * Exactly 150-160 characters
+
+FORBIDDEN IN META FIELDS:
+- Invented statistics ("3x growth", "47% increase")
+- Cliché openings ("Discover", "Learn how", "Master")
+- Vague promises ("proven strategies", "comprehensive guide")
+- Superlatives without evidence ("best", "ultimate", "revolutionary")
+
+CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
+- Start response with { and end with }
+- NO text before or after JSON
+- NO markdown code blocks
+- NO explanations like "Here is your JSON:"
+- Put ALL HTML inside the content field as a properly escaped JSON string
+- Escape ALL quotes with backslashes (\\" not ")
+- Do NOT include literal newlines or unescaped quotes in JSON strings
 
 Remember: Create the definitive resource that makes other content feel incomplete by comparison. Every section should provide genuine value and actionable insights.`;
 
@@ -976,7 +1181,7 @@ Remember: Create the definitive resource that makes other content feel incomplet
    - Apply {{ brand_kit.brand_point_of_view }} in strategic sections
    - Follow {{ brand_kit.tone_of_voice }} throughout the content
    - Implement {{ brand_kit.writing_rules }} for style consistency
-   - End with natural Apollo promotion using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }} (target="_blank")
+   - End with natural Apollo promotion using this exact anchor text: "${selectedCTA}" linking to ${apolloSignupURL} (target="_blank")
 
 4. **Content Depth & Value:**
    - Provide comprehensive coverage that serves as the definitive resource
@@ -1011,7 +1216,7 @@ Key Apollo Features for [Topic]:
 • [Feature]: [Specific description]
 For [target audience] looking to [specific goal], Apollo provides the [tools/data/insights] needed to succeed in today's competitive environment. Try Apollo for free and discover how the platform can transform your [topic] results.
 
-[Adapt one of these conclusion styles to your specific topic, including concrete steps, Apollo features, and strong CTAs using {{ brand_kit.cta_text }} {{ brand_kit.cta_destination }}]`;
+[Adapt one of these conclusion styles to your specific topic, including concrete steps, Apollo features, and strong CTAs using this exact anchor text: "${selectedCTA}" linking to ${apolloSignupURL}]`;
 
         return { systemPrompt: systemPromptTemplate, userPrompt: userPromptTemplate };
       };
@@ -1037,7 +1242,7 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
           '{{ brand_kit.tone_of_voice }}': brandKit.toneOfVoice || brandKit.tone_of_voice || '',
           '{{ brand_kit.header_case_type }}': brandKit.headerCaseType || brandKit.header_case_type || '',
           '{{ brand_kit.writing_rules }}': brandKit.writingRules || brandKit.writing_rules || '',
-          '{{ brand_kit.cta_text }}': brandKit.ctaText || brandKit.cta_text || '',
+          '{{ brand_kit.cta_text }}': getRandomCTAAnchorText(),
           '{{ brand_kit.cta_destination }}': brandKit.ctaDestination || brandKit.cta_destination || '',
           '{{ brand_kit.value_proposition }}': brandKit.valueProposition || brandKit.value_proposition || '',
           '{{ brand_kit.key_features }}': brandKit.keyFeatures || brandKit.key_features || ''
@@ -1076,53 +1281,178 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
         user_prompt: processedUserPrompt.length + ' chars'
       });
 
-      // Start synchronous content generation with default prompts (no polling needed)
-      const response = await fetch(buildApiUrl('/api/blog-creator/generate-content'), {
+      // Create a new AbortController for this request
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      // Use async generation to avoid timeouts and enable 4-step workflow
+      // Why this matters: The 4-step workflow (Firecrawl → Deep Research → Gap Analysis → Content Generation)
+      // takes longer than 60 seconds, so we use async endpoints with job polling for reliable generation
+      
+      const requestPayload = {
+        keyword: keyword.keyword,
+        content_length: 'medium',
+        brand_kit: brandKit,
+        system_prompt: processedSystemPrompt,
+        user_prompt: processedUserPrompt
+      };
+      
+      console.log('🔍 [BLOG CREATOR DEBUG] Starting async generation with payload:', requestPayload);
+      
+      const asyncResp = await fetch(API_ENDPOINTS.blogCreatorGenerateContentAsync, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          keyword: keyword.keyword,
-          content_length: 'medium',
-          brand_kit: brandKit,
-          system_prompt: processedSystemPrompt,
-          user_prompt: processedUserPrompt
-        })
+        body: JSON.stringify(requestPayload),
+        signal: controller.signal
       });
-
-      console.log(`📡 API Response status: ${response.status} ${response.statusText}`);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error(`❌ API Error response:`, errorData);
-        throw new Error(errorData.error || 'Failed to generate content');
-      }
-
-      const responseData = await response.json();
-      const { data: result } = responseData;
-      console.log(`✅ Content generation completed successfully for keyword: ${keyword.keyword}`);
-
-      // Process the result directly (no polling needed)
-      console.log(`📊 Processing completed result for keyword: ${keyword.keyword}`);
-      // Process the completed result directly (no polling needed in synchronous approach)
-      const finalWorkflowDetails = extractWorkflowDetailsFromResult(result);
-      const updatedKeywordRow: KeywordRow = { 
-        ...keyword, 
-        status: 'completed' as const,
-        progress: '✅ Content generation complete!',
-        output: result.content || '',
-        metadata: result.metadata,
-        generationResult: result,
-        ...(finalWorkflowDetails && { workflowDetails: finalWorkflowDetails })
-      };
       
-      setKeywords(prev => prev.map(k => 
-        k.id === keywordId ? updatedKeywordRow : k
-      ));
+      if (!asyncResp.ok) {
+        const errorData = await asyncResp.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to start content generation');
+      }
+      
+      const asyncData = await asyncResp.json();
+      if (!asyncData.success || !asyncData.jobId) {
+        throw new Error('Failed to start content generation');
+      }
+      
+      const jobId = asyncData.jobId;
+      console.log(`📋 Started async blog creator job ${jobId} for ${keyword.keyword}`);
+      
+      // Poll for job completion
+      // Why this matters: With Firecrawl, deep research, gap analysis, and content generation,
+      // the full pipeline can take 3-5 minutes or more depending on content complexity
+      let attempts = 0;
+      let transientErrorStreak = 0;
+      const maxTransientErrorStreak = 8;
+      const maxAttempts = 600; // 10 minutes max polling
+      const pollInterval = 1000; // Poll every 1 second
+      
+      while (attempts < maxAttempts) {
+        if (controller.signal.aborted) {
+          throw new Error('Operation cancelled');
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        
+        try {
+          const statusResp = await fetch(API_ENDPOINTS.blogCreatorJobStatus(jobId), {
+            signal: controller.signal
+          });
+          
+          transientErrorStreak = 0; // reset on success
+          const jobData = await statusResp.json();
+          
+          // Update progress in UI with pipeline stage information
+          if (jobData.data?.progress !== undefined) {
+            const stage = jobData.data.stage || '';
+            const message = jobData.data.message || '';
+            
+            // Map stages to user-friendly descriptions
+            let stageDescription = '';
+            if (stage.includes('firecrawl') || stage.includes('serp')) {
+              stageDescription = '🔍 Analyzing Top 3 SERP Results with Firecrawl';
+            } else if (stage.includes('research')) {
+              stageDescription = '🔬 Deep Research';
+            } else if (stage.includes('gap')) {
+              stageDescription = '📊 Gap Analysis';
+            } else if (stage.includes('content') || stage.includes('generation')) {
+              stageDescription = '✍️ Content Generation';
+            } else {
+              stageDescription = '⚙️ Processing';
+            }
+            
+            console.log(`📊 Job ${jobId} [${stageDescription}] ${jobData.data.progress}% - ${message}`);
+            
+            // Update the keyword with progress information for UI display
+            const progressText = `${stageDescription}: ${jobData.data.progress}% - ${message}`;
+            setKeywords(prev => prev.map(k => 
+              k.id === keywordId 
+                ? { ...k, status: 'running' as const, progress: progressText }
+                : k
+            ));
+          }
+          
+          if (jobData.data?.status === 'completed') {
+            // Job completed successfully
+            const resultPayload = jobData.data.result || jobData.data;
+            const rawContent = String(
+              resultPayload?.content ?? resultPayload?.raw_content ?? ''
+            );
+            
+            if (rawContent.length > 0) {
+              // Parse the AI response to extract content and meta fields
+              const parsed = parseAIResponse(rawContent);
+              console.log('🔍 [BlogCreator] Parsed response:', {
+                contentLength: parsed.content.length,
+                hasMetaTitle: !!parsed.metaSeoTitle,
+                hasMetaDesc: !!parsed.metaDescription,
+                metaTitle: parsed.metaSeoTitle?.substring(0, 50) + '...',
+                metaDesc: parsed.metaDescription?.substring(0, 50) + '...'
+              });
+              
+              const finalWorkflowDetails = extractWorkflowDetailsFromResult(resultPayload);
+              
+              // Enhanced metadata structure with AI-generated meta fields
+              const enhancedMetadata = {
+                ...(resultPayload?.metadata || {}),
+                metaSeoTitle: parsed.metaSeoTitle || resultPayload?.metadata?.metaSeoTitle || undefined,
+                metaDescription: parsed.metaDescription || resultPayload?.metadata?.metaDescription || undefined,
+                title: resultPayload?.metadata?.title || `${keyword.keyword} - Apollo Blog`,
+                description: resultPayload?.metadata?.description || `Comprehensive guide to ${keyword.keyword}`,
+                word_count: resultPayload?.metadata?.word_count || parsed.content.length,
+                seo_optimized: resultPayload?.metadata?.seo_optimized ?? true,
+                citations_included: resultPayload?.metadata?.citations_included ?? false,
+                brand_variables_processed: resultPayload?.metadata?.brand_variables_processed || 0,
+                aeo_optimized: resultPayload?.metadata?.aeo_optimized ?? true
+              };
+              
+              const updatedKeywordRow: KeywordRow = { 
+                ...keyword, 
+                status: 'completed' as const,
+                progress: '✅ 4-step workflow complete!',
+                output: parsed.content, // Use parsed content
+                metadata: enhancedMetadata,
+                generationResult: resultPayload,
+                ...(finalWorkflowDetails && { workflowDetails: finalWorkflowDetails })
+              };
+              
+              setKeywords(prev => prev.map(k => 
+                k.id === keywordId ? updatedKeywordRow : k
+              ));
 
-      // Auto-save to blog history
-      autoSaveBlogIfReady(updatedKeywordRow);
+              // Auto-save to blog history
+              autoSaveBlogIfReady(updatedKeywordRow);
+              return; // Success - exit the function
+            }
+          } else if (jobData.data?.status === 'error') {
+            throw new Error(jobData.data.error || 'Content generation failed');
+          }
+        } catch (pollErr: any) {
+          const status = pollErr?.response?.status;
+          const message = pollErr?.message || '';
+          const isNetworkFlap = message.includes('Network Error') || message.includes('net::ERR_NETWORK_CHANGED');
+          const isTransientStatus = status === 404 || status === 425 || status === 429 || status === 502 || status === 503 || status === 504;
+          const withinWarmup = attempts < 10 && status === 404;
+          
+          if (isNetworkFlap || isTransientStatus || withinWarmup) {
+            transientErrorStreak++;
+            console.warn(`[poll] transient issue (attempt ${attempts}, streak ${transientErrorStreak}) — ${status || ''} ${message || ''}`);
+            if (transientErrorStreak <= maxTransientErrorStreak) {
+              attempts++;
+              continue;
+            }
+          }
+          throw pollErr;
+        }
+        
+        attempts++;
+      }
+      
+      // If we get here, polling timed out after 10 minutes
+      throw new Error('Content generation is taking longer than 10 minutes. This can happen with very complex content. Please try with simpler settings or contact support.');
 
     } catch (error) {
       // Handle API failures with error status
@@ -1149,6 +1479,9 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
         newSet.delete(keywordId);
         return newSet;
       });
+      
+      // Clear the abort controller reference
+      abortControllerRef.current = null;
     }
   };
 
@@ -1219,44 +1552,81 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
   };
 
   /**
-   * Execute selected keywords (retry for failed, execute for pending) with enhanced tracking
-   * Why this matters: Provides targeted bulk processing for user-selected keywords with real-time status feedback
+   * Execute selected keywords sequentially with stop/resume capability
+   * Why this matters: Runs selected keywords one-by-one with ability to stop and resume, matching CompetitorConquestingPage behavior
    */
-  const executeSelected = async () => {
-    if (selectedRows.size === 0) return;
-
-    const selectedKeywords = keywords
-      .filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error'))
-      .slice(0, 5); // Limit to 5 concurrent executions
-
-    if (selectedKeywords.length === 0) return;
-
-    // Initialize bulk execution tracking for selected keywords
-    setBulkExecutionStatus({
-      isRunning: true,
-      total: selectedKeywords.length,
-      completed: 0,
-      failed: 0
+  const executeSelected = async (targetRowIds?: string[]) => {
+    const queue = (targetRowIds && targetRowIds.length > 0 ? targetRowIds : Array.from(selectedRows)).filter(id => {
+      const keyword = keywords.find(k => k.id === id);
+      // Only process keywords that are not running AND not completed (pending, error)
+      return keyword && keyword.status !== 'running' && keyword.status !== 'completed';
     });
+    
+    if (queue.length === 0) return;
 
-    // Execute/retry selected keywords concurrently with result tracking
-    const promises = selectedKeywords.map(async (keyword) => {
-      try {
-        await executeKeyword(keyword.id);
-        setBulkExecutionStatus(prev => ({ ...prev, completed: prev.completed + 1 }));
-        return { id: keyword.id, success: true };
-      } catch (error) {
-        setBulkExecutionStatus(prev => ({ ...prev, failed: prev.failed + 1 }));
-        return { id: keyword.id, success: false, error };
+    setBulkExecutionStatus({ isRunning: true, total: queue.length, completed: 0, failed: 0 });
+    setIsSequentialRunning(true);
+    stopSequentialRef.current = false;
+    setSequentialRemaining(queue.slice());
+
+    // Mark all queued as queued
+    setKeywords(prev => prev.map(k => (queue.includes(k.id) ? { ...k, status: 'pending' } : k)));
+
+    for (let i = 0; i < queue.length; i++) {
+      const id = queue[i];
+      if (stopSequentialRef.current) {
+        // Reset the current keyword back to pending state
+        setKeywords(prev => prev.map(k => {
+          if (k.id === id) {
+            // If it was running, set back to pending so it can be resumed
+            return k.status === 'running' ? { ...k, status: 'pending' } : k;
+          }
+          // Reset any other queued keywords back to pending
+          return k.status === 'running' ? { ...k, status: 'pending' } : k;
+        }));
+        
+        // Save the remaining queue including the current keyword that was interrupted
+        const remaining = queue.slice(i);
+        setSequentialRemaining(remaining);
+        setIsSequentialRunning(false);
+        setBulkExecutionStatus(prev => ({ ...prev, isRunning: false }));
+        return;
       }
-    });
-    
-    await Promise.all(promises);
-    
-    // Reset bulk execution status after completion
-    setTimeout(() => {
-      setBulkExecutionStatus({ isRunning: false, total: 0, completed: 0, failed: 0 });
-    }, 3000); // Show completion status for 3 seconds
+
+      setKeywords(prev => prev.map(k => (k.id === id ? { ...k, status: 'running' } : k)));
+      try {
+        await executeKeyword(id);
+        setBulkExecutionStatus(prev => ({ ...prev, completed: prev.completed + 1 }));
+      } catch (err: any) {
+        // Check if this was due to stopping
+        if (stopSequentialRef.current || err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') {
+          // Reset the current keyword back to pending since it was interrupted
+          setKeywords(prev => prev.map(k => {
+            if (k.id === id) {
+              return { ...k, status: 'pending' };
+            }
+            // Reset any other running keywords back to pending
+            return k.status === 'running' ? { ...k, status: 'pending' } : k;
+          }));
+          
+          // Save remaining including current interrupted keyword
+          const remaining = queue.slice(i);
+          setSequentialRemaining(remaining);
+          setIsSequentialRunning(false);
+          setBulkExecutionStatus(prev => ({ ...prev, isRunning: false }));
+          return; // Exit the loop
+        } else {
+          // It's a real error, not a stop
+        setBulkExecutionStatus(prev => ({ ...prev, failed: prev.failed + 1 }));
+        }
+      }
+      // Update remaining list after each completion
+      setSequentialRemaining(queue.slice(i + 1));
+    }
+
+    setBulkExecutionStatus(prev => ({ ...prev, isRunning: false }));
+    setIsSequentialRunning(false);
+    setSequentialRemaining([]);
   };
 
   /**
@@ -1385,554 +1755,182 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
 
   return (
     <>
-      {/* Auto-save status indicator */}
-      {autoSaveStatus && (
-        <div style={{
-          position: 'fixed',
-          top: '1rem',
-          right: '1rem',
-          zIndex: 50,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.75rem 1rem',
-          backgroundColor: 'white',
-          border: '1px solid #e5e7eb',
-          borderRadius: '0.5rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-          color: autoSaveStatus === 'saving' ? '#6b7280' : '#10b981',
-          fontSize: '0.875rem',
-          fontWeight: '500',
-          pointerEvents: 'none'
-        }}>
-          {autoSaveStatus === 'saving' ? (
-            <>
-              <Clock className="animate-spin" style={{ width: '0.75rem', height: '0.75rem' }} />
-              Auto-saving progress...
-            </>
-          ) : (
-            <>
-              <CheckCircle size={14} />
-              Progress auto-saved
-            </>
-          )}
-        </div>
-      )}
-
-      <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-        {/* Hero Section */}
-      <div style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ padding: '2rem 1rem', width: '100%' }}>
-          <div style={{ textAlign: 'center' }}>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: '700', color: '#1f2937', marginBottom: '1rem' }}>
+      <style>
+        {`
+          @keyframes pulse {
+            0% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0.5;
+            }
+            100% {
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
+      <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', padding: '2rem' }}>
+        {/* Header Section */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h1 style={{ 
+            fontSize: '2rem', 
+            fontWeight: '600', 
+            color: '#111827',
+            marginBottom: '0.5rem'
+          }}>
               Blog Creator
             </h1>
-            <p style={{ fontSize: '1.125rem', color: '#6b7280', maxWidth: '768px', margin: '0 auto 2rem' }}>
-              Generate AEO-optimized articles using our 4-model pipeline:
-            </p>
-            
-            {/* Modern Pipeline Visualization */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              gap: '1rem',
-              flexWrap: 'wrap',
-              maxWidth: '900px',
-              margin: '0 auto'
-            }}>
-                             {/* Step 1: Firecrawl */}
-               <div style={{
-                 display: 'flex',
-                 alignItems: 'center',
-                 background: '#F67318',
-                 borderRadius: '1rem',
-                 padding: '0.5rem 1rem',
-                 color: 'white',
-                 fontWeight: '600',
+          <p style={{ 
                  fontSize: '0.875rem',
-                 boxShadow: '0 4px 6px -1px rgba(246, 115, 24, 0.3)',
-                 minWidth: '140px',
-                 justifyContent: 'center',
-                 gap: '0.5rem'
+            color: '#6b7280'
                }}>
-                 <Globe size={16} />
-                 Firecrawl
+            Generate AEO-optimized articles using our 4-model pipeline: Firecrawl → Deep Research → Gap Analysis → Content Generation
+          </p>
                </div>
 
-              {/* Arrow 1 */}
+        {/* Controls Section */}
               <div style={{ 
-                color: '#d1d5db', 
-                fontSize: '1.25rem', 
-                fontWeight: 'bold',
                 display: 'flex',
-                alignItems: 'center'
-              }}>
-                →
-              </div>
-
-                             {/* Step 2: Deep Research */}
-               <div style={{
-                 display: 'flex',
+          gap: '1rem', 
                  alignItems: 'center',
-                 background: '#3BB591',
-                 borderRadius: '1rem',
-                 padding: '0.5rem 1rem',
-                 color: 'white',
-                 fontWeight: '600',
-                 fontSize: '0.875rem',
-                 boxShadow: '0 4px 6px -1px rgba(59, 181, 145, 0.3)',
-                 minWidth: '160px',
-                 justifyContent: 'center',
+          marginBottom: '1.5rem',
+          flexWrap: 'wrap'
+        }}>
+          {/* Upload CSV Button */}
+          <div style={{ position: 'relative' }}>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleDirectCSVUpload}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+              id="csv-upload"
+            />
+                        <button
+              style={{ 
+                padding: '0.4rem 0.75rem',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                background: '#fff',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                 alignItems: 'center',
                  gap: '0.5rem'
-               }}>
-                 <Brain size={16} />
-                 Deep Research
+              }}
+            >
+              <Upload size={16} />
+              Upload CSV
+            </button>
                </div>
 
-              {/* Arrow 2 */}
-              <div style={{ 
-                color: '#d1d5db', 
-                fontSize: '1.25rem', 
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                →
-              </div>
+          {/* Loaded Keywords Info */}
+          <span style={{ fontSize: '0.875rem', color: '#3AB981', fontWeight: '500' }}>
+            Loaded {keywords.length} keywords
+          </span>
 
-                             {/* Step 3: Gap Analysis */}
-               <div style={{
-                 display: 'flex',
-                 alignItems: 'center',
-                 background: '#7D3DED',
-                 borderRadius: '1rem',
-                 padding: '0.5rem 1rem',
-                 color: 'white',
-                 fontWeight: '600',
-                 fontSize: '0.875rem',
-                 boxShadow: '0 4px 6px -1px rgba(125, 61, 237, 0.3)',
-                 minWidth: '150px',
-                 justifyContent: 'center',
-                 gap: '0.5rem'
-               }}>
-                 <BarChart3 size={16} />
-                 Gap Analysis
-               </div>
-
-              {/* Arrow 3 */}
-              <div style={{ 
-                color: '#d1d5db', 
-                fontSize: '1.25rem', 
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                →
-              </div>
-
-                             {/* Step 4: Content Generation */}
-               <div style={{
-                 display: 'flex',
-                 alignItems: 'center',
-                 background: '#EBF212',
-                 borderRadius: '1rem',
-                 padding: '0.5rem 1rem',
-                 color: 'black',
-                 fontWeight: '600',
-                 fontSize: '0.875rem',
-                 boxShadow: '0 4px 6px -1px rgba(235, 242, 18, 0.3)',
-                 minWidth: '180px',
-                 justifyContent: 'center',
-                 gap: '0.5rem'
-               }}>
-                 <Sparkles size={16} />
-                 Content Generation
-               </div>
-            </div>
-
-            {/* Mobile-responsive CSS */}
-            <style>
-              {`
-                @media (max-width: 768px) {
-                  .pipeline-step {
-                    min-width: 120px !important;
-                    font-size: 0.75rem !important;
-                    padding: 0.5rem 1rem !important;
-                  }
-                  .pipeline-arrow {
-                    transform: rotate(90deg);
-                    margin: 0.5rem 0;
-                  }
-                }
-              `}
-            </style>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-              <div style={{ padding: '2rem 1rem', width: '100%' }}>
-        {/* Control Panel */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          {/* Upload Status Messages */}
-          {(uploadSuccess || uploadError) && (
-            <div className="card" style={{ marginBottom: '1rem' }}>
-              <div className="card-content">
-                {uploadSuccess && (
-                  <div style={{ 
-                    padding: '0.75rem 1rem',
-                    backgroundColor: '#dcfce7',
-                    border: '1px solid #bbf7d0',
-                    borderRadius: '0.5rem',
-                    color: '#166534',
-                    fontSize: '0.875rem',
-                    marginBottom: uploadError ? '0.5rem' : 0
-                  }}>
-                    ✅ {uploadSuccess}
-                  </div>
-                )}
-                {uploadError && (
-                  <div style={{ 
-                    padding: '0.75rem 1rem',
-                    backgroundColor: '#fef2f2',
-                    border: '1px solid #fecaca',
-                    borderRadius: '0.5rem',
-                    color: '#dc2626',
-                    fontSize: '0.875rem'
-                  }}>
-                    ⚠️ {uploadError}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-
-
-          {/* Bulk Execute Control */}
-          <div className="card">
-            <div className="card-content">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                  {/* Primary bulk execution button */}
-                  {selectedRows.size > 0 ? (
-                    <button
-                      onClick={executeSelected}
-                      disabled={keywords.filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error')).length === 0}
-                      className="apollo-btn-primary"
-                      style={{ 
-                        opacity: keywords.filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error')).length === 0 ? 0.5 : 1 
-                      }}
-                    >
-                      <Play size={16} />
-                      Execute Selected ({Math.min(keywords.filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error')).length, 5)})
+          {/* Bulk controls */}
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button onClick={() => {
+              const allSelected = selectedRows.size === keywords.length && keywords.length > 0;
+              if ((selectionMadeBySelectAll && allSelected) || selectedRows.size > 0) {
+                // Unselect All if selection came from Select All and all are still selected; otherwise unselect current selection
+                clearSelection();
+              } else {
+                selectAll();
+              }
+            }} style={{ padding: '0.4rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer' }}>
+              {(() => {
+                const allSelected = selectedRows.size === keywords.length && keywords.length > 0;
+                if (selectionMadeBySelectAll && allSelected) return 'Unselect All';
+                if (selectedRows.size > 0) return `Unselect (${selectedRows.size})`;
+                return 'Select All';
+              })()}
                     </button>
-                  ) : (
-                    <button
-                      onClick={executeBulk}
-                      disabled={keywords.filter(k => k.status === 'pending').length === 0}
-                      className="apollo-btn-primary"
-                      style={{ opacity: keywords.filter(k => k.status === 'pending').length === 0 ? 0.5 : 1 }}
-                    >
-                      <Play size={16} />
-                      Execute 5 Rows
-                    </button>
-                  )}
-
-                  {/* Secondary bulk execute for first 3 pending when rows are selected */}
-                  {selectedRows.size > 0 && keywords.filter(k => k.status === 'pending').length > 0 && (
-                    <button
-                      onClick={executeBulk}
-                      className="apollo-btn-secondary"
-                    >
-                      <Play size={16} />
-                      Execute Next 5 Pending
-                    </button>
-                  )}
                   
                   {selectedRows.size > 0 && (
-                    <button
-                      onClick={showBulkDeleteConfirmation}
-                      className="apollo-btn-secondary"
-                      style={{ 
-                        backgroundColor: '#dc2626',
-                        color: '#ffffff',
-                        border: 'none'
-                      }}
-                    >
-                      <Trash2 size={16} />
+              <button onClick={showBulkDeleteConfirmation} style={{ padding: '0.4rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer' }}>
                       Delete Selected ({selectedRows.size})
                     </button>
                   )}
-                </div>
 
-                {/* Enhanced Execution Status Info with Concurrent Processing Feedback */}
-                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                  {bulkExecutionStatus.isRunning ? (
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem',
-                      padding: '0.5rem',
-                      backgroundColor: '#eff6ff',
-                      borderRadius: '0.375rem',
-                      border: '1px solid #dbeafe'
-                    }}>
-                      <div style={{ 
-                        width: '16px', 
-                        height: '16px', 
-                        border: '2px solid #3b82f6', 
-                        borderTop: '2px solid transparent',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                      }}></div>
-                      <span style={{ color: '#1e40af', fontWeight: '500' }}>
-                        Running {concurrentExecutions.size} concurrent workflow{concurrentExecutions.size > 1 ? 's' : ''} • 
-                        {bulkExecutionStatus.completed}/{bulkExecutionStatus.total} completed
-                        {bulkExecutionStatus.failed > 0 && ` • ${bulkExecutionStatus.failed} failed`}
-                      </span>
-                    </div>
-                  ) : selectedRows.size > 0 ? (
-                    <span>
-                      {selectedRows.size} row{selectedRows.size > 1 ? 's' : ''} selected • 
-                      {keywords.filter(k => selectedRows.has(k.id) && (k.status === 'pending' || k.status === 'error')).length} ready to execute/retry • 
-                      Max 5 concurrent executions
-                      {sortField && (
-                        <span style={{ color: '#3b82f6', marginLeft: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                          • Sorted by {sortField === 'monthlyVolume' ? 'Volume' : 'Difficulty'} ({sortDirection === 'desc' ? '↓' : '↑'})
-                          <button
-                            onClick={resetSorting}
-                            style={{
-                              padding: '0.125rem 0.5rem',
-                              fontSize: '0.75rem',
-                              fontWeight: '500',
-                              backgroundColor: '#f3f4f6',
-                              color: '#6b7280',
-                              border: '1px solid #d1d5db',
-                              borderRadius: '0.25rem',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#e5e7eb';
-                              e.currentTarget.style.color = '#374151';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = '#f3f4f6';
-                              e.currentTarget.style.color = '#6b7280';
-                            }}
-                            title="Reset to original order"
-                          >
-                            <X size={10} />
-                            Reset
+                        <button onClick={() => executeSelected(Array.from(selectedRows))} disabled={bulkExecutionStatus.isRunning || selectedRows.size === 0} style={{ padding: '0.4rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', background: bulkExecutionStatus.isRunning ? '#e5e7eb' : '#fff', cursor: bulkExecutionStatus.isRunning ? 'not-allowed' : 'pointer' }}>
+              Run Selected ({selectedRows.size})
                           </button>
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <span>
-                      {keywords.filter(k => k.status === 'pending').length} pending • 
-                      {keywords.filter(k => k.status === 'error').length} failed • 
-                      {keywords.filter(k => k.status === 'completed').length} completed
-                      {concurrentExecutions.size > 0 && ` • ${concurrentExecutions.size} running`}
-                      {sortField && (
-                        <span style={{ color: '#3b82f6', marginLeft: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                          • Sorted by {sortField === 'monthlyVolume' ? 'Volume' : 'Difficulty'} ({sortDirection === 'desc' ? '↓' : '↑'})
-                          <button
-                            onClick={resetSorting}
-                            style={{
-                              padding: '0.125rem 0.5rem',
-                              fontSize: '0.75rem',
-                              fontWeight: '500',
-                              backgroundColor: '#f3f4f6',
-                              color: '#6b7280',
-                              border: '1px solid #d1d5db',
-                              borderRadius: '0.25rem',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#e5e7eb';
-                              e.currentTarget.style.color = '#374151';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = '#f3f4f6';
-                              e.currentTarget.style.color = '#6b7280';
-                            }}
-                            title="Reset to original order"
-                          >
-                            <X size={10} />
-                            Reset
+            {isSequentialRunning ? (
+              <button onClick={() => { 
+                stopSequentialRef.current = true; 
+                // Also abort the current request if one is in progress
+                if (abortControllerRef.current) {
+                  abortControllerRef.current.abort();
+                }
+              }} style={{ padding: '0.4rem 0.75rem', border: '1px solid #ee4444', borderRadius: '0.5rem', background: '#ee4444', color: '#fff', cursor: 'pointer' }}>
+                Stop
                           </button>
-                        </span>
-                      )}
+            ) : sequentialRemaining.length > 0 ? (
+              <button onClick={() => executeSelected(sequentialRemaining)} style={{ padding: '0.4rem 0.75rem', border: '1px solid #3AB981', borderRadius: '0.5rem', background: '#3AB981', color: '#fff', cursor: 'pointer' }}>
+                Resume ({sequentialRemaining.length})
+              </button>
+            ) : null}
+            {bulkExecutionStatus.isRunning && (
+              <span style={{ fontSize: '0.8rem', color: '#2563eb' }}>
+                {bulkExecutionStatus.completed + bulkExecutionStatus.failed}/{bulkExecutionStatus.total} done
                     </span>
                   )}
                 </div>
-              </div>
-            </div>
-          </div>
+
+
         </div>
 
-        {/* Airtable-like Table */}
-        <div className="card" style={{ overflow: 'auto', maxHeight: '70vh' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ 
-                backgroundColor: '#f9fafb', 
-                borderBottom: '1px solid #e5e7eb',
-                position: 'sticky',
-                top: 0,
-                zIndex: 10
-              }}>
+                {/* Table Container */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
+          <div style={{ maxHeight: '65vh', overflow: 'auto' }}>
+            <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
+            <colgroup>
+              <col style={{ width: '32px' }} />
+              <col style={{ width: '60%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '8%' }} />
+            </colgroup>
+              <thead>
                 <tr>
-                  <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', width: '60px' }}>
+                                                <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>
                     <input
                       type="checkbox"
                       checked={keywords.length > 0 && selectedRows.size === keywords.length}
                       onChange={toggleSelectAll}
                       style={{ cursor: 'pointer' }}
-                      title="Select all"
                     />
                   </th>
-                  <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      Keywords
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="file"
-                          accept=".csv"
-                          onChange={handleDirectCSVUpload}
-                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
-                          id="compact-csv-upload"
-                        />
-                        <button
-                          style={{ 
-                            padding: '0.25rem 0.5rem',
-                            fontSize: '0.75rem',
-                            textTransform: 'none',
-                            fontWeight: '500',
-                            backgroundColor: '#EBF212',
-                            color: '#000000',
-                            border: 'none',
-                            borderRadius: '0.375rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem'
-                          }}
-                          title="Upload CSV file"
-                        >
-                          <Upload size={12} />
-                          Upload CSV
-                        </button>
-                      </div>
-                    </div>
+                <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>KEYWORDS</th>
+                <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb', cursor: 'pointer' }} onClick={() => handleSort('monthlyVolume')}>
+                  MSV {sortField === 'monthlyVolume' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
                   </th>
-                  <th 
-                    style={{ 
-                      padding: '0.75rem 1.5rem', 
-                      textAlign: 'left', 
-                      fontSize: '0.75rem', 
-                      fontWeight: '500', 
-                      color: '#6b7280', 
-                      textTransform: 'uppercase', 
-                      letterSpacing: '0.05em', 
-                      width: '120px',
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      position: 'relative'
-                    }}
-                    onClick={() => handleSort('monthlyVolume')}
-                    title="Click to sort by Monthly Volume"
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      Monthly Volume
-                      <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '0.25rem' }}>
-                        <ChevronUp 
-                          size={12} 
-                          style={{ 
-                            color: sortField === 'monthlyVolume' && sortDirection === 'asc' ? '#3b82f6' : '#6b7280',
-                            marginBottom: '-2px'
-                          }} 
-                        />
-                        <ChevronDown 
-                          size={12} 
-                          style={{ 
-                            color: sortField === 'monthlyVolume' && sortDirection === 'desc' ? '#3b82f6' : '#6b7280' 
-                          }} 
-                        />
-                      </div>
-                    </div>
+                <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb', cursor: 'pointer' }} onClick={() => handleSort('avgDifficulty')}>
+                  KD {sortField === 'avgDifficulty' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
                   </th>
-                  <th 
-                    style={{ 
-                      padding: '0.75rem 1.5rem', 
-                      textAlign: 'left', 
-                      fontSize: '0.75rem', 
-                      fontWeight: '500', 
-                      color: '#6b7280', 
-                      textTransform: 'uppercase', 
-                      letterSpacing: '0.05em', 
-                      width: '120px',
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      position: 'relative'
-                    }}
-                    onClick={() => handleSort('avgDifficulty')}
-                    title="Click to sort by Avg. Difficulty"
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      Avg. Difficulty
-                      <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '0.25rem' }}>
-                        <ChevronUp 
-                          size={12} 
-                          style={{ 
-                            color: sortField === 'avgDifficulty' && sortDirection === 'asc' ? '#3b82f6' : '#6b7280',
-                            marginBottom: '-2px'
-                          }} 
-                        />
-                        <ChevronDown 
-                          size={12} 
-                          style={{ 
-                            color: sortField === 'avgDifficulty' && sortDirection === 'desc' ? '#3b82f6' : '#6b7280' 
-                          }} 
-                        />
-                      </div>
-                    </div>
-                  </th>
-                  <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Execute
-                  </th>
-                  <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Output
-                  </th>
-                  <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Next Steps
-                  </th>
-                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', width: '60px' }}>
-                    Actions
-                  </th>
+                <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>EXECUTE</th>
+                <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>DETAILS</th>
+                <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>ACTIONS</th>
                 </tr>
               </thead>
-              <tbody style={{ backgroundColor: '#ffffff' }}>
+              <tbody style={{ backgroundColor: '#ffffff', fontSize: '0.875rem' }}>
                 {keywords.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#6b7280' }}>
+                  <td colSpan={7} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
                       Upload a CSV file to get started
                     </td>
                   </tr>
                 ) : (
-                  getSortedKeywords().map((keyword) => (
-                    <tr key={keyword.id} style={{ borderBottom: '1px solid #f3f4f6', backgroundColor: selectedRows.has(keyword.id) ? '#f0f9ff' : '#ffffff' }}>
-                      {/* Selection Checkbox */}
-                      <td style={{ padding: '1rem', textAlign: 'center' }}>
+                  paginatedKeywords.map((keyword) => (
+                  <tr key={keyword.id} style={{ 
+                    borderBottom: '1px solid #e5e7eb',
+                    backgroundColor: '#ffffff'
+                  }}>
+                                        {/* Checkbox */}
+                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
                         <input
                           type="checkbox"
                           checked={selectedRows.has(keyword.id)}
@@ -1941,293 +1939,132 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                         />
                       </td>
 
-                      {/* Keywords Column */}
-                      <td style={{ padding: '1rem 1.5rem', maxWidth: '350px', minWidth: '280px' }}>
-                        <div style={{ 
-                          fontSize: '0.875rem', 
-                          fontWeight: '500', 
-                          color: '#1f2937',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}
-                        title={keyword.keyword} // Show full keyword on hover
-                        >
+                    {/* Keywords */}
+                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6', color: '#374151' }}>
                           {keyword.keyword}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                          {keyword.createdAt.toLocaleDateString()}
-                        </div>
                       </td>
 
-                      {/* Monthly Volume Column */}
-                      <td style={{ padding: '1rem 1.5rem', textAlign: 'center', width: '120px' }}>
-                        <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>
-                          {keyword.monthlyVolume ? keyword.monthlyVolume.toLocaleString() : '-'}
-                        </div>
+                    {/* MSV (Monthly Search Volume) */}
+                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6', color: '#374151' }}>
+                      {keyword.monthlyVolume ? keyword.monthlyVolume.toLocaleString() : '0'}
                       </td>
 
-                      {/* Avg. Difficulty Column */}
-                      <td style={{ padding: '1rem 1.5rem', textAlign: 'center', width: '120px' }}>
-                        <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>
-                          {keyword.avgDifficulty !== undefined ? keyword.avgDifficulty : '-'}
-                        </div>
+                    {/* KD (Keyword Difficulty) */}
+                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6', color: '#374151' }}>
+                      {keyword.avgDifficulty !== undefined ? keyword.avgDifficulty : '0'}
                       </td>
 
-                      {/* Execute Column */}
-                      <td style={{ padding: '1rem 1.5rem', width: '280px', minWidth: '280px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
-                          {keyword.status === 'error' ? (
+                    {/* Execute */}
+                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
+                      {keyword.status === 'pending' ? (
                             <button
-                              onClick={() => retryKeyword(keyword.id)}
+                          onClick={() => executeKeyword(keyword.id)}
                               style={{ 
-                                padding: '0.25rem 0.5rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '500',
-                                backgroundColor: '#f59e0b',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '0.375rem',
-                                whiteSpace: 'nowrap',
-                                width: 'fit-content',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
+                            padding: '0.3125rem 0.625rem',
+                            borderRadius: '0.5rem',
+                            border: '1px solid #e5e7eb',
+                            background: '#ffffff',
+                            color: '#111827',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s ease'
+                            fontSize: 'inherit'
                               }}
                             >
-                              <RefreshCw size={14} />
-                              Retry
+                          Run
+                            </button>
+                      ) : keyword.status === 'running' ? (
+                            <button
+                          disabled
+                              style={{ 
+                            padding: '0.3125rem 0.625rem',
+                            borderRadius: '0.5rem',
+                            border: '1px solid #e5e7eb',
+                            background: '#e5e7eb',
+                            color: '#111827',
+                            cursor: 'not-allowed',
+                            fontSize: 'inherit'
+                          }}
+                          title={keyword.progress || 'Content generation in progress...'}
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{
+                              display: 'inline-block',
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: '#10b981',
+                              animation: 'pulse 1.5s ease-in-out infinite'
+                            }} />
+                            Running…
+                          </span>
                             </button>
                           ) : keyword.status === 'completed' ? (
                             <button
                               onClick={() => retryKeyword(keyword.id)}
                               style={{ 
-                                padding: '0.25rem 0.5rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '500',
-                                backgroundColor: '#6b7280',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '0.375rem',
-                                whiteSpace: 'nowrap',
-                                width: 'fit-content',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
+                            padding: '0.3125rem 0.625rem',
+                            borderRadius: '0.5rem',
+                            border: '1px solid #e5e7eb',
+                            background: '#ffffff',
+                            color: '#111827',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s ease'
+                            fontSize: 'inherit'
                               }}
                             >
-                              <RefreshCw size={14} />
-                              Regenerate
+                          Re-run
                             </button>
-                          ) : (
-                            <button
-                              onClick={() => executeKeyword(keyword.id)}
-                              disabled={keyword.status === 'running'}
-                              style={{ 
-                                padding: keyword.status === 'running' ? '0.25rem 0.5rem' : '0.25rem 0.4rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '500',
-                                backgroundColor: keyword.status === 'running' ? '#6b7280' : '#10b981',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '0.375rem',
-                                opacity: keyword.status === 'running' ? 0.6 : 1,
-                                cursor: keyword.status === 'running' ? 'not-allowed' : 'pointer',
-                                whiteSpace: 'nowrap',
-                                width: keyword.status === 'running' ? '90px' : '65px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                transition: 'all 0.2s ease'
-                              }}
-                            >
-                              <Play size={14} />
-                              {keyword.status === 'running' ? 'Running...' : 'Play'}
-                            </button>
-                          )}
-                          
-                          {/* Enhanced progress indicator for running keywords with concurrent processing indicator */}
-                          {keyword.status === 'running' && (
-                            <div 
-                              style={{ 
-                                fontSize: '0.75rem', 
-                                color: '#6b7280', 
-                                width: '100%',
-                                maxWidth: '250px',
-                                wordWrap: 'break-word',
-                                whiteSpace: 'normal',
-                                lineHeight: '1.3',
-                                marginTop: '0.25rem',
-                                cursor: 'pointer',
-                                padding: '0.25rem',
-                                borderRadius: '0.25rem',
-                                transition: 'background-color 0.2s'
-                              }}
-                              onMouseEnter={(e) => showBackendPopup(keyword.id, e)}
-                              onMouseLeave={hideBackendPopup}
-                              onClick={(e) => showBackendPopup(keyword.id, e)} // Mobile tap support
-                              title="Hover/tap for detailed backend progress"
-                            >
-                              {concurrentExecutions.size > 1 && (
-                                <div style={{ 
-                                  display: 'inline-flex', 
-                                  alignItems: 'center', 
-                                  gap: '0.25rem',
-                                  marginBottom: '0.25rem',
-                                  padding: '0.125rem 0.375rem',
-                                  backgroundColor: '#e0f2fe',
-                                  borderRadius: '0.25rem',
-                                  fontSize: '0.6875rem',
-                                  color: '#0369a1',
-                                  fontWeight: '500'
-                                }}>
-                                  🔄 Concurrent ({concurrentExecutions.size} running)
-                                </div>
-                              )}
-                              {keyword.progress}
-                            </div>
-                          )}
-                          
-                          {/* Error message for failed keywords */}
-                          {keyword.status === 'error' && (
-                            <div 
-                              style={{ 
-                                fontSize: '0.75rem', 
-                                color: '#dc2626', 
-                                width: '100%',
-                                maxWidth: '250px',
-                                wordWrap: 'break-word',
-                                whiteSpace: 'normal',
-                                lineHeight: '1.3',
-                                marginTop: '0.25rem',
-                                cursor: 'pointer',
-                                padding: '0.25rem',
-                                borderRadius: '0.25rem',
-                                transition: 'background-color 0.2s'
-                              }}
-                              onMouseEnter={(e) => showBackendPopup(keyword.id, e)}
-                              onMouseLeave={hideBackendPopup}
-                              onClick={(e) => showBackendPopup(keyword.id, e)} // Mobile tap support
-                              title="Hover/tap for detailed error information"
-                            >
-                              {keyword.progress}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Output Column */}
-                      <td style={{ padding: '1rem 1.5rem' }}>
-                        <div style={{ maxWidth: '200px' }}>
-                          {keyword.status === 'completed' ? (
-                            <div 
-                              style={{ 
-                                fontSize: '0.875rem', 
-                                color: '#1f2937',
-                                cursor: 'pointer',
-                                padding: '0.25rem',
-                                borderRadius: '0.25rem',
-                                transition: 'background-color 0.2s'
-                              }}
-                              onMouseEnter={(e) => showBackendPopup(keyword.id, e)}
-                              onMouseLeave={hideBackendPopup}
-                              onClick={(e) => showBackendPopup(keyword.id, e)} // Mobile tap support
-                              title="Hover/tap for detailed generation results"
-                            >
-                              <div style={{ marginBottom: '0.25rem', fontWeight: '500' }}>Article Generated</div>
-                              <div style={{ fontSize: '0.75rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {keyword.output.split('\n')[0].replace('# ', '')}
-                              </div>
-                            </div>
                           ) : keyword.status === 'error' ? (
-                            <div 
+                            <button
+                          onClick={() => retryKeyword(keyword.id)}
                               style={{ 
-                                fontSize: '0.875rem', 
+                            padding: '0.3125rem 0.625rem',
+                            borderRadius: '0.5rem',
+                            border: '1px solid #e5e7eb',
+                            background: '#fef2f2',
                                 color: '#dc2626',
                                 cursor: 'pointer',
-                                padding: '0.25rem',
-                                borderRadius: '0.25rem',
-                                transition: 'background-color 0.2s'
-                              }}
-                              onMouseEnter={(e) => showBackendPopup(keyword.id, e)}
-                              onMouseLeave={hideBackendPopup}
-                              onClick={(e) => showBackendPopup(keyword.id, e)} // Mobile tap support
-                              title="Hover/tap for error details"
-                            >
-                              Generation failed
-                            </div>
-                          ) : keyword.status === 'running' ? (
-                            <div 
-                              style={{ 
-                                fontSize: '0.875rem', 
-                                color: '#2563eb',
-                                cursor: 'pointer',
-                                padding: '0.25rem',
-                                borderRadius: '0.25rem',
-                                transition: 'background-color 0.2s'
-                              }}
-                              onMouseEnter={(e) => showBackendPopup(keyword.id, e)}
-                              onMouseLeave={hideBackendPopup}
-                              onClick={(e) => showBackendPopup(keyword.id, e)} // Mobile tap support
-                              title="Hover/tap for live progress details"
-                            >
-                              Processing...
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
-                              Pending
-                            </div>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Next Steps Column */}
-                      <td style={{ padding: '1rem 1.5rem', whiteSpace: 'nowrap' }}>
-                        {keyword.status === 'completed' ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <button
-                              onClick={() => openNextStepsModal(keyword.id)}
-                              className="apollo-btn-primary"
-                              style={{ 
-                                padding: '0.25rem 0.75rem',
-                                fontSize: '0.875rem'
-                              }}
-                            >
-                              Actions
-                            </button>
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
-                            Complete generation first
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Individual Delete Action */}
-                      <td style={{ padding: '1rem', textAlign: 'center' }}>
-                        <button
-                          onClick={() => showDeleteKeywordModal(keyword.id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#dc2626',
-                            cursor: 'pointer',
-                            padding: '0.25rem',
-                            borderRadius: '0.25rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'background-color 0.2s'
+                            fontSize: 'inherit'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          title="Delete keyword"
                         >
-                          <Trash2 size={16} />
+                          Retry
+                            </button>
+                      ) : null}
+                      </td>
+
+                    {/* Details */}
+                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
+                            <button
+                        onClick={(e) => showBackendPopup(keyword.id, e)}
+                        disabled={!keyword.output || keyword.status === 'running'}
+                              style={{ 
+                          padding: '0.3125rem 0.625rem',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e5e7eb',
+                          background: keyword.output && keyword.status !== 'running' ? '#ffffff' : '#e5e7eb',
+                          color: keyword.output && keyword.status !== 'running' ? '#111827' : '#9ca3af',
+                          cursor: keyword.output && keyword.status !== 'running' ? 'pointer' : 'not-allowed',
+                          fontSize: 'inherit'
+                        }}
+                      >
+                        Show
+                            </button>
+                      </td>
+
+                    {/* Actions */}
+                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
+                        <button
+                        onClick={() => openNextStepsModal(keyword.id)}
+                        disabled={!keyword.output || keyword.status === 'running'}
+                          style={{
+                          padding: '0.3125rem 0.625rem',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e5e7eb',
+                          background: keyword.output && keyword.status !== 'running' ? '#EBF212' : '#e5e7eb',
+                          color: keyword.output && keyword.status !== 'running' ? '#000000' : '#111827',
+                          cursor: keyword.output && keyword.status !== 'running' ? 'pointer' : 'not-allowed',
+                          fontSize: '0.8125rem'
+                        }}
+                      >
+                        See Output
                         </button>
                       </td>
                     </tr>
@@ -2235,6 +2072,36 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                 )}
               </tbody>
             </table>
+                        </div>
+
+          {/* Pagination Footer */}
+          <div style={{ 
+            padding: '0.75rem 1rem',
+            borderTop: '1px solid #e5e7eb',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+                                fontSize: '0.875rem', 
+            color: '#6b7280'
+          }}>
+            <div>
+              Page {page} of {totalPages} • Showing {paginatedKeywords.length} of {keywords.length.toLocaleString()} rows
+                              </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button onClick={() => setPage(1)} disabled={page === 1} style={{ padding: '0.3rem 0.6rem', border: '1px solid #e5e7eb', borderRadius: '0.375rem', background: page === 1 ? '#e5e7eb' : '#fff', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>{'<<'}</button>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '0.3rem 0.6rem', border: '1px solid #e5e7eb', borderRadius: '0.375rem', background: page === 1 ? '#e5e7eb' : '#fff', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>{'<'}</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '0.3rem 0.6rem', border: '1px solid #e5e7eb', borderRadius: '0.375rem', background: page === totalPages ? '#e5e7eb' : '#fff', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}>{'>'}</button>
+                                          <button onClick={() => setPage(totalPages)} disabled={page === totalPages} style={{ padding: '0.3rem 0.6rem', border: '1px solid #e5e7eb', borderRadius: '0.375rem', background: page === totalPages ? '#e5e7eb' : '#fff', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}>{'>>'}</button>
+              <label style={{ color: '#374151', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Rows per page
+                <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} style={{ padding: '0.3rem 0.6rem', border: '1px solid #e5e7eb', borderRadius: '0.375rem', background: '#fff' }}>
+                  {[50, 100, 200, 500, 1000].map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
         </div>
 
         {/* Upload Error Modal */}
@@ -2538,13 +2405,13 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
               status={selectedKeyword?.status || 'pending'}
               isVisible={popupState.isVisible}
               position={popupState.position}
-              onMouseEnter={keepPopupVisible}
-              onMouseLeave={hideBackendPopup}
+              onMouseEnter={() => {}}
+              onMouseLeave={hidePopupImmediately}
               onMobileClose={hidePopupImmediately}
+              dismissBehavior="manual"
             />
           );
         })()}
-      </div>
     </div>
     </>
   );
