@@ -733,7 +733,7 @@ const VoCKitPage: React.FC = () => {
             </h3>
             <p style={{ color: '#6b7280', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
               Customer pain points are extracted and ready! Use the CTA Creator to generate 
-              hyper-relevant CTAs from any article URL using Voice of Customer insights.
+              hyper-relevant CTAs using Voice of Customer insights.
             </p>
 
             <a 
