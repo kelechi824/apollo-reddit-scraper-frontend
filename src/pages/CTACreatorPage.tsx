@@ -643,47 +643,88 @@ const CTACreatorPage: React.FC = () => {
 
   /**
    * Download all CTAs as a text file
-   * Why this matters: Provides a convenient way to save all generated CTAs.
+   * Why this matters: Provides a convenient way to save all generated CTAs with both original and styled shortcodes.
    */
   const downloadCTAs = () => {
     if (!generatedCTAs) return;
 
+    // Helper function to generate styled shortcode
+    const generateStyledShortcode = (ctaData: any) => {
+      return `<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem; position: relative;">
+  <div style="font-size: 0.875rem; font-weight: 600; color: #ffffff; margin-bottom: 1rem; letter-spacing: 0.1em; text-transform: uppercase;">
+    ${ctaData.cta.category_header}
+  </div>
+  <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
+    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0;">
+      <img src="/apollo logo only.png" alt="Apollo Logo" style="width: 100%; height: 100%; object-fit: cover;" />
+    </div>
+    <div style="flex: 1;">
+      <h4 style="font-size: 1.5rem; font-weight: 700; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
+        ${ctaData.cta.headline}
+      </h4>
+      <p style="font-size: 1rem; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
+        ${ctaData.cta.description}
+      </p>
+      <a href="#" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(189, 245, 72, 0.3); text-decoration: none;">
+        ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
+        <span style="font-size: 1.1rem;">→</span>
+      </a>
+    </div>
+  </div>
+</div>`;
+    };
+
     const content = `
 Generated on: ${new Date(generatedCTAs.generation_metadata.generation_timestamp).toLocaleString()}
 
-## Beginning CTA (Awareness Strategy)
+## Beginning CTA
 Category: ${generatedCTAs.cta_variants.beginning.cta.category_header}
 Headline: ${generatedCTAs.cta_variants.beginning.cta.headline}
 Description: ${generatedCTAs.cta_variants.beginning.cta.description}
 Action: ${generatedCTAs.cta_variants.beginning.cta.action_button}
 
-Shortcode:
+Original Shortcode:
 ${generatedCTAs.cta_variants.beginning.shortcode}
 
-## Middle CTA (Consideration Strategy)
+Styled Shortcode (with Apollo design):
+${generateStyledShortcode(generatedCTAs.cta_variants.beginning)}
+
+## Middle CTA
 Category: ${generatedCTAs.cta_variants.middle.cta.category_header}
 Headline: ${generatedCTAs.cta_variants.middle.cta.headline}
 Description: ${generatedCTAs.cta_variants.middle.cta.description}
 Action: ${generatedCTAs.cta_variants.middle.cta.action_button}
 
-Shortcode:
+Original Shortcode:
 ${generatedCTAs.cta_variants.middle.shortcode}
 
-## End CTA (Conversion Strategy)
+Styled Shortcode (with Apollo design):
+${generateStyledShortcode(generatedCTAs.cta_variants.middle)}
+
+## End CTA
 Category: ${generatedCTAs.cta_variants.end.cta.category_header}
 Headline: ${generatedCTAs.cta_variants.end.cta.headline}
 Description: ${generatedCTAs.cta_variants.end.cta.description}
 Action: ${generatedCTAs.cta_variants.end.cta.action_button}
 
-Shortcode:
+Original Shortcode:
 ${generatedCTAs.cta_variants.end.shortcode}
+
+Styled Shortcode (with Apollo design):
+${generateStyledShortcode(generatedCTAs.cta_variants.end)}
+
+## Notes:
+- Original Shortcodes: Content-only versions for custom styling
+- Styled Shortcodes: Complete HTML with Apollo branding, ready to paste into any website
+- Logo Path: Update "/apollo logo only.png" to match your website's logo location
+- Button Links: Replace href="#" with your actual landing page URLs
 `;
 
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ctas-${Date.now()}.txt`;
+    a.download = `apollo-ctas-${Date.now()}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -800,8 +841,10 @@ ${generatedCTAs.cta_variants.end.shortcode}
       padding: '2rem'
     }}>
       <div style={{ 
-        maxWidth: '80rem', 
-        margin: '0 auto'
+        width: '100%', 
+        margin: '0 auto',
+        paddingLeft: '2rem',
+        paddingRight: '2rem'
       }}>
         {/* Header */}
         <div style={{ marginBottom: '3rem', textAlign: 'center' }}>
@@ -919,7 +962,7 @@ ${generatedCTAs.cta_variants.end.shortcode}
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: (generatedCTAs || showSkeletons) ? '1fr 1fr' : '1fr', gap: '3rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: (generatedCTAs || showSkeletons) ? '40% 60%' : '1fr', gap: '3rem', width: '100%' }}>
           {/* Input Section */}
           <div style={{
             backgroundColor: 'white',
@@ -1373,125 +1416,8 @@ Paste your markdown content here...
 
               </div>
 
-              {/* Overall VoC Insights Summary */}
-              {generatedCTAs.pain_point_context && vocKitReady && (
-                <div style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '0.75rem',
-                  padding: '1.5rem',
-                  marginBottom: '2rem'
-                }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.75rem', 
-                    marginBottom: '1rem' 
-                  }}>
-                    <div style={{
-                      padding: '0.5rem',
-                      backgroundColor: '#EBF212',
-                      borderRadius: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <CheckCircle size={20} style={{ color: 'black' }} />
-                    </div>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: '#1e293b' }}>
-                      🎯 VoC Data Successfully Integrated
-                    </h3>
-                  </div>
-                  
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                    gap: '1.5rem' 
-                  }}>
-                    {/* Pain Points Stats */}
-                    <div style={{
-                      backgroundColor: 'white',
-                      padding: '1rem',
-                      borderRadius: '0.5rem',
-                      border: '1px solid #e5e7eb'
-                    }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        marginBottom: '0.5rem'
-                      }}>
-                        <span style={{ fontSize: '1.25rem' }}>📊</span>
-                        <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
-                          Pain Points
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.25rem' }}>
-                        {generatedCTAs.matched_pain_points}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                        themes matched from VoC analysis
-                      </div>
-                    </div>
-                    
-                    {/* Customer Quotes Stats */}
-                    <div style={{
-                      backgroundColor: 'white',
-                      padding: '1rem',
-                      borderRadius: '0.5rem',
-                      border: '1px solid #e5e7eb'
-                    }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        marginBottom: '0.5rem'
-                      }}>
-                        <span style={{ fontSize: '1.25rem' }}>💬</span>
-                        <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
-                          Customer Quotes
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.25rem' }}>
-                        {generatedCTAs.pain_point_context.customer_quotes_used?.length || 0}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                        authentic customer quotes used
-                      </div>
-                    </div>
-                    
-                    
-                  </div>
-                  
-                  {/* Top Customer Quote */}
-                  {generatedCTAs.pain_point_context.customer_quotes_used?.length > 0 && (
-                    <div style={{
-                      marginTop: '1.5rem',
-                      padding: '1rem',
-                      backgroundColor: '#f0fdf4',
-                      borderRadius: '0.5rem',
-                      border: '1px solid #bbf7d0'
-                    }}>
-                      <div style={{ 
-                        fontSize: '0.875rem', 
-                        fontWeight: '600', 
-                        color: '#16a34a', 
-                        marginBottom: '0.5rem' 
-                      }}>
-                        🗣️ Top Customer Quote Used:
-                      </div>
-                      <div style={{
-                        fontSize: '0.875rem',
-                        fontStyle: 'italic',
-                        color: '#059669',
-                        lineHeight: '1.5'
-                      }}>
-                        "{generatedCTAs.pain_point_context.customer_quotes_used[0]}"
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* VoC Insights Summary - Hidden for cleaner interface */}
+              {/* Removed VoC integration stats section for cleaner UI */}
 
               {/* CTA Variants */}
               <div style={{ display: 'grid', gap: '2rem' }}>
@@ -1518,115 +1444,121 @@ Paste your markdown content here...
                         </div>
                       </div>
                       
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          onClick={() => setShowPreview(showPreview === position ? '' : position)}
-                          style={{
-                            padding: '0.375rem 0.75rem',
-                            backgroundColor: showPreview === position ? '#fef3c7' : '#f1f5f9',
-                            color: showPreview === position ? '#b45309' : '#475569',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.75rem',
-                            fontWeight: '500',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem'
-                          }}
-                        >
-                          <ExternalLink size={12} />
-                          {showPreview === position ? 'Hide Test' : 'Test Shortcode'}
-                        </button>
-                        
-                        <button
-                          onClick={() => copyToClipboard(ctaData.shortcode, position)}
-                          style={{
-                            padding: '0.375rem 0.75rem',
-                            backgroundColor: copySuccess === position ? '#dcfce7' : '#f1f5f9',
-                            color: copySuccess === position ? '#16a34a' : '#475569',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.75rem',
-                            fontWeight: '500',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem'
-                          }}
-                        >
-                          {copySuccess === position ? (
-                            <>
-                              <CheckCircle size={12} />
-                              Copied!
-                            </>
-                          ) : (
-                            <>
-                              <Copy size={12} />
-                              Copy Code
-                            </>
-                          )}
-                        </button>
+                      <div style={{ display: 'none' }}>
+                        {/* Hidden - using dedicated shortcode copy buttons below instead */}
                       </div>
                     </div>
 
-                    {/* CTA Preview */}
+                    {/* CTA Preview - Apollo Design */}
                     <div style={{ 
-                      backgroundColor: 'white',
-                      padding: '1.5rem',
-                      borderRadius: '0.5rem',
-                      border: '1px solid #e5e7eb',
-                      marginBottom: '1rem'
+                      backgroundColor: '#192307',
+                      padding: '2rem',
+                      borderRadius: '0.875rem',
+                      marginBottom: '1rem',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}>
+                      {/* Category Header */}
                       <div style={{ 
-                        fontSize: '0.75rem', 
-                        fontWeight: '700', 
-                        color: '#374151',
-                        marginBottom: '0.5rem',
-                        letterSpacing: '0.05em'
+                        fontSize: '0.875rem', 
+                        fontWeight: '600', 
+                        color: '#ffffff',
+                        marginBottom: '1rem',
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase'
                       }}>
                         {ctaData.cta.category_header}
                       </div>
 
-                      <h4 style={{ 
-                        fontSize: '1.25rem', 
-                        fontWeight: '700', 
-                        color: '#111827',
-                        margin: '0 0 0.75rem 0',
-                        lineHeight: '1.3'
-                      }}>
-                        {ctaData.cta.headline}
-                      </h4>
-
-                      <p style={{ 
-                        fontSize: '0.875rem', 
-                        color: '#4b5563',
-                        lineHeight: '1.5',
-                        margin: '0 0 1rem 0'
-                      }}>
-                        {ctaData.cta.description}
-                      </p>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      {/* Content Layout with Logo */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
+                        {/* Apollo Logo */}
                         <div style={{
-                          display: 'inline-block',
-                          padding: '0.75rem 1.5rem',
-                          backgroundColor: '#EBF212',
-                          color: 'black',
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875rem',
-                          fontWeight: '700'
+                          width: '4rem',
+                          height: '4rem',
+                          borderRadius: '0.75rem',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          position: 'relative'
                         }}>
-                          {ctaData.cta.action_button}
+                          <img 
+                            src="/apollo logo only.png" 
+                            alt="Apollo Logo"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
                         </div>
-                        
+
+                        {/* Content */}
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ 
+                            fontSize: '1.5rem', 
+                            fontWeight: '700', 
+                            color: '#ffffff',
+                            margin: '0 0 1rem 0',
+                            lineHeight: '1.3'
+                          }}>
+                            {ctaData.cta.headline}
+                          </h4>
+
+                          <p style={{ 
+                            fontSize: '1rem', 
+                            color: '#ffffff',
+                            lineHeight: '1.6',
+                            margin: '0 0 1.5rem 0',
+                            opacity: 0.9
+                          }}>
+                            {ctaData.cta.description}
+                          </p>
+
+                          {/* CTA Button */}
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '1rem 2rem',
+                            backgroundColor: '#BDF548',
+                            color: '#192307',
+                            borderRadius: '0.625rem',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 4px 12px rgba(189, 245, 72, 0.3)'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.backgroundColor = '#A8E63A';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(189, 245, 72, 0.4)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = '#BDF548';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(189, 245, 72, 0.3)';
+                          }}
+                          >
+                            {ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
+                            <span style={{ fontSize: '1.1rem' }}>→</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Change CTA Button - Positioned outside the main design */}
+                      <div style={{ 
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem'
+                      }}>
                         <button
                           onClick={() => cycleCTAButton(position as 'beginning' | 'middle' | 'end')}
                           style={{
                             padding: '0.5rem 0.75rem',
-                            backgroundColor: '#e0f2fe',
-                            color: '#0369a1',
-                            border: '1px solid #0ea5e9',
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            color: '#ffffff',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
                             borderRadius: '0.375rem',
                             cursor: 'pointer',
                             display: 'flex',
@@ -1634,16 +1566,15 @@ Paste your markdown content here...
                             gap: '0.375rem',
                             fontSize: '0.75rem',
                             fontWeight: '500',
-                            transition: 'all 0.2s ease'
+                            transition: 'all 0.2s ease',
+                            backdropFilter: 'blur(10px)'
                           }}
                           onMouseOver={(e) => {
-                            e.currentTarget.style.backgroundColor = '#0ea5e9';
-                            e.currentTarget.style.color = 'white';
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
                             e.currentTarget.style.transform = 'translateY(-1px)';
                           }}
                           onMouseOut={(e) => {
-                            e.currentTarget.style.backgroundColor = '#e0f2fe';
-                            e.currentTarget.style.color = '#0369a1';
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                             e.currentTarget.style.transform = 'translateY(0)';
                           }}
                           title="Change to a different CTA button"
@@ -1786,67 +1717,114 @@ Paste your markdown content here...
                           {(() => {
                             const parsed = parseShortcode(ctaData.shortcode);
                             return (
-                              <div style={{ marginTop: '0.5rem' }}>
+                              <div style={{ 
+                                backgroundColor: '#192307',
+                                padding: '2rem',
+                                borderRadius: '0.875rem',
+                                marginTop: '0.5rem',
+                                position: 'relative'
+                              }}>
+                                {/* Category Header */}
                                 <div style={{ 
-                                  fontSize: '0.75rem', 
-                                  fontWeight: '700', 
-                                  color: '#374151',
-                                  marginBottom: '0.5rem',
-                                  letterSpacing: '0.05em'
+                                  fontSize: '0.875rem', 
+                                  fontWeight: '600', 
+                                  color: '#ffffff',
+                                  marginBottom: '1rem',
+                                  letterSpacing: '0.1em',
+                                  textTransform: 'uppercase'
                                 }}>
                                   {parsed.category}
                                 </div>
 
-                                <h4 style={{ 
-                                  fontSize: '1.25rem', 
-                                  fontWeight: '700', 
-                                  color: '#111827',
-                                  margin: '0 0 0.75rem 0',
-                                  lineHeight: '1.3'
-                                }}>
-                                  {parsed.headline}
-                                </h4>
-
-                                <p style={{ 
-                                  fontSize: '0.875rem', 
-                                  color: '#4b5563',
-                                  lineHeight: '1.5',
-                                  margin: '0 0 1rem 0'
-                                }}>
-                                  {parsed.description}
-                                </p>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                {/* Content Layout with Logo */}
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
+                                  {/* Apollo Logo */}
                                   <div style={{
-                                    display: 'inline-block',
-                                    padding: '0.75rem 1.5rem',
-                                    backgroundColor: '#EBF212',
-                                    color: 'black',
-                                    borderRadius: '0.5rem',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease'
-                                  }}
-                                  onMouseOver={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#d4e017';
-                                    e.currentTarget.style.transform = 'translateY(-1px)';
-                                  }}
-                                  onMouseOut={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#EBF212';
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                  }}
-                                  >
-                                    {parsed.action}
+                                    width: '4rem',
+                                    height: '4rem',
+                                    borderRadius: '0.75rem',
+                                    overflow: 'hidden',
+                                    flexShrink: 0,
+                                    position: 'relative'
+                                  }}>
+                                    <img 
+                                      src="/apollo logo only.png" 
+                                      alt="Apollo Logo"
+                                      style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover'
+                                      }}
+                                    />
                                   </div>
-                                  
+
+                                  {/* Content */}
+                                  <div style={{ flex: 1 }}>
+                                    <h4 style={{ 
+                                      fontSize: '1.5rem', 
+                                      fontWeight: '700', 
+                                      color: '#ffffff',
+                                      margin: '0 0 1rem 0',
+                                      lineHeight: '1.3'
+                                    }}>
+                                      {parsed.headline}
+                                    </h4>
+
+                                    <p style={{ 
+                                      fontSize: '1rem', 
+                                      color: '#ffffff',
+                                      lineHeight: '1.6',
+                                      margin: '0 0 1.5rem 0',
+                                      opacity: 0.9
+                                    }}>
+                                      {parsed.description}
+                                    </p>
+
+                                    {/* CTA Button */}
+                                    <div style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.5rem',
+                                      padding: '1rem 2rem',
+                                      backgroundColor: '#BDF548',
+                                      color: '#192307',
+                                      borderRadius: '0.625rem',
+                                      fontSize: '1rem',
+                                      fontWeight: '700',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.3s ease',
+                                      boxShadow: '0 4px 12px rgba(189, 245, 72, 0.3)'
+                                    }}
+                                    onMouseOver={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#A8E63A';
+                                      e.currentTarget.style.transform = 'translateY(-2px)';
+                                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(189, 245, 72, 0.4)';
+                                    }}
+                                    onMouseOut={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#BDF548';
+                                      e.currentTarget.style.transform = 'translateY(0)';
+                                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(189, 245, 72, 0.3)';
+                                    }}
+                                    >
+                                      {parsed.action.replace(/\s*→\s*$/, '')}
+                                      <span style={{ fontSize: '1.1rem' }}>→</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Change CTA Button - Positioned in corner */}
+                                <div style={{ 
+                                  position: 'absolute',
+                                  top: '1rem',
+                                  right: '1rem'
+                                }}>
                                   <button
                                     onClick={() => cycleCTAButton(position as 'beginning' | 'middle' | 'end')}
                                     style={{
                                       padding: '0.5rem 0.75rem',
-                                      backgroundColor: '#e0f2fe',
-                                      color: '#0369a1',
-                                      border: '1px solid #0ea5e9',
+                                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                      color: '#ffffff',
+                                      border: '1px solid rgba(255, 255, 255, 0.2)',
                                       borderRadius: '0.375rem',
                                       cursor: 'pointer',
                                       display: 'flex',
@@ -1854,16 +1832,15 @@ Paste your markdown content here...
                                       gap: '0.375rem',
                                       fontSize: '0.75rem',
                                       fontWeight: '500',
-                                      transition: 'all 0.2s ease'
+                                      transition: 'all 0.2s ease',
+                                      backdropFilter: 'blur(10px)'
                                     }}
                                     onMouseOver={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#0ea5e9';
-                                      e.currentTarget.style.color = 'white';
+                                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
                                       e.currentTarget.style.transform = 'translateY(-1px)';
                                     }}
                                     onMouseOut={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#e0f2fe';
-                                      e.currentTarget.style.color = '#0369a1';
+                                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                                       e.currentTarget.style.transform = 'translateY(0)';
                                     }}
                                     title="Change to a different CTA button"
@@ -1888,24 +1865,158 @@ Paste your markdown content here...
                       </div>
                     )}
 
-                    {/* Shortcode */}
-                    <div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                        Shortcode:
+                    {/* Code Options */}
+                    <div style={{ display: 'grid', gap: '1rem' }}>
+                      {/* Styled Shortcode */}
+                      <div>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          marginBottom: '0.5rem' 
+                        }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151' }}>
+                            Styled Shortcode (with Apollo design):
+                          </div>
+                          <button
+                            onClick={() => {
+                              const styledShortcode = `<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem; position: relative;">
+  <div style="font-size: 0.875rem; font-weight: 600; color: #ffffff; margin-bottom: 1rem; letter-spacing: 0.1em; text-transform: uppercase;">
+    ${ctaData.cta.category_header}
+  </div>
+  <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
+    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0;">
+      <img src="/apollo logo only.png" alt="Apollo Logo" style="width: 100%; height: 100%; object-fit: cover;" />
+    </div>
+    <div style="flex: 1;">
+      <h4 style="font-size: 1.5rem; font-weight: 700; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
+        ${ctaData.cta.headline}
+      </h4>
+      <p style="font-size: 1rem; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
+        ${ctaData.cta.description}
+      </p>
+      <a href="#" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(189, 245, 72, 0.3); text-decoration: none;">
+        ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
+        <span style="font-size: 1.1rem;">→</span>
+      </a>
+    </div>
+  </div>
+</div>`;
+                              copyToClipboard(styledShortcode, `${position}_styled`);
+                            }}
+                            style={{
+                              padding: '0.25rem 0.5rem',
+                              backgroundColor: copySuccess === `${position}_styled` ? '#dcfce7' : '#6b7280',
+                              color: copySuccess === `${position}_styled` ? '#16a34a' : 'white',
+                              border: 'none',
+                              borderRadius: '0.25rem',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                          >
+                            {copySuccess === `${position}_styled` ? (
+                              <>
+                                <CheckCircle size={10} />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={10} />
+                                Copy
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <div style={{
+                          backgroundColor: '#f3f4f6',
+                          padding: '0.75rem',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.6rem',
+                          fontFamily: 'monospace',
+                          color: '#374151',
+                          whiteSpace: 'pre-wrap',
+                          border: '1px solid #e5e7eb',
+                          maxHeight: '6rem',
+                          overflow: 'auto'
+                        }}>
+                          {`<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem;">
+  <div style="font-size: 0.875rem; font-weight: 600; color: #ffffff; margin-bottom: 1rem; text-transform: uppercase;">
+    ${ctaData.cta.category_header}
+  </div>
+  <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
+    <img src="/apollo logo only.png" alt="Apollo" style="width: 4rem; height: 4rem; border-radius: 0.75rem;" />
+    <div style="flex: 1;">
+      <h4 style="font-size: 1.5rem; font-weight: 700; color: #ffffff; margin: 0 0 1rem 0;">
+        ${ctaData.cta.headline}
+      </h4>
+      <p style="font-size: 1rem; color: #ffffff; margin: 0 0 1.5rem 0; opacity: 0.9;">
+        ${ctaData.cta.description}
+      </p>
+      <a href="#" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-weight: 700; text-decoration: none;">
+        ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')} <span>→</span>
+      </a>
+    </div>
+  </div>
+</div>`}
+                        </div>
                       </div>
-                      <div style={{
-                        backgroundColor: '#f3f4f6',
-                        padding: '0.75rem',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.75rem',
-                        fontFamily: 'monospace',
-                        color: '#374151',
-                        whiteSpace: 'pre-wrap',
-                        border: '1px solid #e5e7eb',
-                        maxHeight: '6rem',
-                        overflow: 'auto'
-                      }}>
-                        {ctaData.shortcode}
+
+                      {/* Original Shortcode */}
+                      <div>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          marginBottom: '0.5rem' 
+                        }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151' }}>
+                            Original Shortcode (content only):
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(ctaData.shortcode, `${position}_original`)}
+                            style={{
+                              padding: '0.25rem 0.5rem',
+                              backgroundColor: copySuccess === `${position}_original` ? '#dcfce7' : '#6b7280',
+                              color: copySuccess === `${position}_original` ? '#16a34a' : 'white',
+                              border: 'none',
+                              borderRadius: '0.25rem',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                          >
+                            {copySuccess === `${position}_original` ? (
+                              <>
+                                <CheckCircle size={10} />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={10} />
+                                Copy
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <div style={{
+                          backgroundColor: '#f3f4f6',
+                          padding: '0.75rem',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.75rem',
+                          fontFamily: 'monospace',
+                          color: '#374151',
+                          whiteSpace: 'pre-wrap',
+                          border: '1px solid #e5e7eb',
+                          maxHeight: '4rem',
+                          overflow: 'auto'
+                        }}>
+                          {ctaData.shortcode}
+                        </div>
                       </div>
                     </div>
                   </div>
