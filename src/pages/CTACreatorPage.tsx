@@ -322,6 +322,14 @@ const CTACreatorPage: React.FC = () => {
         const storedVocKit = localStorage.getItem('apollo_voc_kit');
         if (storedVocKit) {
           vocKitData = JSON.parse(storedVocKit);
+          console.log('🔍 VoC Kit data loaded:', {
+            hasGeneratedAnalysis: vocKitData.hasGeneratedAnalysis,
+            extractedPainPointsCount: vocKitData.extractedPainPoints?.length || 0,
+            samplePainPoint: vocKitData.extractedPainPoints?.[0]
+          });
+          console.log('🔍 Full VoC Kit data being sent to backend:', vocKitData);
+        } else {
+          console.log('❌ No VoC Kit data found in localStorage');
         }
       } catch (error) {
         console.error('Error loading VoC Kit data:', error);
@@ -401,6 +409,13 @@ const CTACreatorPage: React.FC = () => {
         if (!result.data || !result.data.cta_variants) {
           throw new Error('Invalid response format received from server');
         }
+
+        console.log('🎯 CTA Generation Result:', {
+          persona: result.data.persona,
+          matched_pain_points: result.data.matched_pain_points,
+          pain_point_context: result.data.pain_point_context,
+          generation_metadata: result.data.generation_metadata
+        });
 
         setShowSkeletons(false);
         setGenerationStage('');
@@ -1358,6 +1373,126 @@ Paste your markdown content here...
 
               </div>
 
+              {/* Overall VoC Insights Summary */}
+              {generatedCTAs.pain_point_context && vocKitReady && (
+                <div style={{
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '0.75rem',
+                  padding: '1.5rem',
+                  marginBottom: '2rem'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.75rem', 
+                    marginBottom: '1rem' 
+                  }}>
+                    <div style={{
+                      padding: '0.5rem',
+                      backgroundColor: '#EBF212',
+                      borderRadius: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <CheckCircle size={20} style={{ color: 'black' }} />
+                    </div>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: '#1e293b' }}>
+                      🎯 VoC Data Successfully Integrated
+                    </h3>
+                  </div>
+                  
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                    gap: '1.5rem' 
+                  }}>
+                    {/* Pain Points Stats */}
+                    <div style={{
+                      backgroundColor: 'white',
+                      padding: '1rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        marginBottom: '0.5rem'
+                      }}>
+                        <span style={{ fontSize: '1.25rem' }}>📊</span>
+                        <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
+                          Pain Points
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.25rem' }}>
+                        {generatedCTAs.matched_pain_points}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        themes matched from VoC analysis
+                      </div>
+                    </div>
+                    
+                    {/* Customer Quotes Stats */}
+                    <div style={{
+                      backgroundColor: 'white',
+                      padding: '1rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        marginBottom: '0.5rem'
+                      }}>
+                        <span style={{ fontSize: '1.25rem' }}>💬</span>
+                        <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
+                          Customer Quotes
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.25rem' }}>
+                        {generatedCTAs.pain_point_context.customer_quotes_used?.length || 0}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        authentic customer quotes used
+                      </div>
+                    </div>
+                    
+                    
+                  </div>
+                  
+                  {/* Top Customer Quote */}
+                  {generatedCTAs.pain_point_context.customer_quotes_used?.length > 0 && (
+                    <div style={{
+                      marginTop: '1.5rem',
+                      padding: '1rem',
+                      backgroundColor: '#f0fdf4',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #bbf7d0'
+                    }}>
+                      <div style={{ 
+                        fontSize: '0.875rem', 
+                        fontWeight: '600', 
+                        color: '#16a34a', 
+                        marginBottom: '0.5rem' 
+                      }}>
+                        🗣️ Top Customer Quote Used:
+                      </div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontStyle: 'italic',
+                        color: '#059669',
+                        lineHeight: '1.5'
+                      }}>
+                        "{generatedCTAs.pain_point_context.customer_quotes_used[0]}"
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* CTA Variants */}
               <div style={{ display: 'grid', gap: '2rem' }}>
                 {Object.entries(generatedCTAs.cta_variants).map(([position, ctaData]) => (
@@ -1518,6 +1653,108 @@ Paste your markdown content here...
                         </button>
                       </div>
                     </div>
+
+                    {/* VoC Insights Display */}
+                    {generatedCTAs?.pain_point_context && vocKitReady && (
+                      <div style={{
+                        backgroundColor: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: '0.5rem',
+                        padding: '1rem',
+                        marginBottom: '1rem'
+                      }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '0.5rem', 
+                          marginBottom: '0.75rem' 
+                        }}>
+                          <div style={{
+                            width: '1rem',
+                            height: '1rem',
+                            borderRadius: '50%',
+                            backgroundColor: '#16a34a',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <CheckCircle size={10} style={{ color: 'white' }} />
+                          </div>
+                          <span style={{ 
+                            fontSize: '0.875rem', 
+                            fontWeight: '600', 
+                            color: '#16a34a' 
+                          }}>
+                            🎯 VoC Insights Used in This CTA
+                          </span>
+                        </div>
+                        
+                        <div style={{ display: 'grid', gap: '0.75rem' }}>
+                          {/* Pain Points Used */}
+                          {generatedCTAs.pain_point_context.primary_pain_points?.length > 0 && (
+                            <div>
+                              <div style={{ 
+                                fontSize: '0.75rem', 
+                                fontWeight: '600', 
+                                color: '#374151', 
+                                marginBottom: '0.25rem' 
+                              }}>
+                                📊 Pain Points Matched: {generatedCTAs.matched_pain_points}
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                                {generatedCTAs.pain_point_context.primary_pain_points.map((painPoint, idx) => (
+                                  <span key={idx} style={{
+                                    fontSize: '0.6875rem',
+                                    backgroundColor: '#dcfce7',
+                                    color: '#16a34a',
+                                    padding: '0.125rem 0.5rem',
+                                    borderRadius: '0.25rem',
+                                    border: '1px solid #bbf7d0',
+                                    fontWeight: '500'
+                                  }}>
+                                    {painPoint}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Customer Quotes Used */}
+                          {generatedCTAs.pain_point_context.customer_quotes_used?.length > 0 && (
+                            <div>
+                              <div style={{ 
+                                fontSize: '0.75rem', 
+                                fontWeight: '600', 
+                                color: '#374151', 
+                                marginBottom: '0.25rem' 
+                              }}>
+                                💬 Customer Language Used: {generatedCTAs.pain_point_context.customer_quotes_used.length} quotes
+                              </div>
+                              <div>
+                                {generatedCTAs.pain_point_context.customer_quotes_used.map((quote, idx) => (
+                                  <div key={idx} style={{
+                                    fontSize: '0.6875rem',
+                                    fontStyle: 'italic',
+                                    color: '#059669',
+                                    backgroundColor: '#ecfdf5',
+                                    padding: '0.25rem 0.5rem',
+                                    borderRadius: '0.25rem',
+                                    marginBottom: '0.25rem',
+                                    border: '1px solid #a7f3d0',
+                                    lineHeight: '1.3'
+                                  }}>
+                                    "{quote}"
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+
+                        </div>
+
+                      </div>
+                    )}
 
                     {/* Shortcode Test Preview */}
                     {showPreview === position && (
