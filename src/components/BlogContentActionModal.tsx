@@ -3277,7 +3277,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
                       VoC Kit Setup Required
               </h3>
                     <p style={{ fontSize: '0.875rem', color: '#374151', margin: 0 }}>
-                      Please extract customer pain points in the VoC Kit before generating CTAs.
+                      Please extract customer pain points to generate CTAs.
                     </p>
                   </div>
                   <a 
@@ -3368,8 +3368,8 @@ Return ONLY the JSON object with the three required fields. No additional text o
                 lineHeight: '1.5'
               }}>
                 {generatedCTAs 
-                  ? 'Generate fresh, unique CTA variations with different copy and angles using Apollo\'s Voice of Customer insights.'
-                  : 'Generate hyper-relevant CTAs from your blog content using Apollo\'s Voice of Customer insights.'
+                  ? 'Regenerate CTAs for the blog content.'
+                  : 'Generate beginning, middle, and ending CTAs with different copy and angles using Apollo\'s Voice of Customer insights.'
                 }
               </p>
 
