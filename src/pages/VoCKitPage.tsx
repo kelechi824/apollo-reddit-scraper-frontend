@@ -199,21 +199,21 @@ const VoCKitPage: React.FC = () => {
    */
   const extractPainPoints = async () => {
     setIsExtracting(true);
-    setMessage('Analyzing customer calls... This may take 2-3 minutes.');
+    setMessage('Analyzing 300 customer calls. Please do not exit this page until the analysis is complete. This may take 1-2 minutes.');
     
     try {
-      console.log('🚀 Starting VoC extraction request...');
+      console.log('🚀 Starting high-efficiency VoC extraction request...');
       console.log('API URL:', buildApiUrl('/api/voc-extraction/analyze-synchronous'));
       
-      // Direct synchronous analysis call
+      // High-efficiency parallel processing call
       const response = await fetch(buildApiUrl('/api/voc-extraction/analyze-synchronous'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          daysBack: 90,  // Optimized for serverless timeout
-          maxCalls: 100  // Optimized for serverless timeout
+          daysBack: 90,  // 90 days for comprehensive coverage
+          maxCalls: 300  // High volume with optimized parallel processing
         }),
       });
 
@@ -483,18 +483,7 @@ const VoCKitPage: React.FC = () => {
               )}
             </button>
 
-            {/* Time estimate during extraction */}
-            {isExtracting && (
-              <div style={{
-                fontSize: '0.75rem',
-                color: '#6b7280',
-                fontStyle: 'italic',
-                textAlign: 'center'
-              }}>
-                Estimated time: 2-3 minutes<br />
-                Please keep this page open during analysis
-              </div>
-            )}
+
 
             {hasGeneratedAnalysis && (
               <button
@@ -719,15 +708,7 @@ const VoCKitPage: React.FC = () => {
                     )}
                   </div>
                   
-                  <code style={{ 
-                    fontSize: '0.75rem', 
-                    backgroundColor: '#f3f4f6', 
-                    padding: '0.25rem 0.5rem', 
-                    borderRadius: '0.25rem',
-                    color: '#6b7280'
-                  }}>
-                    {`{{ pain_points.${painPoint.liquidVariable} }}`}
-                  </code>
+
                 </div>
               ))}
             </div>
