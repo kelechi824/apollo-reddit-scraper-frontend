@@ -514,6 +514,25 @@ const CTACreatorPage: React.FC = () => {
   };
 
   /**
+   * Generate Apollo sign-up URL with UTM tracking for CTA Creator
+   * Why this matters: Creates trackable sign-up links that help measure CTA performance by position.
+   */
+  const generateApolloSignUpUrl = (position: string): string => {
+    // Convert position to full word for UTM tracking clarity
+    const positionName = position === 'end' ? 'ending' : position;
+    const utmCampaign = `cta_creator_${positionName}cta`;
+    return `https://www.apollo.io/sign-up?utm_campaign=${utmCampaign}`;
+  };
+
+  // Helper function to add URL to original shortcode
+  // Why this matters: Enhances the original shortcode with functional URLs for complete CTA functionality
+  const addUrlToShortcode = (shortcode: string, position: string): string => {
+    const url = generateApolloSignUpUrl(position);
+    // Add the URL line before the closing tag
+    return shortcode.replace('[/apollo-cta]', `  [cta-url]${url}[/cta-url]\n[/apollo-cta]`);
+  };
+
+  /**
    * Copy content to clipboard with enhanced error handling and fallbacks
    * Why this matters: Provides reliable copying across different browsers and handles edge cases
    * like permission issues, unsupported browsers, and network failures gracefully.
@@ -633,7 +652,8 @@ const CTACreatorPage: React.FC = () => {
     if (!generatedCTAs) return;
 
     // Helper function to generate styled shortcode
-    const generateStyledShortcode = (ctaData: any) => {
+    const generateStyledShortcode = (ctaData: any, position: string) => {
+      const signUpUrl = generateApolloSignUpUrl(position);
       return `<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem; position: relative;">
   <div style="font-size: 0.875rem; font-weight: 600; color: #ffffff; margin-bottom: 1rem; letter-spacing: 0.1em; text-transform: uppercase;">
     ${ctaData.cta.category_header}
@@ -649,7 +669,7 @@ const CTACreatorPage: React.FC = () => {
       <p style="font-size: 1rem; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
         ${ctaData.cta.description}
       </p>
-      <a href="#" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(189, 245, 72, 0.3); text-decoration: none;">
+      <a href="${signUpUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(189, 245, 72, 0.3); text-decoration: none;">
         ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
         <span style="font-size: 1.1rem;">→</span>
       </a>
@@ -666,42 +686,40 @@ Category: ${generatedCTAs.cta_variants.beginning.cta.category_header}
 Headline: ${generatedCTAs.cta_variants.beginning.cta.headline}
 Description: ${generatedCTAs.cta_variants.beginning.cta.description}
 Action: ${generatedCTAs.cta_variants.beginning.cta.action_button}
+Sign-up URL: ${generateApolloSignUpUrl('beginning')}
 
 Original Shortcode:
-${generatedCTAs.cta_variants.beginning.shortcode}
+${addUrlToShortcode(generatedCTAs.cta_variants.beginning.shortcode, 'beginning')}
 
 Styled Shortcode (with Apollo design):
-${generateStyledShortcode(generatedCTAs.cta_variants.beginning)}
+${generateStyledShortcode(generatedCTAs.cta_variants.beginning, 'beginning')}
 
 ## Middle CTA
 Category: ${generatedCTAs.cta_variants.middle.cta.category_header}
 Headline: ${generatedCTAs.cta_variants.middle.cta.headline}
 Description: ${generatedCTAs.cta_variants.middle.cta.description}
 Action: ${generatedCTAs.cta_variants.middle.cta.action_button}
+Sign-up URL: ${generateApolloSignUpUrl('middle')}
 
 Original Shortcode:
-${generatedCTAs.cta_variants.middle.shortcode}
+${addUrlToShortcode(generatedCTAs.cta_variants.middle.shortcode, 'middle')}
 
 Styled Shortcode (with Apollo design):
-${generateStyledShortcode(generatedCTAs.cta_variants.middle)}
+${generateStyledShortcode(generatedCTAs.cta_variants.middle, 'middle')}
 
 ## End CTA
 Category: ${generatedCTAs.cta_variants.end.cta.category_header}
 Headline: ${generatedCTAs.cta_variants.end.cta.headline}
 Description: ${generatedCTAs.cta_variants.end.cta.description}
 Action: ${generatedCTAs.cta_variants.end.cta.action_button}
+Sign-up URL: ${generateApolloSignUpUrl('end')}
 
 Original Shortcode:
-${generatedCTAs.cta_variants.end.shortcode}
+${addUrlToShortcode(generatedCTAs.cta_variants.end.shortcode, 'end')}
 
 Styled Shortcode (with Apollo design):
-${generateStyledShortcode(generatedCTAs.cta_variants.end)}
+${generateStyledShortcode(generatedCTAs.cta_variants.end, 'end')}
 
-## Notes:
-- Original Shortcodes: Content-only versions for custom styling
-- Styled Shortcodes: Complete HTML with Apollo branding, ready to paste into any website
-- Logo Path: Update "/apollo logo only.png" to match your website's logo location
-- Button Links: Replace href="#" with your actual landing page URLs
 `;
 
     const blob = new Blob([content], { type: 'text/plain' });
@@ -1424,7 +1442,7 @@ Paste your markdown content here...
                           fontWeight: '600',
                           textTransform: 'uppercase'
                         }}>
-                          {position}
+                          {position === 'end' ? 'ending' : position}
                         </div>
                       </div>
                       
@@ -1499,34 +1517,39 @@ Paste your markdown content here...
                           </p>
 
                           {/* CTA Button */}
-                          <div style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '1rem 2rem',
-                            backgroundColor: '#BDF548',
-                            color: '#192307',
-                            borderRadius: '0.625rem',
-                            fontSize: '1rem',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease',
-                            boxShadow: '0 4px 12px rgba(189, 245, 72, 0.3)'
-                          }}
-                          onMouseOver={(e) => {
-                            e.currentTarget.style.backgroundColor = '#A8E63A';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(189, 245, 72, 0.4)';
-                          }}
-                          onMouseOut={(e) => {
-                            e.currentTarget.style.backgroundColor = '#BDF548';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(189, 245, 72, 0.3)';
-                          }}
+                          <a
+                            href={generateApolloSignUpUrl(position)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '1rem 2rem',
+                              backgroundColor: '#BDF548',
+                              color: '#192307',
+                              borderRadius: '0.625rem',
+                              fontSize: '1rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              boxShadow: '0 4px 12px rgba(189, 245, 72, 0.3)',
+                              textDecoration: 'none'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = '#A8E63A';
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 6px 20px rgba(189, 245, 72, 0.4)';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = '#BDF548';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(189, 245, 72, 0.3)';
+                            }}
                           >
                             {ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
                             <span style={{ fontSize: '1.1rem' }}>→</span>
-                          </div>
+                          </a>
                         </div>
                       </div>
 
@@ -1719,34 +1742,39 @@ Paste your markdown content here...
                                     </p>
 
                                     {/* CTA Button */}
-                                    <div style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '0.5rem',
-                                      padding: '1rem 2rem',
-                                      backgroundColor: '#BDF548',
-                                      color: '#192307',
-                                      borderRadius: '0.625rem',
-                                      fontSize: '1rem',
-                                      fontWeight: '700',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.3s ease',
-                                      boxShadow: '0 4px 12px rgba(189, 245, 72, 0.3)'
-                                    }}
-                                    onMouseOver={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#A8E63A';
-                                      e.currentTarget.style.transform = 'translateY(-2px)';
-                                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(189, 245, 72, 0.4)';
-                                    }}
-                                    onMouseOut={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#BDF548';
-                                      e.currentTarget.style.transform = 'translateY(0)';
-                                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(189, 245, 72, 0.3)';
-                                    }}
+                                    <a
+                                      href={generateApolloSignUpUrl(position)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        padding: '1rem 2rem',
+                                        backgroundColor: '#BDF548',
+                                        color: '#192307',
+                                        borderRadius: '0.625rem',
+                                        fontSize: '1rem',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s ease',
+                                        boxShadow: '0 4px 12px rgba(189, 245, 72, 0.3)',
+                                        textDecoration: 'none'
+                                      }}
+                                      onMouseOver={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#A8E63A';
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(189, 245, 72, 0.4)';
+                                      }}
+                                      onMouseOut={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#BDF548';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(189, 245, 72, 0.3)';
+                                      }}
                                     >
                                       {parsed.action.replace(/\s*→\s*$/, '')}
                                       <span style={{ fontSize: '1.1rem' }}>→</span>
-                                    </div>
+                                    </a>
                                   </div>
                                 </div>
 
@@ -1833,7 +1861,7 @@ Paste your markdown content here...
       <p style="font-size: 1rem; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
         ${ctaData.cta.description}
       </p>
-      <a href="#" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(189, 245, 72, 0.3); text-decoration: none;">
+      <a href="${generateApolloSignUpUrl(position)}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(189, 245, 72, 0.3); text-decoration: none;">
         ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
         <span style="font-size: 1.1rem;">→</span>
       </a>
@@ -1893,7 +1921,7 @@ Paste your markdown content here...
       <p style="font-size: 1rem; color: #ffffff; margin: 0 0 1.5rem 0; opacity: 0.9;">
         ${ctaData.cta.description}
       </p>
-      <a href="#" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-weight: 700; text-decoration: none;">
+      <a href="${generateApolloSignUpUrl(position)}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-weight: 700; text-decoration: none;">
         ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')} <span>→</span>
       </a>
     </div>
@@ -1911,10 +1939,10 @@ Paste your markdown content here...
                           marginBottom: '0.5rem' 
                         }}>
                           <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151' }}>
-                            Original Shortcode (content only):
+                            Original Shortcode:
                           </div>
                           <button
-                            onClick={() => copyToClipboard(ctaData.shortcode, `${position}_original`)}
+                            onClick={() => copyToClipboard(addUrlToShortcode(ctaData.shortcode, position), `${position}_original`)}
                             style={{
                               padding: '0.25rem 0.5rem',
                               backgroundColor: copySuccess === `${position}_original` ? '#dcfce7' : '#6b7280',
@@ -1953,7 +1981,34 @@ Paste your markdown content here...
                           maxHeight: '4rem',
                           overflow: 'auto'
                         }}>
-                          {ctaData.shortcode}
+                          {addUrlToShortcode(ctaData.shortcode, position)}
+                        </div>
+                      </div>
+
+                      {/* URL Preview */}
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <div style={{ 
+                          fontSize: '0.75rem', 
+                          fontWeight: '600', 
+                          color: '#374151',
+                          marginBottom: '0.25rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}>
+                          🔗 Sign-up URL:
+                        </div>
+                        <div style={{
+                          backgroundColor: '#eff6ff',
+                          padding: '0.5rem',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.625rem',
+                          fontFamily: 'monospace',
+                          color: '#1e40af',
+                          border: '1px solid #bfdbfe',
+                          wordBreak: 'break-all'
+                        }}>
+                          {generateApolloSignUpUrl(position)}
                         </div>
                       </div>
                     </div>
