@@ -286,9 +286,10 @@ const CTACreatorPage: React.FC = () => {
       setGeneratedCTAs(null);
     }
     
-    let stageMessage = 'Extracting article content...';
-    if (inputMethod === 'text') stageMessage = 'Processing article text...';
-    if (inputMethod === 'markdown') stageMessage = 'Processing markdown content...';
+    const isRegeneration = !!generatedCTAs;
+    let stageMessage = isRegeneration ? 'Preparing new CTA variations...' : 'Analyzing voice of customer insights...';
+    if (inputMethod === 'text') stageMessage = isRegeneration ? 'Analyzing current CTAs...' : 'Processing article text...';
+    if (inputMethod === 'markdown') stageMessage = isRegeneration ? 'Finding new angles...' : 'Processing markdown content...';
     setGenerationStage(stageMessage);
 
     try {
@@ -350,9 +351,10 @@ const CTACreatorPage: React.FC = () => {
       });
 
       // Simulate stage updates for better UX while processing
-      const stage1 = setTimeout(() => setGenerationStage('Identifying persona...'), 5000);
-      const stage2 = setTimeout(() => setGenerationStage('Matching persona to pain points...'), 10000);
-      const stage3 = setTimeout(() => setGenerationStage('Generating CTAs...'), 15000);
+      const isRegeneration = !!generatedCTAs;
+      const stage1 = setTimeout(() => setGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 3000);
+      const stage2 = setTimeout(() => setGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 6000);
+      const stage3 = setTimeout(() => setGenerationStage(isRegeneration ? 'Creating unique CTAs...' : 'Generating CTAs...'), 9000);
 
       const response = await fetchPromise;
       
@@ -1198,12 +1200,12 @@ Paste your markdown content here...
                     borderRadius: '50%',
                     animation: 'spin 1s linear infinite'
                   }} />
-                  {generationStage || 'Generating CTAs...'}
+                  {generationStage || (generatedCTAs ? 'Regenerating CTAs...' : 'Generating CTAs...')}
                 </>
               ) : (
                 <>
-                  <Zap size={20} strokeWidth={3} />
-                  {generatedCTAs ? 'Generate New CTAs' : 'Generate CTAs'}
+                  <Target size={20} strokeWidth={3} />
+                  {generatedCTAs ? 'Regenerate CTAs' : 'Generate CTAs'}
                 </>
               )}
             </button>
