@@ -530,4 +530,59 @@ export interface SendGongMessageResponse {
   user_message: ChatMessage;
   assistant_message: ChatMessage;
   conversation_stage?: string;
+}
+
+// CTA Generation Types (matching backend)
+export interface CTAStructure {
+  category_header: string;
+  headline: string;
+  description: string;
+  action_button: string;
+}
+
+export interface PositionSpecificCTA {
+  position: 'beginning' | 'middle' | 'end';
+  cta: CTAStructure;
+  strategy: string;
+  shortcode: string;
+}
+
+export interface CTAGenerationResult {
+  article_url?: string;
+  persona: string;
+  matched_pain_points: number;
+  cta_variants: {
+    beginning: PositionSpecificCTA;
+    middle: PositionSpecificCTA;
+    end: PositionSpecificCTA;
+  };
+  pain_point_context: {
+    primary_pain_points: string[];
+    customer_quotes_used: string[];
+    liquid_variables_referenced: string[];
+  };
+  position_specific_context?: {
+    beginning: {
+      pain_points: string[];
+      customer_quotes: string[];
+      liquid_variables: string[];
+    };
+    middle: {
+      pain_points: string[];
+      customer_quotes: string[];
+      liquid_variables: string[];
+    };
+    end: {
+      pain_points: string[];
+      customer_quotes: string[];
+      liquid_variables: string[];
+    };
+  };
+  generation_metadata: {
+    total_variants: number;
+    generation_timestamp: string;
+    model_used: string;
+    confidence_score: number;
+    cro_principles_applied: string[];
+  };
 } 

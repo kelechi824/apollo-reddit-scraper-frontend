@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, CheckCircle, Copy, Check, Table, Target, AlertCircle, ArrowRight, RotateCcw } from 'lucide-react';
-import { BrandKit } from '../types';
+import { BrandKit, CTAGenerationResult } from '../types';
 import googleDocsService from '../services/googleDocsService';
 import { autoSaveBlogIfReady } from '../services/blogHistoryService';
 import { API_ENDPOINTS, buildApiUrl } from '../config/api';
@@ -48,32 +48,7 @@ interface CTAVariant {
   shortcode: string;
 }
 
-interface CTAGenerationResult {
-  persona: string;
-  matched_pain_points: number;
-  cta_variants: {
-    beginning: CTAVariant;
-    middle: CTAVariant;
-    end: CTAVariant;
-  };
-  pain_point_context: {
-    primary_pain_points: string[];
-    customer_quotes_used: string[];
-    liquid_variables_referenced: string[];
-  };
-  generation_metadata: {
-    confidence_score: number;
-    generation_timestamp: string;
-    model_used: string;
-    cro_principles_applied: string[];
-  };
-  pipeline_metadata?: {
-    processing_time_ms: number;
-    stages_completed: number;
-    article_word_count: number;
-    enhanced_analysis_used: boolean;
-  };
-}
+// CTAGenerationResult interface imported from types
 
 /**
  * Variables Menu Component
@@ -2985,7 +2960,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
     setIsGeneratingCTAs(true);
     setCtaError('');
     const isRegeneration = !!generatedCTAs;
-    setCtaGenerationStage(isRegeneration ? 'Preparing new CTA variations...' : 'Processing blog content...');
+    setCtaGenerationStage(isRegeneration ? 'Preparing new CTA variations...' : 'Analyzing voice of customer insights...');
 
     try {
       // Get VoC Kit data to send with request
@@ -3014,8 +2989,8 @@ Return ONLY the JSON object with the three required fields. No additional text o
 
       // Simulate stage updates for better UX
       const isRegeneration = !!generatedCTAs;
-      const stage1 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Identifying persona...'), 3000);
-      const stage2 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Finding new angles...' : 'Matching persona to pain points...'), 6000);
+      const stage1 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 3000);
+      const stage2 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 6000);
       const stage3 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Creating unique CTAs...' : 'Generating CTAs...'), 9000);
 
       const response = await fetch(endpoint, {
@@ -3357,7 +3332,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
                   <Target size={24} style={{ color: 'black' }} />
                 </div>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: '#374151' }}>
-                  Generate CTAs from Content
+                  Generate CTAs for Content
                 </h3>
               </div>
 
@@ -3369,7 +3344,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
               }}>
                 {generatedCTAs 
                   ? 'Regenerate CTAs for the blog content.'
-                  : 'Generate beginning, middle, and ending CTAs with different copy and angles using Apollo\'s Voice of Customer insights.'
+                  : 'Generate beginning, middle, and ending CTAs using Apollo\'s Voice of Customer insights.'
                 }
               </p>
 
@@ -3410,7 +3385,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
                 ) : (
                   <>
                     <Target size={20} strokeWidth={3} />
-                    {generatedCTAs ? 'Regenerate CTAs' : 'Generate CTAs from Content'}
+                    {generatedCTAs ? 'Regenerate CTAs' : 'Generate CTAs'}
                   </>
                 )}
               </button>
@@ -3436,7 +3411,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
               {generatedCTAs && (
                 <div style={{ marginTop: '1rem' }}>
                   <h4 style={{ 
-                    fontSize: '1rem', 
+                    fontSize: '0.875rem', 
                     fontWeight: '600', 
                     margin: '0 0 1.5rem 0', 
                     color: '#374151',
@@ -3444,7 +3419,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
                     alignItems: 'center',
                     gap: '0.5rem'
                   }}>
-                    <CheckCircle size={18} style={{ color: '#16a34a' }} />
+                    <CheckCircle size={14} style={{ color: '#16a34a' }} />
                     Generated CTAs
                   </h4>
 
@@ -3596,7 +3571,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
                         </div>
 
                         {/* VoC Insights for this CTA */}
-                        {generatedCTAs?.pain_point_context && vocKitReady && (
+                        {((generatedCTAs?.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]) || generatedCTAs?.pain_point_context) && vocKitReady && (
                           <div style={{
                             backgroundColor: '#f0fdf4',
                             border: '1px solid #bbf7d0',
@@ -3626,15 +3601,19 @@ Return ONLY the JSON object with the three required fields. No additional text o
                                 fontWeight: '600', 
                                 color: '#16a34a' 
                               }}>
-                                🎯 VoC Insights Used in This CTA
+                                🎯 VoC Insights Used in This {position === 'end' ? 'Ending' : position.charAt(0).toUpperCase() + position.slice(1)} CTA
                               </span>
                             </div>
                             
                             <div style={{ fontSize: '0.625rem', color: '#374151' }}>
-                              <div>📊 Pain Points: {generatedCTAs.matched_pain_points}</div>
+                              <div>📊 Pain Points: {
+                                generatedCTAs.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]?.pain_points?.length || 
+                                generatedCTAs.pain_point_context?.primary_pain_points?.length || 0
+                              }</div>
                               <div style={{ marginTop: '0.25rem' }}>
                                 <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>💬 Customer Language Used:</div>
-                                {generatedCTAs.pain_point_context.customer_quotes_used?.map((quote, idx) => (
+                                {(generatedCTAs.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]?.customer_quotes || 
+                                  generatedCTAs.pain_point_context?.customer_quotes_used || [])?.map((quote: string, idx: number) => (
                                   <div key={idx} style={{
                                     fontSize: '0.6875rem',
                                     fontStyle: 'italic',
