@@ -1605,28 +1605,22 @@ Paste your markdown content here...
                         </div>
 
                         <div style={{ fontSize: '0.625rem', color: '#374151' }}>
-                          <div>📊 Pain Points: {
-                            generatedCTAs.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]?.pain_points?.length ||
-                            generatedCTAs.pain_point_context?.primary_pain_points?.length || 0
-                          }</div>
-                          <div style={{ marginTop: '0.25rem' }}>
-                            <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>💬 Customer Language Used:</div>
-                            {(generatedCTAs.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]?.customer_quotes ||
-                              generatedCTAs.pain_point_context?.customer_quotes_used || [])?.map((quote: string, idx: number) => (
-                              <div key={idx} style={{
-                                fontSize: '0.6875rem',
-                                fontStyle: 'italic',
-                                color: '#059669',
-                                backgroundColor: '#ecfdf5',
-                                padding: '0.25rem 0.5rem',
-                                borderRadius: '0.25rem',
-                                marginBottom: '0.25rem',
-                                border: '1px solid #bbf7d0'
-                              }}>
-                                "{quote}"
-                              </div>
-                            ))}
-                          </div>
+                          <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>💬 Customer Language Used:</div>
+                          {(generatedCTAs.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]?.customer_quotes ||
+                            generatedCTAs.pain_point_context?.customer_quotes_used || [])?.map((quote: string, idx: number) => (
+                            <div key={idx} style={{
+                              fontSize: '0.6875rem',
+                              fontStyle: 'italic',
+                              color: '#059669',
+                              backgroundColor: '#ecfdf5',
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '0.25rem',
+                              marginBottom: '0.25rem',
+                              border: '1px solid #bbf7d0'
+                            }}>
+                              "{quote}"
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
