@@ -3,6 +3,7 @@ import { ExternalLink, Zap, Target, Sparkles, CheckCircle, AlertCircle, ArrowRig
 import ArticlePreviewInterface from '../components/ArticlePreviewInterface';
 import { FEATURE_FLAGS } from '../utils/featureFlags';
 import { buildApiUrl } from '../config/api';
+import { CTAGenerationResult } from '../types';
 
 // Skeleton component for loading states
 const Skeleton = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -29,32 +30,7 @@ interface CTAVariant {
   shortcode: string;
 }
 
-interface CTAGenerationResult {
-  persona: string;
-  matched_pain_points: number;
-  cta_variants: {
-    beginning: CTAVariant;
-    middle: CTAVariant;
-    end: CTAVariant;
-  };
-  pain_point_context: {
-    primary_pain_points: string[];
-    customer_quotes_used: string[];
-    liquid_variables_referenced: string[];
-  };
-  generation_metadata: {
-    confidence_score: number;
-    generation_timestamp: string;
-    model_used: string;
-    cro_principles_applied: string[];
-  };
-  pipeline_metadata?: {
-    processing_time_ms: number;
-    stages_completed: number;
-    article_word_count: number;
-    enhanced_analysis_used: boolean;
-  };
-}
+
 
 /**
  * CTA Creator Page Component
@@ -339,7 +315,9 @@ const CTACreatorPage: React.FC = () => {
       let requestBody: any = { 
         url: articleUrl, 
         enhanced_analysis: enhancedAnalysis,
-        voc_kit_data: vocKitData
+        voc_kit_data: vocKitData,
+        regenerate: !!generatedCTAs, // Flag to indicate this is a regeneration for unique copy
+        timestamp: Date.now() // Add timestamp for unique seed
       };
 
       if (inputMethod === 'text') {
@@ -347,14 +325,18 @@ const CTACreatorPage: React.FC = () => {
         requestBody = { 
           text: articleText, 
           enhanced_analysis: enhancedAnalysis,
-          voc_kit_data: vocKitData
+          voc_kit_data: vocKitData,
+          regenerate: !!generatedCTAs, // Flag to indicate this is a regeneration for unique copy
+          timestamp: Date.now() // Add timestamp for unique seed
         };
       } else if (inputMethod === 'markdown') {
         endpoint = buildApiUrl('/api/cta-generation/generate-from-markdown');
         requestBody = { 
           markdown: articleMarkdown, 
           enhanced_analysis: enhancedAnalysis,
-          voc_kit_data: vocKitData
+          voc_kit_data: vocKitData,
+          regenerate: !!generatedCTAs, // Flag to indicate this is a regeneration for unique copy
+          timestamp: Date.now() // Add timestamp for unique seed
         };
       }
 
@@ -1585,105 +1567,65 @@ Paste your markdown content here...
                       </div>
                     </div>
 
-                    {/* VoC Insights Display */}
-                    {generatedCTAs?.pain_point_context && vocKitReady && (
+                    {/* VoC Insights for this CTA */}
+                    {((generatedCTAs?.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]) || generatedCTAs?.pain_point_context) && vocKitReady && (
                       <div style={{
                         backgroundColor: '#f0fdf4',
                         border: '1px solid #bbf7d0',
                         borderRadius: '0.5rem',
-                        padding: '1rem',
+                        padding: '0.75rem',
                         marginBottom: '1rem'
                       }}>
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '0.5rem', 
-                          marginBottom: '0.75rem' 
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.5rem'
                         }}>
                           <div style={{
-                            width: '1rem',
-                            height: '1rem',
+                            width: '0.75rem',
+                            height: '0.75rem',
                             borderRadius: '50%',
                             backgroundColor: '#16a34a',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center'
                           }}>
-                            <CheckCircle size={10} style={{ color: 'white' }} />
+                            <CheckCircle size={8} style={{ color: 'white' }} />
                           </div>
-                          <span style={{ 
-                            fontSize: '0.875rem', 
-                            fontWeight: '600', 
-                            color: '#16a34a' 
+                          <span style={{
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            color: '#16a34a'
                           }}>
-                            🎯 VoC Insights Used in This CTA
+                            🎯 VoC Insights Used in This {position === 'end' ? 'Ending' : position.charAt(0).toUpperCase() + position.slice(1)} CTA
                           </span>
                         </div>
-                        
-                        <div style={{ display: 'grid', gap: '0.75rem' }}>
-                          {/* Pain Points Used */}
-                          {generatedCTAs.pain_point_context.primary_pain_points?.length > 0 && (
-                            <div>
-                              <div style={{ 
-                                fontSize: '0.75rem', 
-                                fontWeight: '600', 
-                                color: '#374151', 
-                                marginBottom: '0.25rem' 
-                              }}>
-                                📊 Pain Points Matched: {generatedCTAs.matched_pain_points}
-                              </div>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-                                {generatedCTAs.pain_point_context.primary_pain_points.map((painPoint, idx) => (
-                                  <span key={idx} style={{
-                                    fontSize: '0.6875rem',
-                                    backgroundColor: '#dcfce7',
-                                    color: '#16a34a',
-                                    padding: '0.125rem 0.5rem',
-                                    borderRadius: '0.25rem',
-                                    border: '1px solid #bbf7d0',
-                                    fontWeight: '500'
-                                  }}>
-                                    {painPoint}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Customer Quotes Used */}
-                          {generatedCTAs.pain_point_context.customer_quotes_used?.length > 0 && (
-                            <div>
-                              <div style={{ 
-                                fontSize: '0.75rem', 
-                                fontWeight: '600', 
-                                color: '#374151', 
-                                marginBottom: '0.25rem' 
-                              }}>
-                                💬 Customer Language Used: {generatedCTAs.pain_point_context.customer_quotes_used.length} quotes
-                              </div>
-                              <div>
-                                {generatedCTAs.pain_point_context.customer_quotes_used.map((quote, idx) => (
-                                  <div key={idx} style={{
-                                    fontSize: '0.6875rem',
-                                    fontStyle: 'italic',
-                                    color: '#059669',
-                                    backgroundColor: '#ecfdf5',
-                                    padding: '0.25rem 0.5rem',
-                                    borderRadius: '0.25rem',
-                                    marginBottom: '0.25rem',
-                                    border: '1px solid #a7f3d0',
-                                    lineHeight: '1.3'
-                                  }}>
-                                    "{quote}"
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
 
+                        <div style={{ fontSize: '0.625rem', color: '#374151' }}>
+                          <div>📊 Pain Points: {
+                            generatedCTAs.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]?.pain_points?.length ||
+                            generatedCTAs.pain_point_context?.primary_pain_points?.length || 0
+                          }</div>
+                          <div style={{ marginTop: '0.25rem' }}>
+                            <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>💬 Customer Language Used:</div>
+                            {(generatedCTAs.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]?.customer_quotes ||
+                              generatedCTAs.pain_point_context?.customer_quotes_used || [])?.map((quote: string, idx: number) => (
+                              <div key={idx} style={{
+                                fontSize: '0.6875rem',
+                                fontStyle: 'italic',
+                                color: '#059669',
+                                backgroundColor: '#ecfdf5',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '0.25rem',
+                                marginBottom: '0.25rem',
+                                border: '1px solid #bbf7d0'
+                              }}>
+                                "{quote}"
+                              </div>
+                            ))}
+                          </div>
                         </div>
-
                       </div>
                     )}
 
