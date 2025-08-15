@@ -544,8 +544,8 @@ const BlogCreatorPage: React.FC = () => {
         const progressData = {
           keywords: keywords.map(keyword => ({
             ...keyword,
-            // Store only essential data - truncate large output to save space
-            output: keyword.output.length > 1000 ? keyword.output.substring(0, 1000) + '...[truncated]' : keyword.output,
+            // Store full content - don't truncate as it breaks the workflow after refresh
+            output: keyword.output,
             createdAt: keyword.createdAt.toISOString() // Convert Date to ISO string for storage
           })),
           selectedRows: Array.from(selectedRows), // Convert Set to Array for storage
@@ -555,9 +555,36 @@ const BlogCreatorPage: React.FC = () => {
           timestamp: new Date().toISOString()
         };
         
-        localStorage.setItem('apollo_blog_creator_progress', JSON.stringify(progressData));
-        
-        setAutoSaveStatus('saved');
+        try {
+          localStorage.setItem('apollo_blog_creator_progress', JSON.stringify(progressData));
+          setAutoSaveStatus('saved');
+        } catch (storageError: any) {
+          // Handle localStorage quota exceeded
+          if (storageError.name === 'QuotaExceededError') {
+            console.warn('LocalStorage quota exceeded, clearing old data and retrying...');
+            // Clear old auto-save data and try again with minimal data
+            localStorage.removeItem('apollo_blog_creator_progress');
+            const minimalData = {
+              keywords: keywords.map(keyword => ({
+                id: keyword.id,
+                keyword: keyword.keyword,
+                status: keyword.status,
+                progress: keyword.progress,
+                output: keyword.status === 'completed' ? keyword.output : '', // Only save completed content
+                createdAt: keyword.createdAt.toISOString(),
+                metadata: keyword.metadata,
+                monthlyVolume: keyword.monthlyVolume,
+                avgDifficulty: keyword.avgDifficulty
+              })),
+              selectedRows: Array.from(selectedRows),
+              timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('apollo_blog_creator_progress', JSON.stringify(minimalData));
+            setAutoSaveStatus('saved');
+          } else {
+            throw storageError;
+          }
+        }
         
         // Clear the "saved" status after 2 seconds
         setTimeout(() => setAutoSaveStatus(''), 2000);
