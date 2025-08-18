@@ -1893,12 +1893,6 @@ Return ONLY the JSON object with the three required fields. No additional text o
       return;
     }
 
-    // Check if Client ID is available
-    if (!process.env.REACT_APP_GOOGLE_CLIENT_ID) {
-      alert('Google Client ID not configured. Please check your .env file and restart the server.');
-      return;
-    }
-
     setIsOpeningSheets(true);
     try {
       // Generate the new metadata fields
@@ -1916,8 +1910,8 @@ Return ONLY the JSON object with the three required fields. No additional text o
         author: author
       };
 
-      // Log data to blog content spreadsheet and get URL
-      const result = await googleDocsService.appendBlogData(blogData);
+      // Log data to your specific spreadsheet
+      const result = await googleDocsService.appendToSpecificSpreadsheet('15u6QMH8AtfHN3UwHMUueJgRX11sCvsZsuEGbkPfPXm0', blogData);
       
       if (result.success) {
         // Show success message
@@ -1925,8 +1919,8 @@ Return ONLY the JSON object with the three required fields. No additional text o
         setShowSheetsMessage(true);
         setTimeout(() => setShowSheetsMessage(false), 3000);
         
-        // Open the spreadsheet in a new tab
-        window.open(result.spreadsheetUrl, '_blank');
+        // Open the specific Google Sheet URL you provided
+        window.open('https://docs.google.com/spreadsheets/d/15u6QMH8AtfHN3UwHMUueJgRX11sCvsZsuEGbkPfPXm0/edit?gid=1144895816', '_blank');
       }
       
     } catch (error) {
