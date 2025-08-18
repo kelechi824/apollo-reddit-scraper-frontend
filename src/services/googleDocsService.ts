@@ -1252,6 +1252,135 @@ class GoogleDocsService {
   }
 
   /**
+   * Append blog content data to a specific spreadsheet by ID
+   * Why this matters: Logs all generated blog content with metadata directly to a user-specified spreadsheet.
+   */
+  async appendToSpecificSpreadsheet(spreadsheetId: string, blogData: {
+    metaSeoTitle: string;
+    metaDescription: string;
+    htmlContent: string;
+    urlSlug: string;
+    secondaryCategory: string;
+    author: string;
+  }): Promise<{ success: boolean; spreadsheetUrl: string }> {
+    if (!this.isAuthenticated()) {
+      await this.authenticate();
+    }
+
+    try {
+      window.gapi.client.setToken({ access_token: this.accessToken });
+
+      // Extract H1 title from HTML content
+      const h1Title = this.extractH1Title(blogData.htmlContent);
+      
+      // Get current data to determine next publish date
+      const dataResponse = await window.gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: 'A:H'
+      });
+      
+      // Determine next publish date based on last entry
+      let nextPublishDate: string;
+      const currentRowCount = dataResponse.result.values ? dataResponse.result.values.length : 1;
+      
+      if (dataResponse.result.values && dataResponse.result.values.length > 1) {
+        // Get the last date entry (skip header row)
+        const lastRow = dataResponse.result.values[dataResponse.result.values.length - 1];
+        const lastDateEntry = lastRow[0]; // First column is Publish Date
+        
+        console.log('Last date entry found:', lastDateEntry);
+        
+        if (lastDateEntry && /^\d{4}-\d{2}-\d{2}$/.test(lastDateEntry)) {
+          // Parse the last date and add one day
+          const lastDate = new Date(lastDateEntry + 'T00:00:00'); // Add time to avoid timezone issues
+          lastDate.setDate(lastDate.getDate() + 1);
+          nextPublishDate = lastDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+          console.log('Next publish date calculated:', nextPublishDate);
+        } else {
+          // If last entry isn't a valid date, use today's date
+          const today = new Date();
+          nextPublishDate = today.toISOString().split('T')[0];
+          console.log('Using today as fallback:', nextPublishDate);
+        }
+      } else {
+        // If no previous entries, start with today's date
+        const today = new Date();
+        nextPublishDate = today.toISOString().split('T')[0];
+        console.log('No previous entries, starting with today:', nextPublishDate);
+      }
+      
+      // Prepare row data for blog content in specified order (keyword removed)
+      const rowData = [
+        nextPublishDate,
+        blogData.htmlContent, // Content
+        h1Title,
+        blogData.metaSeoTitle,
+        blogData.metaDescription,
+        blogData.urlSlug,
+        blogData.secondaryCategory,
+        blogData.author
+      ];
+      
+      const newRowIndex = currentRowCount; // 0-indexed, so this will be the new row
+
+      // Try to append to the first sheet (you can modify this if you need a specific sheet name)
+      await window.gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: spreadsheetId,
+        range: 'A:H', // Assumes first sheet, columns A through H
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        resource: {
+          values: [rowData]
+        }
+      });
+
+      // Get sheet info to access sheetId for formatting
+      const spreadsheetInfo = await window.gapi.client.sheets.spreadsheets.get({
+        spreadsheetId: spreadsheetId
+      });
+      const sheetId = spreadsheetInfo.result.sheets[0].properties.sheetId;
+
+      // Apply consistent formatting to the newly added row
+      await window.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: spreadsheetId,
+        resource: {
+          requests: [
+            {
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startRowIndex: newRowIndex, // The newly added row
+                  endRowIndex: newRowIndex + 1, // Just this one row
+                  startColumnIndex: 0, // Start from column A
+                  endColumnIndex: 8,   // Through column H
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: false,
+                      fontSize: 10 // Match typical Google Sheets default font size
+                    },
+                    wrapStrategy: 'CLIP' // Prevent text wrapping in content column
+                  }
+                },
+                fields: 'userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.fontSize,userEnteredFormat.wrapStrategy'
+              }
+            }
+          ]
+        }
+      });
+
+      console.log('Successfully appended blog content data to specific spreadsheet');
+      const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+      return { success: true, spreadsheetUrl };
+
+    } catch (error) {
+      console.error('Error appending blog content data to specific spreadsheet:', error);
+      throw new Error('Failed to save blog content data to the specified Google Spreadsheet. Please try again.');
+    }
+  }
+
+  /**
    * Append blog content data to tracking spreadsheet
    * Why this matters: Logs all generated blog content with metadata for tracking and analytics.
    */
