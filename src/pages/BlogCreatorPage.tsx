@@ -1168,10 +1168,12 @@ FORMATTING REQUIREMENTS:
    - YOU MUST INSERT AT LEAST 3-5 INTERNAL LINKS from the provided sitemap URLs
    - This is a MANDATORY requirement - articles without internal links are incomplete
    - Only use URLs from the "AVAILABLE INTERNAL LINKS" section provided below
+   - Each internal link URL must be used ONLY ONCE (no duplicate links in the same article)
+   - MANDATORY: Place at least ONE internal link early in the content (introduction or within first 2-3 paragraphs after defining the main topic)
+   - Distribute the remaining 2-4 internal links naturally throughout the rest of the article
    - Choose URLs that are contextually relevant to the current topic
    - Use natural anchor text that matches the linked page's content
    - Format internal links as: <a href="URL" target="_blank">natural anchor text</a>
-   - Distribute links throughout the article, not clustered in one section
    - Example: "Learn more about <a href="https://example.com/page" target="_blank">social selling strategies</a>"
 
 IMPORTANT: The current year is 2025. When referencing "current year," "this year," or discussing recent trends, always use 2025. Do not reference 2024 or earlier years as current.
@@ -1222,8 +1224,13 @@ ${sitemapData && sitemapData.length > 0 ? `**AVAILABLE INTERNAL LINKS (MANDATORY
 ${sitemapData.slice(0, 20).map((url: any) => `• ${url.title}: ${url.description} [${url.url}]`).join('\n')}
 ${sitemapData.length > 20 ? `... and ${sitemapData.length - 20} more URLs available for linking` : ''}
 
-🚨 CRITICAL: You MUST include at least 3-5 internal links from the above list in your content. 
-Articles without internal links will be rejected. Choose the most relevant URLs for your topic.` : '**Note:** No sitemap data available for internal linking.'}
+🚨 CRITICAL INTERNAL LINKING REQUIREMENTS:
+- You MUST include exactly 3-5 internal links from the above list in your content
+- Each internal link URL must be used ONLY ONCE per article (no duplicate links)
+- MANDATORY: Include at least ONE internal link in the introduction or within the first 2-3 paragraphs after defining the main topic/keyword
+- Distribute the remaining 2-4 internal links naturally throughout the rest of the content
+- Choose the most relevant URLs for your topic and context
+- Articles without internal links will be rejected` : '**Note:** No sitemap data available for internal linking.'}
 
 **CRITICAL CONTENT REQUIREMENTS:**
 
