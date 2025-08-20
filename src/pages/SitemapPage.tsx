@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Trash2, ExternalLink, Globe, AlertTriangle, X, FileText, Check, Loader2 } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
+import { makeApiRequest } from '../utils/apiHelpers';
 
 interface SitemapUrl {
   id: string;
@@ -93,32 +94,29 @@ const SitemapPage: React.FC = () => {
     try {
       console.log(`🗺️ Starting sitemap scrape for: ${sitemapUrl}`);
 
-      const response = await fetch(API_ENDPOINTS.sitemapScrape, {
+      const apiResult = await makeApiRequest(API_ENDPOINTS.sitemapScrape, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           sitemapUrl: sitemapUrl.trim()
         }),
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to scrape sitemap');
+      if (!apiResult.success) {
+        throw new Error(apiResult.error || apiResult.message || 'Failed to scrape sitemap');
       }
+
+      const result = apiResult.data!;
 
       // Create new sitemap data
       const newSitemap: SitemapData = {
         id: `sitemap-${Date.now()}`,
-        sitemapUrl: result.data.sitemapUrl,
-        urls: result.data.urls.map((url: any) => ({
+        sitemapUrl: result.success ? result.data?.sitemapUrl || sitemapUrl : sitemapUrl,
+        urls: result.success && result.data?.urls ? result.data.urls.map((url: any) => ({
           ...url,
           scrapedAt: new Date(url.scrapedAt)
-        })),
-        totalUrls: result.data.totalUrls,
-        scrapedAt: new Date(result.data.scrapedAt)
+        })) : [],
+        totalUrls: result.success && result.data?.totalUrls ? result.data.totalUrls : 0,
+        scrapedAt: result.success && result.data?.scrapedAt ? new Date(result.data.scrapedAt) : new Date()
       };
 
       // Add to sitemaps list
