@@ -3,6 +3,7 @@ import { X, Wand2, Download, ExternalLink, Globe, ChevronDown, Search, Clock, Ch
 import { AnalyzedPost, BrandKit, ContentCreationRequest } from '../types';
 import googleDocsService from '../services/googleDocsService';
 import { API_ENDPOINTS, buildApiUrl } from '../config/api';
+import { makeApiRequest } from '../utils/apiHelpers';
 
 interface ContentCreationModalProps {
   isOpen: boolean;
@@ -1174,19 +1175,16 @@ Return ONLY the JSON object, no additional text.`;
       // Why this matters: Ensures all deployments (Netlify, Vercel, local) use the correct backend URL
       
       // Call the content generation API
-      const response = await fetch(API_ENDPOINTS.generateContent, {
+      const apiResult = await makeApiRequest(API_ENDPOINTS.generateContent, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(request),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate content');
+      if (!apiResult.success) {
+        throw new Error(apiResult.error || apiResult.message || 'Failed to generate content');
       }
 
-      const data = await response.json();
+      const data = apiResult.data!;
       
       // Parse the AI response to extract all fields
       const parsedResponse = parseAIResponse(data.content);

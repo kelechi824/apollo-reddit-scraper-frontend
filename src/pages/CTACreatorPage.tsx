@@ -3,6 +3,7 @@ import { ExternalLink, Zap, Target, Sparkles, CheckCircle, AlertCircle, ArrowRig
 import ArticlePreviewInterface from '../components/ArticlePreviewInterface';
 import { FEATURE_FLAGS } from '../utils/featureFlags';
 import { buildApiUrl } from '../config/api';
+import { makeApiRequest } from '../utils/apiHelpers';
 import { CTAGenerationResult } from '../types';
 
 // Skeleton component for loading states
@@ -341,22 +342,17 @@ const CTACreatorPage: React.FC = () => {
         };
       }
 
-      // Start the fetch request
-      const fetchPromise = fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
       // Simulate stage updates for better UX while processing
       const isRegeneration = !!generatedCTAs;
       const stage1 = setTimeout(() => setGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 3000);
       const stage2 = setTimeout(() => setGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 6000);
       const stage3 = setTimeout(() => setGenerationStage(isRegeneration ? 'Creating unique CTAs...' : 'Generating CTAs...'), 9000);
 
-      const response = await fetchPromise;
+      // Make the API request with safe JSON parsing
+      const apiResult = await makeApiRequest(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
       
       // Clear any remaining timeouts since we got a response
       clearTimeout(stage1);
@@ -364,50 +360,53 @@ const CTACreatorPage: React.FC = () => {
       clearTimeout(stage3);
 
       // Enhanced response handling with specific error messages
-      if (!response.ok) {
-        let errorMessage = 'Failed to generate CTAs';
+      if (!apiResult.success) {
+        let errorMessage = apiResult.error || 'Failed to generate CTAs';
         
-        if (response.status === 400) {
+        // Map common error messages to user-friendly ones
+        if (errorMessage.includes('400') || errorMessage.includes('Invalid')) {
           errorMessage = 'Invalid input provided. Please check your content and try again.';
-        } else if (response.status === 401) {
+        } else if (errorMessage.includes('401') || errorMessage.includes('Authorization')) {
           errorMessage = 'Authorization failed. Please refresh the page and try again.';
-        } else if (response.status === 403) {
+        } else if (errorMessage.includes('403') || errorMessage.includes('Access')) {
           errorMessage = 'Access denied. Please check your permissions.';
-        } else if (response.status === 404) {
+        } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
           errorMessage = 'Service not found. Please try again later.';
-        } else if (response.status === 429) {
+        } else if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
           errorMessage = 'Too many requests. Please wait a moment before trying again.';
-        } else if (response.status >= 500) {
+        } else if (errorMessage.includes('500') || errorMessage.includes('Server')) {
           errorMessage = 'Server error. Please try again in a few minutes.';
-        } else if (response.status === 408) {
+        } else if (errorMessage.includes('408') || errorMessage.includes('timeout')) {
           errorMessage = 'Request timed out. The article might be too large or complex.';
         }
         
         throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      const backendResponse = apiResult.data!;
 
-      if (result.success) {
+      if (backendResponse.success) {
         // Validate the response data structure
-        if (!result.data || !result.data.cta_variants) {
+        if (!backendResponse.data || !backendResponse.data.cta_variants) {
           throw new Error('Invalid response format received from server');
         }
 
+        const result = backendResponse.data; // This is the actual CTAGenerationResult
+
         console.log('🎯 CTA Generation Result:', {
-          persona: result.data.persona,
-          matched_pain_points: result.data.matched_pain_points,
-          pain_point_context: result.data.pain_point_context,
-          generation_metadata: result.data.generation_metadata
+          persona: result.persona,
+          matched_pain_points: result.matched_pain_points,
+          pain_point_context: result.pain_point_context,
+          generation_metadata: result.generation_metadata
         });
 
         setShowSkeletons(false);
         setGenerationStage('');
         
         // Capture article structure and content for preview interface
-        if (result.article_content) {
-          setArticleStructure(result.article_content.structure);
-          setOriginalContent(result.article_content.content || 
+        if (backendResponse.article_content) {
+          setArticleStructure(backendResponse.article_content.structure);
+          setOriginalContent(backendResponse.article_content.content || 
             (inputMethod === 'text' ? articleText : 
              inputMethod === 'markdown' ? articleMarkdown : ''));
           
@@ -465,28 +464,28 @@ const CTACreatorPage: React.FC = () => {
           
           // Add transformed insertion points to the CTA data for preview interface
           const transformedInsertionPoints = transformInsertionPoints(
-            result.article_content.insertion_points, 
-            result.article_content.structure
+            backendResponse.article_content.insertion_points, 
+            backendResponse.article_content.structure
           );
           const ctasWithInsertionPoints = {
-            ...result.data,
+            ...result,
             insertion_points: transformedInsertionPoints
           };
           setGeneratedCTAs(ctasWithInsertionPoints);
         } else {
           // Fallback - set the CTAs without preview capability
-          setGeneratedCTAs(result.data);
+          setGeneratedCTAs(result);
         }
         
         // Save to localStorage for persistence with error handling
         try {
-          saveCTAsToStorage(result.data);
+          saveCTAsToStorage(result);
         } catch (storageError) {
           console.warn('Failed to save CTAs to local storage:', storageError);
           // Don't fail the entire operation for storage issues
         }
       } else {
-        const errorMessage = result.error || 'Failed to generate CTAs';
+        const errorMessage = backendResponse.error || 'Failed to generate CTAs';
         throw new Error(errorMessage);
       }
     } catch (error: any) {

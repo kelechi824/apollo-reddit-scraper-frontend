@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Play, AlertCircle, Clock } from 'lucide-react';
 import { WorkflowRequest, WorkflowResponse } from '../types';
+import { makeApiRequest } from '../utils/apiHelpers';
 
 interface AnalysisInterfaceProps {
   apiUrl: string;
@@ -140,19 +141,19 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
 
       console.log('🚀 Starting analysis workflow:', request);
 
-      const response = await fetch(`${apiUrl.replace(/\/$/, '')}/api/workflow/run-analysis`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
+      const apiResult = await makeApiRequest<WorkflowResponse>(
+        `${apiUrl.replace(/\/$/, '')}/api/workflow/run-analysis`,
+        {
+          method: 'POST',
+          body: JSON.stringify(request),
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`Analysis failed: ${response.statusText}`);
+      if (!apiResult.success) {
+        throw new Error(apiResult.error || apiResult.message || 'Analysis failed');
       }
 
-      const data: WorkflowResponse = await response.json();
+      const data = apiResult.data!;
       
       console.log('✅ Analysis complete:', data);
       
