@@ -240,6 +240,11 @@ export interface ContentCreationRequest {
     audience_summary: string;
   };
   brand_kit: BrandKit;
+  sitemap_data?: Array<{
+    title: string;
+    description: string;
+    url: string;
+  }>;
   system_prompt: string;
   user_prompt: string;
 }

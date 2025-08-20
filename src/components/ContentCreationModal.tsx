@@ -1152,6 +1152,27 @@ Return ONLY the JSON object, no additional text.`;
       return;
     }
 
+    // Load sitemap data from localStorage for internal linking
+    let sitemapData = null;
+    try {
+      const stored = localStorage.getItem('apollo_sitemap_data');
+      if (stored) {
+        const sitemaps = JSON.parse(stored);
+        // Flatten all sitemap URLs into a single array for content generation
+        const allUrls = sitemaps.flatMap((sitemap: any) => 
+          sitemap.urls.map((url: any) => ({
+            title: url.title,
+            description: url.description,
+            url: url.url
+          }))
+        );
+        sitemapData = allUrls;
+        console.log(`🗺️ [ContentCreationModal] Loaded ${allUrls.length} URLs from ${sitemaps.length} sitemaps for internal linking`);
+      }
+    } catch (error) {
+      console.warn('Failed to load sitemap data:', error);
+    }
+
     setIsGenerating(true);
     try {
       // Replace liquid variables in prompts
@@ -1167,6 +1188,7 @@ Return ONLY the JSON object, no additional text.`;
           audience_summary: post.analysis.audience_insight
         },
         brand_kit: brandKit,
+        sitemap_data: sitemapData || undefined,
         system_prompt: processedSystemPrompt,
         user_prompt: processedUserPrompt
       };
@@ -1186,15 +1208,56 @@ Return ONLY the JSON object, no additional text.`;
 
       const data = apiResult.data!;
       
-      // Parse the AI response to extract all fields
-      const parsedResponse = parseAIResponse(data.content);
+      console.log('📥 FRONTEND - API Response Structure:', {
+        contentType: Array.isArray(data.content) ? 'array' : typeof data.content,
+        contentLength: Array.isArray(data.content) ? data.content.length : 'N/A',
+        hasMetaTitle: !!data.metaSeoTitle,
+        hasMetaDescription: !!data.metaDescription
+      });
       
-      setGeneratedContent(parsedResponse.content);
-      setEditableContent(parsedResponse.content);
+      // Handle the API response structure - content is an array, meta fields are separate
+      let contentToUse = '';
+      if (Array.isArray(data.content) && data.content.length > 0) {
+        contentToUse = data.content[0]; // Use first content variation
+        console.log('✅ Using first content variation from array');
+      } else if (typeof data.content === 'string') {
+        contentToUse = data.content;
+        console.log('✅ Using string content directly');
+      } else {
+        console.error('❌ Invalid content format:', typeof data.content, data.content);
+        throw new Error('Invalid content format received from API');
+      }
+      
+      // Check if the content is still a JSON string that needs parsing
+      let finalContent = contentToUse;
+      let metaTitle = data.metaSeoTitle || '';
+      let metaDesc = data.metaDescription || '';
+      
+      if (typeof contentToUse === 'string' && contentToUse.trim().startsWith('{') && contentToUse.trim().endsWith('}')) {
+        try {
+          console.log('🔍 Content appears to be JSON, attempting to parse...');
+          const parsedContent = JSON.parse(contentToUse);
+          if (parsedContent.content) {
+            finalContent = parsedContent.content;
+            metaTitle = parsedContent.metaSeoTitle || metaTitle;
+            metaDesc = parsedContent.metaDescription || metaDesc;
+            console.log('✅ Successfully parsed JSON content from response');
+          }
+        } catch (e) {
+          console.log('⚠️ Failed to parse content as JSON, using as-is');
+          // Keep original content if JSON parsing fails
+        }
+      }
+      
+      // Clean the content and use the extracted meta fields
+      const cleanedContent = cleanAIContent(finalContent);
+      
+      setGeneratedContent(cleanedContent);
+      setEditableContent(cleanedContent);
       setIsEditingContent(false);
-      setMetaSeoTitle(parsedResponse.metaSeoTitle);
-      setMetaDescription(parsedResponse.metaDescription);
-      saveGeneratedContent(parsedResponse.content, parsedResponse.metaSeoTitle, parsedResponse.metaDescription);
+      setMetaSeoTitle(metaTitle);
+      setMetaDescription(metaDesc);
+      saveGeneratedContent(cleanedContent, metaTitle, metaDesc);
 
     } catch (error) {
       console.error('Error generating content:', error);
@@ -1245,17 +1308,17 @@ Return ONLY the JSON object, no additional text.`;
         <p><strong>Ready to get started?</strong> <a href="${brandKit?.ctaDestination || 'https://apollo.io'}">${brandKit?.ctaText || 'Try Apollo for free'}</a> and see how we can help solve your ${post.analysis.pain_point} challenges.</p>
       `;
       
-      // Use parseAIResponse for fallback content too
-      const parsedFallback = parseAIResponse(fallbackContent);
+      // Clean fallback content and generate meta fields
+      const cleanedFallbackContent = cleanAIContent(fallbackContent);
       const fallbackMetaTitle = `How to Solve ${post.analysis.pain_point} in ${new Date().getFullYear()}`;
       const fallbackMetaDescription = `Discover proven strategies to address ${post.analysis.pain_point}. Learn how Apollo's comprehensive platform helps teams overcome challenges and achieve measurable results.`;
       
-      setGeneratedContent(parsedFallback.content);
-      setEditableContent(parsedFallback.content);
+      setGeneratedContent(cleanedFallbackContent);
+      setEditableContent(cleanedFallbackContent);
       setIsEditingContent(false);
       setMetaSeoTitle(fallbackMetaTitle);
       setMetaDescription(fallbackMetaDescription);
-      saveGeneratedContent(parsedFallback.content, fallbackMetaTitle, fallbackMetaDescription);
+      saveGeneratedContent(cleanedFallbackContent, fallbackMetaTitle, fallbackMetaDescription);
     } finally {
       setIsGenerating(false);
       // Auto-scroll to top after content generation
@@ -1270,6 +1333,16 @@ Return ONLY the JSON object, no additional text.`;
    * Why this matters: Properly extracts content, metaSeoTitle, and metaDescription from AI JSON response.
    */
   const parseAIResponse = (responseText: string): { content: string; metaSeoTitle: string; metaDescription: string } => {
+    // Ensure responseText is a string
+    if (typeof responseText !== 'string') {
+      console.error('parseAIResponse received non-string input:', typeof responseText, responseText);
+      return {
+        content: '',
+        metaSeoTitle: '',
+        metaDescription: ''
+      };
+    }
+    
     try {
       // First, try to parse the entire response as JSON
       let parsed;
@@ -1315,6 +1388,12 @@ Return ONLY the JSON object, no additional text.`;
    * Why this matters: Ensures clean HTML output by stripping AI meta-commentary and markdown formatting.
    */
   const cleanAIContent = (content: string): string => {
+    // Ensure content is a string
+    if (typeof content !== 'string') {
+      console.error('cleanAIContent received non-string input:', typeof content, content);
+      return '';
+    }
+    
     let cleaned = content;
     
     // Remove common AI introductory phrases
