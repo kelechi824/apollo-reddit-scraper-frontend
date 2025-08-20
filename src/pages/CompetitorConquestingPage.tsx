@@ -611,6 +611,27 @@ const CompetitorConquestingPage: React.FC = () => {
         console.warn('Failed to load brand kit:', e);
       }
 
+      // Load sitemap data from localStorage for internal linking
+      let sitemapData = null;
+      try {
+        const stored = localStorage.getItem('apollo_sitemap_data');
+        if (stored) {
+          const sitemaps = JSON.parse(stored);
+          // Flatten all sitemap URLs into a single array for content generation
+          const allUrls = sitemaps.flatMap((sitemap: any) => 
+            sitemap.urls.map((url: any) => ({
+              title: url.title,
+              description: url.description,
+              url: url.url
+            }))
+          );
+          sitemapData = allUrls;
+          console.log(`🗺️ [CompetitorConquesting] Loaded ${allUrls.length} URLs from ${sitemaps.length} sitemaps for internal linking`);
+        }
+      } catch (error) {
+        console.warn('Failed to load sitemap data:', error);
+      }
+
 
         
       // Use async generation to avoid Vercel's 60-second timeout
@@ -629,6 +650,7 @@ const CompetitorConquestingPage: React.FC = () => {
         url: row.url,
         competitor: selectedCompetitor, // Pass competitor for UTM tracking
         brand_kit: brandKit,
+        sitemap_data: sitemapData,
         target_audience: '',
         content_length: 'medium',
         focus_areas: []

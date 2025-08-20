@@ -52,6 +52,10 @@ export const API_ENDPOINTS = {
   competitorJobStatus: (jobId: string) => buildApiUrl(`/api/competitor-conquesting/job-status/${jobId}`),
   competitorCsvCognism: buildApiUrl('/api/competitor-conquesting/csv/cognism'),
   
+  // Sitemap endpoints
+  sitemapScrape: buildApiUrl('/api/sitemap/scrape'),
+  sitemapHealth: buildApiUrl('/api/sitemap/health'),
+  
   // Add other endpoints as needed
 };
 

@@ -4,6 +4,8 @@ import { BrandKit, CTAGenerationResult } from '../types';
 import googleDocsService from '../services/googleDocsService';
 import { autoSaveBlogIfReady } from '../services/blogHistoryService';
 import { API_ENDPOINTS, buildApiUrl } from '../config/api';
+import LinkHoverControls from './LinkHoverControls';
+import { useLinkHoverControls } from '../hooks/useLinkHoverControls';
 
 // Import the KeywordRow interface from BlogCreatorPage
 interface KeywordRow {
@@ -318,6 +320,19 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
+
+  // Content display ref for link hover controls
+  const contentDisplayRef = useRef<HTMLDivElement>(null);
+  
+  // Link hover controls
+  const {
+    targetLink,
+    isHovering: isHoveringLink,
+    handleLinkHover,
+    handleLinkLeave,
+    removeLink,
+    openLink
+  } = useLinkHoverControls(contentDisplayRef);
   const [editableContent, setEditableContent] = useState('');
   const [showGeneratedContentModal, setShowGeneratedContentModal] = useState(false);
   
@@ -2507,6 +2522,27 @@ Return ONLY the JSON object with the three required fields. No additional text o
       return;
     }
 
+    // Load sitemap data from localStorage
+    let sitemapData = null;
+    try {
+      const stored = localStorage.getItem('apollo_sitemap_data');
+      if (stored) {
+        const sitemaps = JSON.parse(stored);
+        // Flatten all sitemap URLs into a single array for content generation
+        const allUrls = sitemaps.flatMap((sitemap: any) => 
+          sitemap.urls.map((url: any) => ({
+            title: url.title,
+            description: url.description,
+            url: url.url
+          }))
+        );
+        sitemapData = allUrls;
+        console.log(`🗺️ [BlogContentActionModal] Loaded ${allUrls.length} URLs from ${sitemaps.length} sitemaps for internal linking`);
+      }
+    } catch (error) {
+      console.warn('Failed to load sitemap data:', error);
+    }
+
     setIsGenerating(true);
     try {
       console.log('🔍 [BlogContentActionModal] Original system prompt:', systemPrompt);
@@ -2532,11 +2568,12 @@ Return ONLY the JSON object with the three required fields. No additional text o
       // Why this matters: Ensures production deployments use the correct backend URL
       const backendUrl = process.env.NODE_ENV === 'production' 
         ? 'https://apollo-reddit-scraper-backend.vercel.app'
-        : 'http://localhost:3003';
+        : 'http://localhost:3001';
       
       const requestBody = {
         post_context: postContext,
         brand_kit: brandKit,
+        sitemap_data: sitemapData,
         system_prompt: processedSystemPrompt,
         user_prompt: processedUserPrompt
       };
@@ -2552,6 +2589,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
         body: JSON.stringify({
           post_context: postContext,
           brand_kit: brandKit,
+          sitemap_data: sitemapData,
           system_prompt: processedSystemPrompt,
           user_prompt: processedUserPrompt
         }),
@@ -4727,7 +4765,11 @@ Return ONLY the JSON object with the three required fields. No additional text o
                       )}
                     </div>
                   ) : (
-                    <div dangerouslySetInnerHTML={{ __html: getDisplayContent() }} key={`display-${isEditingContent}-${editableContent.length}`} />
+                    <div 
+                      ref={contentDisplayRef}
+                      dangerouslySetInnerHTML={{ __html: getDisplayContent() }} 
+                      key={`display-${isEditingContent}-${editableContent.length}`} 
+                    />
                   )}
                 </div>
               ) : (
@@ -5708,6 +5750,13 @@ Return ONLY the JSON object with the three required fields. No additional text o
         setShowVariablesMenu={setShowVariablesMenu}
         brandKit={brandKit}
         insertVariable={insertVariable}
+      />
+
+      {/* Link Hover Controls */}
+      <LinkHoverControls
+        targetLink={targetLink}
+        onRemoveLink={removeLink}
+        onOpenLink={openLink}
       />
     </>
   );

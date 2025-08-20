@@ -1090,6 +1090,30 @@ const BlogCreatorPage: React.FC = () => {
         console.warn('Failed to load brand kit:', error);
       }
 
+      // Load sitemap data from localStorage
+      let sitemapData = null;
+      try {
+        const stored = localStorage.getItem('apollo_sitemap_data');
+        if (stored) {
+          const sitemaps = JSON.parse(stored);
+          // Flatten all sitemap URLs into a single array for content generation
+          const allUrls = sitemaps.flatMap((sitemap: any) => 
+            sitemap.urls.map((url: any) => ({
+              title: url.title,
+              description: url.description,
+              url: url.url
+            }))
+          );
+          sitemapData = allUrls;
+          console.log(`🗺️ [BlogCreator] Loaded ${allUrls.length} URLs from ${sitemaps.length} sitemaps for internal linking`);
+          console.log(`🔗 [BlogCreator] First 3 URLs for linking:`, allUrls.slice(0, 3));
+        } else {
+          console.log(`⚠️ [BlogCreator] No sitemap data found in localStorage`);
+        }
+      } catch (error) {
+        console.warn('Failed to load sitemap data:', error);
+      }
+
       // Generate default prompts with brand kit integration (same as BlogContentActionModal)
       const generateDefaultPrompts = () => {
         const currentYear = 2025;
@@ -1140,6 +1164,18 @@ FORMATTING REQUIREMENTS:
    - Apply {{ brand_kit.tone_of_voice }} consistently throughout
    - Follow {{ brand_kit.writing_rules }} for style and approach
 
+4. **Internal Linking Requirements (CRITICAL - DO NOT SKIP):**
+   - YOU MUST INSERT AT LEAST 3-5 INTERNAL LINKS from the provided sitemap URLs
+   - This is a MANDATORY requirement - articles without internal links are incomplete
+   - Only use URLs from the "AVAILABLE INTERNAL LINKS" section provided below
+   - Each internal link URL must be used ONLY ONCE (no duplicate links in the same article)
+   - MANDATORY: Place at least ONE internal link early in the content (introduction or within first 2-3 paragraphs after defining the main topic)
+   - Distribute the remaining 2-4 internal links naturally throughout the rest of the article
+   - Choose URLs that are contextually relevant to the current topic
+   - Use natural anchor text that matches the linked page's content
+   - Format internal links as: <a href="URL" target="_blank">natural anchor text</a>
+   - Example: "Learn more about <a href="https://example.com/page" target="_blank">social selling strategies</a>"
+
 IMPORTANT: The current year is 2025. When referencing "current year," "this year," or discussing recent trends, always use 2025. Do not reference 2024 or earlier years as current.
 
 CRITICAL OUTPUT FORMAT: Respond with a JSON object containing exactly three fields:
@@ -1184,6 +1220,18 @@ Remember: Create the definitive resource that makes other content feel incomplet
 
 **Target Keyword:** ${keyword.keyword}
 
+${sitemapData && sitemapData.length > 0 ? `**AVAILABLE INTERNAL LINKS (MANDATORY - MUST USE 3-5 OF THESE):**
+${sitemapData.slice(0, 20).map((url: any) => `• ${url.title}: ${url.description} [${url.url}]`).join('\n')}
+${sitemapData.length > 20 ? `... and ${sitemapData.length - 20} more URLs available for linking` : ''}
+
+🚨 CRITICAL INTERNAL LINKING REQUIREMENTS:
+- You MUST include exactly 3-5 internal links from the above list in your content
+- Each internal link URL must be used ONLY ONCE per article (no duplicate links)
+- MANDATORY: Include at least ONE internal link in the introduction or within the first 2-3 paragraphs after defining the main topic/keyword
+- Distribute the remaining 2-4 internal links naturally throughout the rest of the content
+- Choose the most relevant URLs for your topic and context
+- Articles without internal links will be rejected` : '**Note:** No sitemap data available for internal linking.'}
+
 **CRITICAL CONTENT REQUIREMENTS:**
 
 1. **HTML Structure & Formatting:**
@@ -1210,14 +1258,21 @@ Remember: Create the definitive resource that makes other content feel incomplet
    - Implement {{ brand_kit.writing_rules }} for style consistency
    - End with natural Apollo promotion using this exact anchor text: "${selectedCTA}" linking to ${apolloSignupURL} (target="_blank")
 
-4. **Content Depth & Value:**
+4. **Internal Linking (MANDATORY):**
+   - MUST include 3-5 internal links from the provided sitemap URLs
+   - Integrate links naturally within the content where contextually relevant
+   - Use descriptive anchor text that matches the linked page's topic
+   - Example: "For more insights on <a href="URL" target="_blank">social selling tactics</a>, consider..."
+   - DO NOT create fake or placeholder links - only use the provided URLs
+
+5. **Content Depth & Value:**
    - Provide comprehensive coverage that serves as the definitive resource
    - Include practical, actionable guidance with specific examples
    - Address both current best practices and emerging trends for 2025
    - Cover implementation strategies with step-by-step processes
    - Include relevant metrics, benchmarks, and data points
 
-5. **CRITICAL COMPLETION REQUIREMENT:**
+6. **CRITICAL COMPLETION REQUIREMENT:**
    - MUST end with complete conclusion and call-to-action
    - Reserve final 15-20% of content for proper conclusion
    - NEVER end mid-sentence or mid-paragraph
@@ -1320,6 +1375,7 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
         keyword: keyword.keyword,
         content_length: 'medium',
         brand_kit: brandKit,
+        sitemap_data: sitemapData,
         system_prompt: processedSystemPrompt,
         user_prompt: processedUserPrompt
       };
