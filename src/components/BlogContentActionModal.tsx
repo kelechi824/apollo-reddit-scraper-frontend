@@ -4,6 +4,7 @@ import { BrandKit, CTAGenerationResult } from '../types';
 import googleDocsService from '../services/googleDocsService';
 import { autoSaveBlogIfReady } from '../services/blogHistoryService';
 import { API_ENDPOINTS, buildApiUrl } from '../config/api';
+import { makeApiRequest } from '../utils/apiHelpers';
 import LinkHoverControls from './LinkHoverControls';
 import { useLinkHoverControls } from '../hooks/useLinkHoverControls';
 
@@ -2581,25 +2582,25 @@ Return ONLY the JSON object with the three required fields. No additional text o
       console.log('📡 [BlogContentActionModal] API Request Body:', requestBody);
       console.log('📡 [BlogContentActionModal] Backend URL:', backendUrl);
 
-      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/content/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          post_context: postContext,
-          brand_kit: brandKit,
-          sitemap_data: sitemapData,
-          system_prompt: processedSystemPrompt,
-          user_prompt: processedUserPrompt
-        }),
-      });
+      const apiResult = await makeApiRequest(
+        `${backendUrl.replace(/\/$/, '')}/api/content/generate`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            post_context: postContext,
+            brand_kit: brandKit,
+            sitemap_data: sitemapData,
+            system_prompt: processedSystemPrompt,
+            user_prompt: processedUserPrompt
+          }),
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error('Failed to generate content');
+      if (!apiResult.success) {
+        throw new Error(apiResult.error || apiResult.message || 'Failed to generate content');
       }
 
-      const data = await response.json();
+      const data = apiResult.data!;
       console.log('📥 [BlogContentActionModal] API Response:', data);
       
       // Handle the response - it might be a single content string or array

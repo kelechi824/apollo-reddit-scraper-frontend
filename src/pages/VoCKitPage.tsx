@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Plus, Trash2, RefreshCw, CheckCircle, XCircle, AlertCircle, Trash, Search } from 'lucide-react';
 import { buildApiUrl } from '../config/api';
+import { makeApiRequest } from '../utils/apiHelpers';
 
 interface VoCPainPoint {
   id: string;
@@ -206,27 +207,24 @@ const VoCKitPage: React.FC = () => {
       console.log('API URL:', buildApiUrl('/api/voc-extraction/analyze-synchronous'));
       
       // High-efficiency parallel processing call
-      const response = await fetch(buildApiUrl('/api/voc-extraction/analyze-synchronous'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          daysBack: 90,  // 90 days for comprehensive coverage
-          maxCalls: 300  // High volume with optimized parallel processing
-        }),
-      });
+      const apiResult = await makeApiRequest(
+        buildApiUrl('/api/voc-extraction/analyze-synchronous'),
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            daysBack: 90,  // 90 days for comprehensive coverage
+            maxCalls: 300  // High volume with optimized parallel processing
+          }),
+        }
+      );
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', response.headers);
+      console.log('📡 API result:', apiResult);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ HTTP Error Response:', errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      if (!apiResult.success) {
+        throw new Error(apiResult.error || apiResult.message || 'VoC analysis failed');
       }
 
-      const result = await response.json();
+      const result = apiResult.data;
       console.log('✅ API Response:', result);
 
       if (result.success && result.data) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Zap, AlertCircle, Clock, ExternalLink, TrendingUp, Target, MessageSquare } from 'lucide-react';
 import { CROAnalysisResponse, CopyAnalysisResult } from '../types';
 import { API_BASE_URL, buildApiUrl } from '../config/api';
+import { makeApiRequest } from '../utils/apiHelpers';
 
 const CROPage: React.FC = () => {
   const [url, setUrl] = useState<string>('');
@@ -71,23 +72,21 @@ const apiUrl = API_BASE_URL;
       console.log('🔍 CRO Analysis request:', requestData);
       console.log('📡 API URL:', buildApiUrl('/api/cro/analyze'));
       
-      const response = await fetch(buildApiUrl('/api/cro/analyze'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-      });
+      const result = await makeApiRequest<CROAnalysisResponse>(
+        buildApiUrl('/api/cro/analyze'),
+        {
+          method: 'POST',
+          body: JSON.stringify(requestData),
+        }
+      );
 
-      console.log('📡 Response status:', response.status, response.statusText);
+      console.log('📡 API result:', result);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Backend error response:', errorText);
-        throw new Error(`Analysis failed: ${response.statusText} - ${errorText}`);
+      if (!result.success) {
+        throw new Error(result.error || result.message || 'Analysis failed');
       }
 
-      const data: CROAnalysisResponse = await response.json();
+      const data = result.data!;
       console.log('✅ Analysis response:', data);
       
       if (data.success) {
