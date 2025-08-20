@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target, MessageCircle, Workflow, Swords } from 'lucide-react';
+import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target, MessageCircle, Workflow, Swords, Database, Map } from 'lucide-react';
 import { FEATURE_FLAGS, FeatureFlags } from '../utils/featureFlags';
 
 interface NavigationProps {
@@ -11,6 +11,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
   const [showBlogSubMenu, setShowBlogSubMenu] = useState(false);
   const [showRedditAnalysisSubMenu, setShowRedditAnalysisSubMenu] = useState(false);
   const [showKitsSection, setShowKitsSection] = useState(false);
+  const [showKnowledgeBaseSection, setShowKnowledgeBaseSection] = useState(false);
   const [showSettingsSection, setShowSettingsSection] = useState(false);
 
   /**
@@ -35,6 +36,14 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
    */
   const toggleKitsSection = () => {
     setShowKitsSection(!showKitsSection);
+  };
+
+  /**
+   * Toggle Knowledge Base section visibility
+   * Why this matters: Allows users to expand/collapse the Knowledge Base section for cleaner navigation
+   */
+  const toggleKnowledgeBaseSection = () => {
+    setShowKnowledgeBaseSection(!showKnowledgeBaseSection);
   };
 
   /**
@@ -203,6 +212,28 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
               >
                 <Users className="nav-icon" />
                 VoC Kit
+              </NavLink>
+            </div>
+          )}
+        </div>
+        
+        <div className="nav-section">
+          <div 
+            className="nav-section-title clickable" 
+            onClick={toggleKnowledgeBaseSection}
+          >
+            <span>Knowledge Base</span>
+            <ChevronRight className={`nav-submenu-icon ${showKnowledgeBaseSection ? 'rotated' : ''}`} />
+          </div>
+          {showKnowledgeBaseSection && (
+            <div className="nav-section-content">
+              <NavLink 
+                to="/knowledge-base/sitemap" 
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                onClick={onItemClick}
+              >
+                <Map className="nav-icon" />
+                Sitemap
               </NavLink>
             </div>
           )}

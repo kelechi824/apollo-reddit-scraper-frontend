@@ -2071,6 +2071,27 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       setResolvedBrandKit(kit);
     }
 
+    // Load sitemap data from localStorage for internal linking
+    let sitemapData = null;
+    try {
+      const stored = localStorage.getItem('apollo_sitemap_data');
+      if (stored) {
+        const sitemaps = JSON.parse(stored);
+        // Flatten all sitemap URLs into a single array for content generation
+        const allUrls = sitemaps.flatMap((sitemap: any) => 
+          sitemap.urls.map((url: any) => ({
+            title: url.title,
+            description: url.description,
+            url: url.url
+          }))
+        );
+        sitemapData = allUrls;
+        console.log(`🗺️ [CompetitorContentActionModal] Loaded ${allUrls.length} URLs from ${sitemaps.length} sitemaps for internal linking`);
+      }
+    } catch (error) {
+      console.warn('Failed to load sitemap data:', error);
+    }
+
     setIsGenerating(true);
     try {
       // Don't process liquid variables here - let the backend do it with the full context
@@ -2087,6 +2108,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
           keyword: row.keyword,
           url: row.url,
           brand_kit: kit || undefined,
+          sitemap_data: sitemapData,
           target_audience: '',
           content_length: 'medium',
           focus_areas: [],
