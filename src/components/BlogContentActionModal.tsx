@@ -8,6 +8,19 @@ import { makeApiRequest } from '../utils/apiHelpers';
 import LinkHoverControls from './LinkHoverControls';
 import { useLinkHoverControls } from '../hooks/useLinkHoverControls';
 
+// Skeleton component for loading states
+const Skeleton = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+  <div 
+    className={className}
+    style={{
+      backgroundColor: '#f3f4f6',
+      borderRadius: '0.375rem',
+      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      ...style
+    }}
+  />
+);
+
 // Import the KeywordRow interface from BlogCreatorPage
 interface KeywordRow {
   id: string;
@@ -360,10 +373,12 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
   const [ctaCopySuccess, setCtaCopySuccess] = useState<string>('');
   const [vocKitReady, setVocKitReady] = useState(false);
   const [painPointsCount, setPainPointsCount] = useState(0);
+  const [showCtaSkeletons, setShowCtaSkeletons] = useState(false);
   const [vocKitReadyDismissed, setVocKitReadyDismissed] = useState(false);
 
   // Approved CTA button options for dynamic switching (copied from CTACreatorPage)
   const approvedCTAButtons = [
+    'Start Free with Apollo →',
     'Try Apollo Free →',
     'Start Your Free Trial →',
     'Schedule a Demo →',
@@ -531,6 +546,15 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       @keyframes spin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
+      }
+      
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -1287,8 +1311,9 @@ Respond with JSON:
    */
   const getRandomCTAAnchorText = (): string => {
     const ctaOptions = [
-      "Start Your Free Trial",
-      "Try Apollo Free", 
+      "Start Free with Apollo",
+      "Try Apollo Free",
+      "Start Your Free Trial", 
       "Start a Trial",
       "Schedule a Demo",
       "Request a Demo", 
@@ -2992,6 +3017,14 @@ Return ONLY the JSON object with the three required fields. No additional text o
 
     setIsGeneratingCTAs(true);
     setCtaError('');
+    
+    // If CTAs already exist, show skeletons instead of clearing
+    if (generatedCTAs) {
+      setShowCtaSkeletons(true);
+    } else {
+      setGeneratedCTAs(null);
+    }
+    
     const isRegeneration = !!generatedCTAs;
     setCtaGenerationStage(isRegeneration ? 'Preparing new CTA variations...' : 'Analyzing voice of customer insights...');
 
@@ -3047,6 +3080,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
 
       if (result.success) {
         console.log('🎯 CTA Generation Result:', result.data);
+        setShowCtaSkeletons(false);
         setGeneratedCTAs(result.data);
         
         // Auto-save CTAs to localStorage for persistence
@@ -3061,6 +3095,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
     } catch (error: any) {
       console.error('Error generating CTAs:', error);
       setCtaError(error.message || 'Failed to generate CTAs');
+      setShowCtaSkeletons(false);
     } finally {
       setIsGeneratingCTAs(false);
       setCtaGenerationStage('');
@@ -3440,8 +3475,75 @@ Return ONLY the JSON object with the three required fields. No additional text o
               </div>
               )}
 
+              {/* Skeleton Loading Section */}
+              {showCtaSkeletons && (
+                <div style={{ marginTop: '1rem' }}>
+                  {/* Skeleton Header */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                      <Skeleton style={{ height: '0.875rem', width: '8rem' }} />
+                    </div>
+                  </div>
+
+                  {/* Skeleton CTA Variants */}
+                  <div style={{ display: 'grid', gap: '1.5rem' }}>
+                    {['beginning', 'middle', 'end'].map((position) => (
+                      <div key={position} style={{
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.75rem',
+                        padding: '1rem',
+                        backgroundColor: '#fafafa'
+                      }}>
+                        {/* Skeleton Position Header */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <Skeleton style={{ height: '1.5rem', width: '4rem' }} />
+                            <Skeleton style={{ height: '1rem', width: '6rem' }} />
+                          </div>
+                          
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <Skeleton style={{ height: '2rem', width: '4rem' }} />
+                            <Skeleton style={{ height: '2rem', width: '4rem' }} />
+                          </div>
+                        </div>
+
+                        {/* Skeleton CTA Preview */}
+                        <div style={{ 
+                          backgroundColor: '#192307',
+                          padding: '1.5rem',
+                          borderRadius: '0.5rem',
+                          marginBottom: '1rem'
+                        }}>
+                          <Skeleton style={{ height: '0.875rem', width: '6rem', marginBottom: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                            <Skeleton style={{ height: '3rem', width: '3rem', borderRadius: '0.5rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                            <div style={{ flex: 1 }}>
+                              <Skeleton style={{ height: '1.25rem', width: '100%', marginBottom: '0.75rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                              <Skeleton style={{ height: '1rem', width: '90%', marginBottom: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                              <Skeleton style={{ height: '2.5rem', width: '6rem', backgroundColor: 'rgba(189, 245, 72, 0.3)' }} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Skeleton Code Sections */}
+                        <div style={{ display: 'grid', gap: '1rem' }}>
+                          <div>
+                            <Skeleton style={{ height: '0.75rem', width: '8rem', marginBottom: '0.5rem' }} />
+                            <Skeleton style={{ height: '4rem', width: '100%' }} />
+                          </div>
+                          <div>
+                            <Skeleton style={{ height: '0.75rem', width: '6rem', marginBottom: '0.5rem' }} />
+                            <Skeleton style={{ height: '3rem', width: '100%' }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Generated CTAs Display */}
-              {generatedCTAs && (
+              {generatedCTAs && !showCtaSkeletons && (
                 <div style={{ marginTop: '1rem' }}>
                   <h4 style={{ 
                     fontSize: '0.875rem', 
