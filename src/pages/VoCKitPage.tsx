@@ -200,20 +200,20 @@ const VoCKitPage: React.FC = () => {
    */
   const extractPainPoints = async () => {
     setIsExtracting(true);
-    setMessage('Analyzing 300 customer calls. Please do not exit this page until the analysis is complete. This may take 1-2 minutes.');
+    setMessage('Analyzing Gong customer calls. Please do not exit this page until the analysis is complete. This may take 1-2 minutes.');
     
     try {
-      console.log('🚀 Starting high-efficiency VoC extraction request...');
+      console.log('🚀 Starting VoC extraction request...');
       console.log('API URL:', buildApiUrl('/api/voc-extraction/analyze-synchronous'));
       
-      // High-efficiency parallel processing call
+      // High-volume lightweight processing call
       const apiResult = await makeApiRequest(
         buildApiUrl('/api/voc-extraction/analyze-synchronous'),
         {
           method: 'POST',
           body: JSON.stringify({
             daysBack: 90,  // 90 days for comprehensive coverage
-            maxCalls: 300  // High volume with optimized parallel processing
+            maxCalls: 300  // Will be automatically reduced if needed for timeout safety
           }),
         }
       );
@@ -230,6 +230,7 @@ const VoCKitPage: React.FC = () => {
       if (result.success && result.data) {
         const { variables, painPoints, metadata } = result.data;
         handleAnalysisComplete(variables, painPoints, metadata);
+        
         setMessage(`Successfully extracted ${metadata.totalPainPoints} pain points from ${metadata.callsAnalyzed} calls in ${Math.round(result.processingTime / 1000)}s`);
       } else {
         console.error('❌ API returned error:', result);
@@ -597,7 +598,7 @@ const VoCKitPage: React.FC = () => {
             
             <div style={{ display: 'grid', gap: '1rem' }}>
               {extractedPainPoints.map((painPoint, index) => (
-                <div key={painPoint.id} style={{
+                <div key={painPoint.id || `painpoint-${index}`} style={{
                   border: '0.0625rem solid #e5e7eb',
                   borderRadius: '0.5rem',
                   padding: '1rem',
@@ -639,7 +640,7 @@ const VoCKitPage: React.FC = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         {painPoint.customerQuotes.slice(0, 3).map((quote, idx) => (
                           <div 
-                            key={idx} 
+                            key={`quote-${painPoint.id}-${idx}`} 
                             style={{
                               fontSize: '0.7625rem',
                               fontStyle: 'italic',
@@ -831,7 +832,7 @@ const VoCKitPage: React.FC = () => {
               {showExcerptModal.painPoint.sourceExcerpts && showExcerptModal.painPoint.sourceExcerpts.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(28rem, 1fr))', gap: '1.5rem' }}>
                   {showExcerptModal.painPoint.sourceExcerpts.map((excerpt, idx) => (
-                    <div key={idx} style={{
+                    <div key={`excerpt-${excerpt.callId || idx}`} style={{
                       border: '0.0625rem solid #e5e7eb',
                       borderRadius: '0.5rem',
                       padding: '1.25rem',
