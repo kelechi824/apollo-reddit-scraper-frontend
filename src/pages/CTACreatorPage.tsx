@@ -58,6 +58,7 @@ const CTACreatorPage: React.FC = () => {
 
   // Approved CTA button options for dynamic switching
   const approvedCTAButtons = [
+    'Start Free with Apollo →',
     'Try Apollo Free →',
     'Start Your Free Trial →',
     'Schedule a Demo →',
@@ -1289,24 +1290,106 @@ Paste your markdown content here...
                       </div>
                     </div>
 
-                    {/* Skeleton CTA Preview */}
+                    {/* Skeleton CTA Preview - Apollo Design */}
                     <div style={{ 
-                      backgroundColor: 'white',
-                      padding: '1.5rem',
-                      borderRadius: '0.5rem',
-                      border: '1px solid #e5e7eb',
-                      marginBottom: '1rem'
+                      backgroundColor: '#192307',
+                      padding: '2rem',
+                      borderRadius: '0.875rem',
+                      marginBottom: '1rem',
+                      position: 'relative'
                     }}>
-                      <Skeleton style={{ height: '1rem', width: '8rem', marginBottom: '0.5rem' }} />
-                      <Skeleton style={{ height: '1.5rem', width: '100%', marginBottom: '0.75rem' }} />
-                      <Skeleton style={{ height: '1rem', width: '90%', marginBottom: '1rem' }} />
-                      <Skeleton style={{ height: '2.5rem', width: '8rem' }} />
+                      {/* Skeleton Category Header */}
+                      <Skeleton style={{ 
+                        height: '0.875rem', 
+                        width: '8rem', 
+                        marginBottom: '1rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                      }} />
+
+                      {/* Content Layout with Logo */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
+                        {/* Skeleton Apollo Logo */}
+                        <Skeleton style={{
+                          width: '4rem',
+                          height: '4rem',
+                          borderRadius: '0.75rem',
+                          flexShrink: 0,
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                        }} />
+
+                        {/* Skeleton Content */}
+                        <div style={{ flex: 1 }}>
+                          <Skeleton style={{ 
+                            height: '1.5rem', 
+                            width: '100%', 
+                            marginBottom: '1rem',
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                          }} />
+                          <Skeleton style={{ 
+                            height: '1rem', 
+                            width: '90%', 
+                            marginBottom: '1.5rem',
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                          }} />
+                          <Skeleton style={{ 
+                            height: '3rem', 
+                            width: '10rem',
+                            borderRadius: '0.625rem',
+                            backgroundColor: 'rgba(189, 245, 72, 0.3)'
+                          }} />
+                        </div>
+                      </div>
+
+                      {/* Skeleton Change CTA Button */}
+                      <div style={{ 
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem'
+                      }}>
+                        <Skeleton style={{
+                          height: '2rem',
+                          width: '5rem',
+                          borderRadius: '0.375rem',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                        }} />
+                      </div>
                     </div>
 
-                    {/* Skeleton Shortcode */}
-                    <div>
-                      <Skeleton style={{ height: '0.75rem', width: '5rem', marginBottom: '0.5rem' }} />
-                      <Skeleton style={{ height: '4rem', width: '100%' }} />
+                    {/* Skeleton Code Sections */}
+                    <div style={{ display: 'grid', gap: '1rem' }}>
+                      {/* Skeleton Styled Shortcode */}
+                      <div>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          marginBottom: '0.5rem' 
+                        }}>
+                          <Skeleton style={{ height: '0.75rem', width: '12rem' }} />
+                          <Skeleton style={{ height: '1.5rem', width: '3rem' }} />
+                        </div>
+                        <Skeleton style={{ height: '6rem', width: '100%' }} />
+                      </div>
+
+                      {/* Skeleton Original Shortcode */}
+                      <div>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          marginBottom: '0.5rem' 
+                        }}>
+                          <Skeleton style={{ height: '0.75rem', width: '8rem' }} />
+                          <Skeleton style={{ height: '1.5rem', width: '3rem' }} />
+                        </div>
+                        <Skeleton style={{ height: '4rem', width: '100%' }} />
+                      </div>
+
+                      {/* Skeleton URL Preview */}
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <Skeleton style={{ height: '0.75rem', width: '6rem', marginBottom: '0.25rem' }} />
+                        <Skeleton style={{ height: '2rem', width: '100%' }} />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1459,18 +1542,6 @@ Paste your markdown content here...
                       position: 'relative',
                       overflow: 'hidden'
                     }}>
-                      {/* Category Header */}
-                      <div style={{ 
-                        fontSize: '0.875rem', 
-                        fontWeight: '600', 
-                        color: '#ffffff',
-                        marginBottom: '1rem',
-                        letterSpacing: '0.1em',
-                        textTransform: 'uppercase'
-                      }}>
-                        {ctaData.cta.category_header}
-                      </div>
-
                       {/* Content Layout with Logo */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
                         {/* Apollo Logo */}
@@ -1495,6 +1566,18 @@ Paste your markdown content here...
 
                         {/* Content */}
                         <div style={{ flex: 1 }}>
+                          {/* Category Header */}
+                          <div style={{ 
+                            fontSize: '0.875rem', 
+                            fontWeight: '600', 
+                            color: '#ffffff',
+                            marginBottom: '1rem',
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase'
+                          }}>
+                            {ctaData.cta.category_header}
+                          </div>
+
                           <h4 style={{ 
                             fontSize: '1.5rem', 
                             fontWeight: '700', 
@@ -1684,18 +1767,6 @@ Paste your markdown content here...
                                 marginTop: '0.5rem',
                                 position: 'relative'
                               }}>
-                                {/* Category Header */}
-                                <div style={{ 
-                                  fontSize: '0.875rem', 
-                                  fontWeight: '600', 
-                                  color: '#ffffff',
-                                  marginBottom: '1rem',
-                                  letterSpacing: '0.1em',
-                                  textTransform: 'uppercase'
-                                }}>
-                                  {parsed.category}
-                                </div>
-
                                 {/* Content Layout with Logo */}
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
                                   {/* Apollo Logo */}
@@ -1720,6 +1791,18 @@ Paste your markdown content here...
 
                                   {/* Content */}
                                   <div style={{ flex: 1 }}>
+                                    {/* Category Header */}
+                                    <div style={{ 
+                                      fontSize: '0.875rem', 
+                                      fontWeight: '600', 
+                                      color: '#ffffff',
+                                      marginBottom: '1rem',
+                                      letterSpacing: '0.1em',
+                                      textTransform: 'uppercase'
+                                    }}>
+                                      {parsed.category}
+                                    </div>
+
                                     <h4 style={{ 
                                       fontSize: '1.5rem', 
                                       fontWeight: '700', 
