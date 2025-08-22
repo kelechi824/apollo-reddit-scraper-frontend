@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Plus, Trash2, Link2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { BrandKit } from '../types';
+import { compressTextData } from '../utils/localStorage';
+import { HybridStorage } from '../utils/indexedDB';
 
 /**
  * BrandKitPage Component
@@ -41,6 +43,7 @@ const BrandKitPage: React.FC = () => {
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const [editingVariable, setEditingVariable] = useState<string | null>(null);
   const [editingVariableName, setEditingVariableName] = useState('');
+
   const isInitialLoadRef = useRef(true);
 
   // Convert camelCase/PascalCase to snake_case
@@ -64,7 +67,11 @@ const BrandKitPage: React.FC = () => {
     }
   }, [newVariableName]);
 
-  // Auto-save to localStorage with debouncing
+
+
+
+
+  // Auto-save to localStorage with debouncing and quota management
   React.useEffect(() => {
     // Skip auto-save if this is the initial load from localStorage
     if (isInitialLoadRef.current) {
@@ -79,21 +86,36 @@ const BrandKitPage: React.FC = () => {
     // Set auto-save status to saving
     setAutoSaveStatus('saving');
 
-    // Set new timeout for auto-save
-    const timeout = setTimeout(() => {
+    // Set new timeout for auto-save with hybrid storage
+    const timeout = setTimeout(async () => {
       try {
-        localStorage.setItem('apollo_brand_kit_draft', JSON.stringify(brandKit));
+        const compressedData = compressTextData(brandKit) as BrandKit;
+        const saveResult = await HybridStorage.setItem('apollo_brand_kit_draft', compressedData);
+        
+        if (!saveResult.success) {
+          console.warn('Auto-save failed:', saveResult.error);
+          setAutoSaveStatus('');
+          setSaveMessage('Auto-save failed. Your data is safe in memory - try saving manually.');
+          setTimeout(() => setSaveMessage(''), 5000);
+          return;
+        }
         
         // Dispatch custom event to notify other components of auto-save
         window.dispatchEvent(new CustomEvent('apollo-brand-kit-updated'));
+        
+        // Show success message with storage method info
+        const method = saveResult.method === 'indexedDB' ? 'IndexedDB' : 'localStorage';
+        const compressionInfo = saveResult.compressed ? ' (compressed)' : '';
         
         setAutoSaveStatus('saved');
         
         // Clear the "saved" status after 2 seconds
         setTimeout(() => setAutoSaveStatus(''), 2000);
       } catch (error) {
-        console.error('Auto-save failed:', error);
+        console.error('Auto-save error:', error);
         setAutoSaveStatus('');
+        setSaveMessage('Auto-save failed. Your data is safe in memory.');
+        setTimeout(() => setSaveMessage(''), 5000);
       }
     }, 1000); // Save after 1 second of inactivity
 
@@ -110,41 +132,68 @@ const BrandKitPage: React.FC = () => {
   const [connectionMessage, setConnectionMessage] = useState('');
 
   /**
-   * Load brand kit from localStorage on mount
-   * Why this matters: Persists user's brand configuration across sessions and restores auto-saved drafts.
+   * Load brand kit from hybrid storage on mount
+   * Why this matters: Persists user's brand configuration across sessions using the best available storage method.
    */
   useEffect(() => {
-    // First check for auto-saved draft, then fallback to saved version
-    const draft = localStorage.getItem('apollo_brand_kit_draft');
-    const saved = localStorage.getItem('apollo_brand_kit');
-    
-    const dataToLoad = draft || saved;
-    
-    if (dataToLoad) {
+    const loadBrandKit = async () => {
       try {
-        setBrandKit(JSON.parse(dataToLoad));
+        // First check for auto-saved draft, then fallback to saved version
+        let dataToLoad = await HybridStorage.getItem('apollo_brand_kit_draft');
+        if (!dataToLoad) {
+          dataToLoad = await HybridStorage.getItem('apollo_brand_kit');
+        }
+        
+        if (dataToLoad) {
+          setBrandKit(dataToLoad);
+        }
       } catch (error) {
         console.error('Error loading brand kit:', error);
+        
+        // Fallback to localStorage if hybrid storage fails
+        try {
+          const draft = localStorage.getItem('apollo_brand_kit_draft');
+          const saved = localStorage.getItem('apollo_brand_kit');
+          const fallbackData = draft || saved;
+          
+          if (fallbackData) {
+            setBrandKit(JSON.parse(fallbackData));
+          }
+        } catch (fallbackError) {
+          console.error('Fallback loading also failed:', fallbackError);
+        }
       }
-    }
 
-    // After initial load, allow auto-save to work
-    // Use a small delay to ensure the setBrandKit has completed
-    setTimeout(() => {
-      isInitialLoadRef.current = false;
-    }, 100);
+      // After initial load, allow auto-save to work
+      setTimeout(() => {
+        isInitialLoadRef.current = false;
+      }, 100);
+    };
+
+    loadBrandKit();
   }, []);
 
   /**
-   * Save brand kit to localStorage
-   * Why this matters: Ensures brand configuration is preserved and available for content creation.
+   * Save brand kit to localStorage with quota management
+   * Why this matters: Ensures brand configuration is preserved and available for content creation while handling storage limits gracefully.
    */
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
+    
     try {
-      localStorage.setItem('apollo_brand_kit', JSON.stringify(brandKit));
+      const compressedData = compressTextData(brandKit) as BrandKit;
+      const saveResult = await HybridStorage.setItem('apollo_brand_kit', compressedData);
+      
+      if (!saveResult.success) {
+        console.warn('Manual save failed:', saveResult.error);
+        setSaveMessage('Save failed. Please try again or contact support if the issue persists.');
+        setTimeout(() => setSaveMessage(''), 5000);
+        setIsSaving(false);
+        return;
+      }
+      
       // Clear the draft since we've manually saved
-      localStorage.removeItem('apollo_brand_kit_draft');
+      await HybridStorage.removeItem('apollo_brand_kit_draft');
       
       // Dispatch custom event to notify other components
       window.dispatchEvent(new CustomEvent('apollo-brand-kit-updated'));
@@ -152,8 +201,9 @@ const BrandKitPage: React.FC = () => {
       setSaveMessage('Brand Kit saved successfully!');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
-      setSaveMessage('Error saving Brand Kit');
-      console.error('Error saving brand kit:', error);
+      console.error('Save error:', error);
+      setSaveMessage('Save failed due to an unexpected error. Please try again.');
+      setTimeout(() => setSaveMessage(''), 5000);
     } finally {
       setIsSaving(false);
     }
@@ -840,7 +890,7 @@ const BrandKitPage: React.FC = () => {
             type="url"
             value={brandKit.ctaDestination}
             onChange={(e) => handleChange('ctaDestination', e.target.value)}
-            placeholder="https://www.apollo.io/signup"
+            placeholder="https://www.apollo.io/sign-up"
             style={{
               width: '100%',
               padding: '1rem 1.25rem',
@@ -1233,8 +1283,9 @@ const BrandKitPage: React.FC = () => {
 
           {saveMessage && (
             <span style={{ 
-              color: saveMessage.includes('Error') ? '#ef4444' : '#10b981',
-              fontWeight: '500'
+              color: saveMessage.includes('Error') || saveMessage.includes('failed') ? '#ef4444' : '#10b981',
+              fontWeight: '500',
+              textAlign: 'center'
             }}>
               {saveMessage}
             </span>
