@@ -206,15 +206,15 @@ const VoCKitPage: React.FC = () => {
       console.log('🚀 Starting VoC extraction...');
       console.log('API URL:', buildApiUrl('/api/voc-extraction/analyze-synchronous'));
       
-      // Use synchronous endpoint with reduced call count for production
-      // Why this matters: 100 calls processes reliably within Vercel's 60-second limit
+      // Use synchronous endpoint with full 300 calls using parallel workers
+      // Why this matters: 20 parallel workers process 300 calls in under 10 seconds
       const apiResult = await makeApiRequest(
         buildApiUrl('/api/voc-extraction/analyze-synchronous'),
         {
           method: 'POST',
           body: JSON.stringify({
             daysBack: 90,  // 90 days for good coverage
-            maxCalls: 100  // Reduced from 300 to avoid timeouts
+            maxCalls: 300  // Full 300 calls with parallel processing
           }),
         }
       );
