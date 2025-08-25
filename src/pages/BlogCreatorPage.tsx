@@ -1449,11 +1449,11 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
       
       // Poll for job completion
       // Why this matters: With Firecrawl, deep research, gap analysis, and content generation,
-      // the full pipeline can take 3-5 minutes or more depending on content complexity
+      // the full pipeline can take 5-8 minutes or more depending on content complexity
       let attempts = 0;
       let transientErrorStreak = 0;
       const maxTransientErrorStreak = 8;
-      const maxAttempts = 600; // 10 minutes max polling
+      const maxAttempts = 900; // 15 minutes max polling (increased for 5-minute Claude timeout)
       const pollInterval = 1000; // Poll every 1 second
       
       while (attempts < maxAttempts) {
@@ -1577,8 +1577,8 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
         attempts++;
       }
       
-      // If we get here, polling timed out after 10 minutes
-      throw new Error('Content generation is taking longer than 10 minutes. This can happen with very complex content. Please try with simpler settings or contact support.');
+      // If we get here, polling timed out after 15 minutes
+      throw new Error('Content generation is taking longer than 15 minutes. This can happen with very complex content. Please try with simpler settings or contact support.');
 
     } catch (error) {
       // Handle API failures with error status

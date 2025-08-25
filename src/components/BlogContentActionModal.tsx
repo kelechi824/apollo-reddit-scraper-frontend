@@ -1330,7 +1330,7 @@ Respond with JSON:
 
   /**
    * Generate UTM-tracked Apollo signup URL for blog creator campaigns
-   * Why this matters: Tracks campaign effectiveness for specific keywords like competitor conquesting does
+   * Why this matters: Tracks campaign effectiveness for specific keywords with utm_term parameter
    */
   const generateBlogCreatorSignupURL = (keyword: string): string => {
     const baseURL = 'https://www.apollo.io/sign-up';
@@ -1339,7 +1339,7 @@ Respond with JSON:
       return baseURL;
     }
     
-    // Generate UTM campaign parameter from keyword (sanitize for URL)
+    // Generate UTM parameters with keyword as utm_term (sanitize for URL)
     const sanitizedKeyword = keyword.toLowerCase()
       .replace(/[^a-z0-9\s]/g, '') // Remove special characters
       .replace(/\s+/g, '_') // Replace spaces with underscores
@@ -1347,8 +1347,7 @@ Respond with JSON:
       .replace(/^_|_$/g, '') // Remove leading/trailing underscores
       .trim();
       
-    const utmCampaign = `blog_creator_${sanitizedKeyword}`;
-    const url = `${baseURL}?utm_campaign=${utmCampaign}`;
+    const url = `${baseURL}?utm_campaign=blog_creator&utm_term=${sanitizedKeyword}`;
     
     return url;
   };
