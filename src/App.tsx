@@ -18,6 +18,7 @@ import LandingPageAnalyzer from './pages/LandingPageAnalyzer';
 import BlogHistoryPage from './pages/BlogHistoryPage';
 import CompetitorConquestingPage from './pages/CompetitorConquestingPage';
 import SitemapPage from './pages/SitemapPage';
+import SitemapPageEnhanced from './pages/SitemapPageEnhanced';
 import SitemapDetailPage from './pages/SitemapDetailPage';
 import { FEATURE_FLAGS, FeatureFlags } from './utils/featureFlags';
 
@@ -129,7 +130,8 @@ const AppLayout: React.FC = () => {
             <Route path="/brand-kit" element={<BrandKitPage />} />
             <Route path="/cta-creator" element={<CTACreatorPage />} />
             <Route path="/voc-kit" element={<VoCKitPage />} />
-            <Route path="/knowledge-base/sitemap" element={<SitemapPage />} />
+            <Route path="/knowledge-base/sitemap" element={<SitemapPageEnhanced />} />
+            <Route path="/knowledge-base/sitemap-old" element={<SitemapPage />} />
             <Route path="/knowledge-base/sitemap/details/:sitemapId" element={<SitemapDetailPage />} />
             <Route path="/reddit-analysis-history" element={<HistoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
