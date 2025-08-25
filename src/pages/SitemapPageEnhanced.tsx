@@ -383,15 +383,15 @@ const SitemapPageEnhanced: React.FC = () => {
               color: '#111827',
               marginBottom: '0.5rem'
             }}>
-              Sitemap Knowledge Base (Enhanced)
+              Sitemap Knowledge Base
             </h1>
             <p style={{ 
               fontSize: '0.875rem',
               color: '#6b7280',
               margin: 0
             }}>
-              Scrape large sitemaps progressively without timeouts. URLs will be used for intelligent internal linking during content generation.
-            </p>
+              Scrape sitemaps to build an Apollo internal linking knowledge base. URLs will be used for intelligent internal linking during content generation.
+              </p>
           </div>
           
           {sitemaps.length > 0 && (
