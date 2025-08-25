@@ -56,6 +56,11 @@ export const API_ENDPOINTS = {
   sitemapScrape: buildApiUrl('/api/sitemap/scrape'),
   sitemapHealth: buildApiUrl('/api/sitemap/health'),
   
+  // Sitemap chunked endpoints (for large sitemaps)
+  sitemapParse: buildApiUrl('/api/sitemap-chunked/parse'),
+  sitemapScrapeChunk: buildApiUrl('/api/sitemap-chunked/scrape-chunk'),
+  sitemapSession: (sessionId: string) => buildApiUrl(`/api/sitemap-chunked/session/${sessionId}`),
+  
   // Add other endpoints as needed
 };
 
