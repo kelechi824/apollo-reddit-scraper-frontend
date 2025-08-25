@@ -1090,13 +1090,13 @@ const BlogCreatorPage: React.FC = () => {
         console.warn('Failed to load brand kit:', error);
       }
 
-      // Load sitemap data from localStorage
+      // Load and optimize sitemap data for internal linking
       let sitemapData = null;
       try {
         const stored = localStorage.getItem('apollo_sitemap_data');
         if (stored) {
           const sitemaps = JSON.parse(stored);
-          // Flatten all sitemap URLs into a single array for content generation
+          // Flatten all sitemap URLs into a single array
           const allUrls = sitemaps.flatMap((sitemap: any) => 
             sitemap.urls.map((url: any) => ({
               title: url.title,
@@ -1104,9 +1104,51 @@ const BlogCreatorPage: React.FC = () => {
               url: url.url
             }))
           );
-          sitemapData = allUrls;
-          console.log(`🗺️ [BlogCreator] Loaded ${allUrls.length} URLs from ${sitemaps.length} sitemaps for internal linking`);
-          console.log(`🔗 [BlogCreator] First 3 URLs for linking:`, allUrls.slice(0, 3));
+          
+          // Smart compression strategy to maximize URL diversity while staying within limits
+          let optimizedUrls = [];
+          
+          if (allUrls.length <= 100) {
+            // If we have 100 or fewer URLs, send them all (still manageable size)
+            optimizedUrls = allUrls.map((url: any) => ({
+              t: url.title.substring(0, 80), // Truncate title to 80 chars
+              u: url.url // Keep full URL
+              // Skip description to save space - title is enough for matching
+            }));
+          } else {
+            // For larger sets, use smart sampling to maintain diversity
+            // Sample URLs evenly across the entire set to maintain topic diversity
+            const sampleSize = 100; // Send up to 100 URLs (compressed)
+            const step = Math.floor(allUrls.length / sampleSize);
+            
+            for (let i = 0; i < allUrls.length && optimizedUrls.length < sampleSize; i += step) {
+              optimizedUrls.push({
+                t: allUrls[i].title.substring(0, 80), // Truncate title
+                u: allUrls[i].url // Keep full URL
+              });
+            }
+            
+            // Also ensure we include some recent/important URLs from the beginning
+            const importantUrls = allUrls.slice(0, 20).map((url: any) => ({
+              t: url.title.substring(0, 80),
+              u: url.url
+            }));
+            
+            // Merge and deduplicate
+            const urlSet = new Set(optimizedUrls.map((u: any) => u.u));
+            importantUrls.forEach((url: any) => {
+              if (!urlSet.has(url.u) && optimizedUrls.length < sampleSize) {
+                optimizedUrls.push(url);
+                urlSet.add(url.u);
+              }
+            });
+          }
+          
+          sitemapData = optimizedUrls;
+          
+          console.log(`🗺️ [BlogCreator] Optimized sitemap: ${allUrls.length} URLs → ${optimizedUrls.length} compressed URLs`);
+          console.log(`📊 [BlogCreator] Compression ratio: ${((1 - JSON.stringify(optimizedUrls).length / JSON.stringify(allUrls).length) * 100).toFixed(1)}% size reduction`);
+          console.log(`🔗 [BlogCreator] Sample URLs:`, optimizedUrls.slice(0, 3));
         } else {
           console.log(`⚠️ [BlogCreator] No sitemap data found in localStorage`);
         }
@@ -1114,7 +1156,9 @@ const BlogCreatorPage: React.FC = () => {
         console.warn('Failed to load sitemap data:', error);
       }
 
-      // Generate default prompts with brand kit integration (same as BlogContentActionModal)
+      // NOTE: Prompt generation now happens server-side to prevent 413 errors
+      // The code below is kept for reference but not used
+      /*
       const generateDefaultPrompts = () => {
         const currentYear = 2025;
         // Select random CTA to prevent LLM bias
@@ -1302,11 +1346,10 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
 
         return { systemPrompt: systemPromptTemplate, userPrompt: userPromptTemplate };
       };
+      */
 
-      // Generate default prompts
-      const { systemPrompt: defaultSystemPrompt, userPrompt: defaultUserPrompt } = generateDefaultPrompts();
-
-      // Process brand kit variables in prompts if brand kit is available
+      // Process brand kit variables (kept for potential future use)
+      /*
       const processLiquidVariables = (text: string, brandKit: any): string => {
         if (!brandKit) return text;
         
@@ -1338,14 +1381,11 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
         
         return processed;
       };
+      */
 
-      const processedSystemPrompt = brandKit ? processLiquidVariables(defaultSystemPrompt, brandKit) : defaultSystemPrompt;
-      const processedUserPrompt = brandKit ? processLiquidVariables(defaultUserPrompt, brandKit) : defaultUserPrompt;
-
-      console.log(`📝 [BlogCreatorPage] Using default prompts with brand kit integration`);
+      // Log brand kit info for debugging
+      console.log(`📝 [BlogCreatorPage] Using server-side prompt generation`);
       console.log(`🔧 [BlogCreatorPage] Brand kit available:`, !!brandKit);
-      console.log(`🔧 [BlogCreatorPage] System prompt length:`, processedSystemPrompt.length);
-      console.log(`🔧 [BlogCreatorPage] User prompt length:`, processedUserPrompt.length);
       if (brandKit) {
         console.log(`🔧 [BlogCreatorPage] Brand kit keys:`, Object.keys(brandKit));
       }
@@ -1359,8 +1399,8 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
         keyword: keyword.keyword, 
         content_length: 'medium', 
         brand_kit: brandKit,
-        system_prompt: processedSystemPrompt.length + ' chars',
-        user_prompt: processedUserPrompt.length + ' chars'
+        sitemap_urls: sitemapData ? sitemapData.length : 0,
+        use_default_prompts: true
       });
 
       // Create a new AbortController for this request
@@ -1371,13 +1411,16 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
       // Why this matters: The 4-step workflow (Firecrawl → Deep Research → Gap Analysis → Content Generation)
       // takes longer than 60 seconds, so we use async endpoints with job polling for reliable generation
       
+      // Reduce payload size to prevent 413 errors on Vercel/Netlify
+      // Only send essential data, not full prompts
       const requestPayload = {
         keyword: keyword.keyword,
         content_length: 'medium',
         brand_kit: brandKit,
         sitemap_data: sitemapData,
-        system_prompt: processedSystemPrompt,
-        user_prompt: processedUserPrompt
+        // Don't send full prompts - let backend handle prompt generation
+        // This prevents 413 "Payload Too Large" errors
+        use_default_prompts: true
       };
       
       console.log('🔍 [BLOG CREATOR DEBUG] Starting async generation with payload:', requestPayload);
