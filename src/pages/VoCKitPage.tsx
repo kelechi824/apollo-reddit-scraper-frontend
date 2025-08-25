@@ -195,25 +195,26 @@ const VoCKitPage: React.FC = () => {
   }, []);
 
   /**
-   * Extract pain points from Gong calls (synchronous)
-   * Why this matters: Uses direct synchronous VoC analysis optimized for serverless environments.
+   * Extract pain points from Gong calls (optimized for production)
+   * Why this matters: Uses a single optimized call with reduced data volume to avoid timeouts.
    */
   const extractPainPoints = async () => {
     setIsExtracting(true);
-    setMessage('Analyzing Gong customer calls. Please do not exit this page until the analysis is complete. This may take 1-2 minutes.');
+    setMessage('Analyzing Gong customer calls. This may take 30-60 seconds...');
     
     try {
-      console.log('🚀 Starting VoC extraction request...');
+      console.log('🚀 Starting VoC extraction...');
       console.log('API URL:', buildApiUrl('/api/voc-extraction/analyze-synchronous'));
       
-      // High-volume lightweight processing call
+      // Use synchronous endpoint with reduced call count for production
+      // Why this matters: 100 calls processes reliably within Vercel's 60-second limit
       const apiResult = await makeApiRequest(
         buildApiUrl('/api/voc-extraction/analyze-synchronous'),
         {
           method: 'POST',
           body: JSON.stringify({
-            daysBack: 90,  // 90 days for comprehensive coverage
-            maxCalls: 300  // Will be automatically reduced if needed for timeout safety
+            daysBack: 90,  // 90 days for good coverage
+            maxCalls: 100  // Reduced from 300 to avoid timeouts
           }),
         }
       );
@@ -231,7 +232,7 @@ const VoCKitPage: React.FC = () => {
         const { variables, painPoints, metadata } = result.data;
         handleAnalysisComplete(variables, painPoints, metadata);
         
-        setMessage(`Successfully extracted ${metadata.totalPainPoints} pain points from ${metadata.callsAnalyzed} calls in ${Math.round(result.processingTime / 1000)}s`);
+        setMessage(`Successfully extracted ${metadata.totalPainPoints} pain points from ${metadata.callsAnalyzed} calls`);
       } else {
         console.error('❌ API returned error:', result);
         setMessage(`Error: ${result.error || 'Failed to complete analysis'}`);
