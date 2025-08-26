@@ -1201,30 +1201,60 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       const requestBody = {
         keyword: keyword,
         content_preview: contentPreview,
-        prompt: `Generate unique, SEO-optimized meta title and description for content about "${keyword}".
+        prompt: `Generate question-based meta title and direct answer description for content about "${keyword}".
 
-CRITICAL: Avoid formulaic language patterns. Each description must be unique and contextual.
+CRITICAL QUESTION-ANSWER FORMAT REQUIREMENTS:
 
-Requirements:
-- Meta title: 70 characters or less INCLUDING "| Apollo" suffix, natural and compelling, include keyword naturally
-- Meta description: 150-160 characters, engaging and click-worthy, include keyword and value proposition
-- NEVER start with formulaic phrases like "Master...", "Discover...", "Learn...", "Build..."
-- Use varied, natural language that reflects the specific content value
-- Write descriptions that sound like they were written by a human expert, not an AI
-- Focus on specific outcomes, insights, or benefits unique to this content
-- Avoid generic phrases like "comprehensive guide", "proven strategies", "best practices"
+Meta Title Requirements:
+- MUST be a natural question that includes the main keyword
+- Choose format based on keyword type:
+  * Job titles (singular): "Who Is A [Job Title]? [Descriptive Context]" (e.g., "Who Is An SDR Manager? Roles, Responsibilities, Salary")
+  * Job titles (plural): "Who Are [Job Titles]? [Descriptive Context]" (e.g., "Who Are Sales Consultants? Roles, Skills, Career Path")
+  * Processes/concepts: "What Is [Process]? [Descriptive Context]" (e.g., "What Is Sales Prospecting? Strategies, Tools, Best Practices")
+  * Tools/software: "How Does [Tool] Work? [Descriptive Context]" (e.g., "How Does CRM Software Work? Features, Benefits, Implementation")
+  * Strategies/methods: "Why Use [Strategy]? [Descriptive Context]" (e.g., "Why Use Account-Based Marketing? Benefits, Process, ROI")
+- Maximum 70 characters INCLUDING "| Apollo" suffix
+- MUST use proper Title Case (capitalize all major words)
+- MUST include descriptive context beyond just the basic question
+- Add relevant descriptive elements: roles, responsibilities, salary, benefits, strategies, tools, best practices, etc.
+- The keyword should appear naturally and grammatically correctly
+
+Meta Description Requirements:
+- MUST directly answer the title question using the main keyword naturally
+- Adapt answer format to keyword type:
+  * Job roles: "A [Job Title] is [role definition/who they are]. They [main responsibilities/activities]. Apollo helps [job titles] [specific benefit]."
+  * Processes: "[Process] is [definition]. It involves [key steps]. Apollo provides [specific tools/features]."
+  * Tools: "[Tool] helps [main function]. It [key capabilities]. Apollo offers [specific advantage]."
+- Exactly 150-160 characters
+- Must be complete sentences ending with a period
 
 Content preview: ${contentPreview.substring(0, 200)}...
 
-Examples of GOOD descriptions (varied styles):
-- "Sales teams using these email timing insights see 34% higher response rates. Data-driven approach to prospect engagement."
-- "Why 73% of CTOs respond to emails sent at 2 PM Tuesday. Research-backed timing and messaging frameworks."
-- "Real conversion data from 10,000+ outreach attempts reveals optimal subject lines and follow-up sequences."
+INTELLIGENT Question-Answer Examples by Keyword Type:
 
-Examples of BAD descriptions (avoid these patterns):
-- "Master your [topic] with our comprehensive guide..."
-- "Discover proven strategies and best practices..."
-- "Learn how to build winning [topic] plans..."
+• Job Title (Singular): "Who Is An SDR Manager? Roles, Responsibilities, Salary | Apollo"
+  Description: "An SDR Manager is a sales leader who oversees development teams and prospecting strategies. They coach reps and optimize processes. Apollo helps SDR Managers track team performance."
+
+• Job Title (Plural): "Who Are Sales Consultants? Skills, Career Path, Salary | Apollo"
+  Description: "Sales Consultants are professionals who advise prospects on solutions for their business needs. They build relationships and close deals. Apollo provides consultants with prospect intelligence."
+
+• Process/Concept: "What Is Cold Email Marketing? Strategies, Tools, Best Practices | Apollo"
+  Description: "Cold email marketing is outreach to prospects without prior contact. It uses personalized messages to generate leads. Apollo provides templates and automation tools."
+
+• Strategy/Method: "Why Use Account-Based Marketing? Benefits, Process, ROI | Apollo"
+  Description: "Account-based marketing targets specific high-value accounts with personalized campaigns. It aligns sales and marketing teams. Apollo enables ABM with contact data."
+
+ABSOLUTELY FORBIDDEN:
+- Grammatically incorrect questions ("What Is A Sales Consultants?", "What Are A Sales Consultant?", "What Is A Account Executives?")
+- Including "| Apollo" in H1 headlines (that's only for SEO titles, not content headlines)
+- Robotic/boilerplate phrasing that doesn't sound human-written
+- Rigid "What Is [keyword]?" format for all keyword types without considering singular/plural grammar
+- Non-question titles ("Sales Tips", "Lead Generation Methods", "Prospecting Techniques")
+- Titles with colons or lists ("Sales Prospecting: 7 Methods", "Tools: Features & Comparison")
+- The word "Guide" or "Guides" (use intelligent question format instead)
+- "Complete Guide" or "Comprehensive Guide" (use appropriate question type)
+- Descriptions that don't answer the title question directly
+- Descriptions that don't include the main keyword naturally
 
 Respond with JSON:
 {
@@ -1383,7 +1413,11 @@ AEO (ANSWER ENGINE OPTIMIZATION) PRINCIPLES:
 
 FORMATTING REQUIREMENTS:
 1. **Proper HTML Structure:**
-   - Use <h1> for main title, <h2> for major sections, <h3> for subsections
+   - Use <h1> for main title (MUST use proper Title Case - capitalize all major words, NEVER include "| Apollo")
+   - ALL H2 and H3 headers should be natural, grammatically correct questions in Title Case:
+     * Singular: "What Is A Sales Consultant?", "How Does Lead Generation Work?"
+     * Plural: "What Are Sales Consultants?", "Why Are Account Executives Important?"
+     * Process: "What Is Sales Prospecting?", "How Does CRM Integration Work?"
    - Format all lists with proper <ul>, <ol>, and <li> tags
    - Use <table> elements for any comparative data, features, or structured information
    - Include <p> tags for all paragraphs
@@ -1422,9 +1456,9 @@ CRITICAL OUTPUT REQUIREMENTS:
 - No markdown formatting, no code block indicators, no explanatory paragraphs
 
 CONTENT STRUCTURE REQUIREMENTS:
-1. **Compelling H1 Headline** (question format when appropriate)
+1. **Compelling H1 Headline in Title Case** (question format when appropriate, NEVER include "| Apollo")
 2. **Authority-Establishing Introduction** (preview value and set expectations)
-3. **Comprehensive Sections** with proper H2/H3 hierarchy
+3. **Comprehensive Sections** with proper H2/H3 hierarchy in Title Case (grammatically correct questions)
 4. **Tables for Structured Data** (comparisons, features, statistics)
 5. **Practical Implementation Guidance** with step-by-step processes
 6. **Real-World Examples** and case studies (using brand kit data)
