@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Globe, Brain, BarChart3, Sparkles, ChevronDown, ChevronRight, ExternalLink, Clock, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
-interface WorkflowDetails {
+interface BlogWorkflowDetails {
   firecrawl?: {
     urls_analyzed: string[];
     competitor_titles: string[];
@@ -37,37 +37,26 @@ interface WorkflowDetails {
   canResume?: boolean;
 }
 
-interface BackendDetailsPopupProps {
-  workflowDetails?: WorkflowDetails;
+interface BlogCreatorWorkflowDetailsProps {
+  workflowDetails?: BlogWorkflowDetails;
   status: 'pending' | 'running' | 'completed' | 'error';
   isVisible: boolean;
   position: { x: number; y: number };
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   onMobileClose?: () => void;
-  /**
-   * Dismiss behavior control
-   * Why this matters: Competitor Conquesting requires X-only close; other pages keep hover-delay.
-   */
   dismissBehavior?: 'manual' | 'hover-delay';
-  /**
-   * Callback to open content modal
-   * Why this matters: Allows users to view full generated content from the workflow details popup.
-   */
   onSeeOutput?: (() => void) | undefined;
-  /**
-   * Generated content for excerpt display
-   * Why this matters: Shows a preview of the generated content in the popup.
-   */
   generatedContent?: string | undefined;
+  keyword?: string | undefined;
 }
 
 /**
- * BackendDetailsPopup Component
- * Why this matters: Provides transparent insight into the 4-step backend workflow, 
+ * BlogCreatorWorkflowDetails Component
+ * Why this matters: Provides transparent insight into the 4-step blog creation workflow, 
  * showing users exactly what's happening during content generation with detailed results from each step.
  */
-const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
+const BlogCreatorWorkflowDetails: React.FC<BlogCreatorWorkflowDetailsProps> = ({
   workflowDetails,
   status,
   isVisible,
@@ -77,7 +66,8 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
   onMobileClose,
   dismissBehavior = 'hover-delay',
   onSeeOutput,
-  generatedContent
+  generatedContent,
+  keyword
 }) => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['current']));
 
@@ -97,6 +87,18 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
     return lastSpaceIndex > 0 
       ? truncated.substring(0, lastSpaceIndex) + '...'
       : truncated + '...';
+  };
+
+  /**
+   * Generate Google search URL from keyword
+   * Why this matters: Creates a direct link to the Google search results that were analyzed, 
+   * providing transparency about the source of competitive intelligence.
+   */
+  const generateGoogleSearchUrl = (searchKeyword: string): string => {
+    if (!searchKeyword) return '';
+    // Replace spaces with + for Google search format
+    const encodedKeyword = searchKeyword.trim().replace(/\s+/g, '+');
+    return `https://www.google.com/search?q=${encodedKeyword}`;
   };
 
   // Auto-expand the current stage section
@@ -128,7 +130,7 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
    */
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
-      const newSet = new Set(prev);
+      const newSet = new Set(Array.from(prev));
       if (newSet.has(sectionId)) {
         newSet.delete(sectionId);
       } else {
@@ -333,8 +335,41 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
               }}>
                 {workflowDetails?.firecrawl ? (
                   <>
+                    {/* SERP Results Link */}
+                    {keyword && (
+                      <div style={{ fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+                        <strong>Google Search Results:</strong>
+                        <div style={{ 
+                          marginTop: '0.25rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}>
+                          <ExternalLink size={10} style={{ color: '#6b7280' }} />
+                          <a 
+                            href={generateGoogleSearchUrl(keyword)} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ 
+                              color: '#3b82f6', 
+                              textDecoration: 'underline',
+                              cursor: 'pointer'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.color = '#1d4ed8';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.color = '#3b82f6';
+                            }}
+                          >
+                            {generateGoogleSearchUrl(keyword)}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
                     <div style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-                      <strong>URLs Analyzed ({workflowDetails.firecrawl.urls_analyzed.length}):</strong>
+                      <strong>Top 3 URLs Analyzed:</strong>
                       {workflowDetails.firecrawl.competitor_titles.slice(0, 3).map((title, idx) => {
                         const url = workflowDetails.firecrawl?.urls_analyzed[idx];
                         return (
@@ -378,17 +413,6 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
                         <div style={{ marginTop: '0.25rem' }}>
                           {workflowDetails.firecrawl.key_topics.slice(0, 6).join(', ')}
                         </div>
-                      </div>
-                    )}
-                    
-                    {workflowDetails.firecrawl.content_structure_insights.length > 0 && (
-                      <div style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                        <strong>Word Count:</strong>
-                        {workflowDetails.firecrawl.content_structure_insights.slice(0, 2).map((insight, idx) => (
-                          <div key={idx} style={{ marginTop: '0.25rem', color: '#4b5563' }}>
-                            • {insight}
-                          </div>
-                        ))}
                       </div>
                     )}
                   </>
@@ -534,8 +558,6 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
                       </div>
                     )}
                     
-
-                    
                     {workflowDetails.gapAnalysis.identified_gaps.length > 0 && (
                       <div style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
                         <strong>Areas of Focus ({workflowDetails.gapAnalysis.identified_gaps.length}):</strong>
@@ -556,7 +578,7 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
                     padding: '1rem'
                   }}>
                     {isCurrentStage('gap_analysis') ? 
-                      '📊 Analyzing content gaps with GPT-4.1 nano...' : 
+                      '📊 Analyzing content gaps with GPT-5 nano...' : 
                       'Conducting content gap analysis for opportunities...'}
                   </div>
                 )}
@@ -600,14 +622,12 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
               }}>
                 {workflowDetails?.contentGeneration ? (
                   <>
-
                     <div style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                         <CheckCircle size={14} style={{ color: '#059669' }} />
                         <strong style={{ color: '#059669' }}>Content Generated Successfully</strong>
                       </div>
                       
-
                       {generatedContent && (
                         <div style={{ 
                           marginTop: '0.5rem', 
@@ -655,8 +675,6 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
                         </button>
                       )}
                     </div>
-                    
-
                   </>
                 ) : (
                   <div style={{ 
@@ -703,4 +721,4 @@ const BackendDetailsPopup: React.FC<BackendDetailsPopupProps> = ({
   );
 };
 
-export default BackendDetailsPopup; 
+export default BlogCreatorWorkflowDetails;
