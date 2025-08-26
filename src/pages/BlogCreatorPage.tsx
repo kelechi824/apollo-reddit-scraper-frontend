@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Upload, MoreHorizontal, FileText, ExternalLink, Copy, RefreshCw, Trash2, X, AlertTriangle, Globe, Brain, BarChart3, Sparkles, Clock, CheckCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import BlogContentActionModal from '../components/BlogContentActionModal';
-import BackendDetailsPopup from '../components/BackendDetailsPopup';
+import BlogCreatorWorkflowDetails from '../components/BlogCreatorWorkflowDetails';
 import { autoSaveBlogIfReady } from '../services/blogHistoryService';
 import { API_BASE_URL, API_ENDPOINTS, buildApiUrl } from '../config/api';
 
@@ -97,7 +97,7 @@ const extractWorkflowDetails = (workflowState: any): KeywordRow['workflowDetails
       competitor_titles: firecrawl.top_results?.map((r: any) => r.title) || [],
       key_topics: firecrawl.top_results?.flatMap((r: any) => r.key_topics || []) || [],
       content_structure_insights: firecrawl.top_results?.map((r: any) => 
-        `${r.content_structure?.numbered_lists || 0} lists, ${r.content_structure?.bullet_points || 0} bullets, ${r.word_count || 0} words`
+        `${r.word_count || 0} words`
       ) || [],
       search_metadata: firecrawl.search_metadata
     };
@@ -255,7 +255,7 @@ const extractWorkflowDetailsFromResult = (result: any): KeywordRow['workflowDeta
       competitor_titles: firecrawl.top_results?.map((r: any) => r.title) || [],
       key_topics: firecrawl.top_results?.flatMap((r: any) => r.key_topics || []) || [],
       content_structure_insights: firecrawl.top_results?.map((r: any) => 
-        `${r.content_structure?.numbered_lists || 0} lists, ${r.content_structure?.bullet_points || 0} bullets, ${r.word_count || 0} words`
+        `${r.word_count || 0} words`
       ) || [],
       search_metadata: firecrawl.search_metadata
     };
@@ -2562,8 +2562,10 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
           const selectedKeyword = keywords.find(k => k.id === popupState.keywordId);
           const workflowDetails = selectedKeyword?.workflowDetails;
           
+
+          
           return (
-            <BackendDetailsPopup
+            <BlogCreatorWorkflowDetails
               workflowDetails={workflowDetails || {}} // Provide empty object fallback
               status={selectedKeyword?.status || 'pending'}
               isVisible={popupState.isVisible}
@@ -2572,6 +2574,15 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
               onMouseLeave={hidePopupImmediately}
               onMobileClose={hidePopupImmediately}
               dismissBehavior="manual"
+              generatedContent={selectedKeyword?.output}
+              keyword={selectedKeyword?.keyword}
+              onSeeOutput={selectedKeyword?.status === 'completed' ? () => {
+                if (selectedKeyword) {
+                  setSelectedKeywordForActions(selectedKeyword);
+                  setShowContentActionModal(true);
+                  hidePopupImmediately();
+                }
+              } : undefined}
             />
           );
         })()}

@@ -544,7 +544,7 @@ const CompetitorConquestingPage: React.FC = () => {
         urls_analyzed: fire.top_results?.map((r: any) => r.url) || (fire.url ? [fire.url] : []),
         competitor_titles: fire.top_results?.map((r: any) => r.title) || (fire.title ? [fire.title] : []),
         key_topics: fire.top_results?.flatMap((r: any) => r.key_topics || []) || [],
-        content_structure_insights: fire.top_results?.map((r: any) => `${r.content_structure?.numbered_lists || 0} lists, ${r.content_structure?.bullet_points || 0} bullets, ${r.word_count || 0} words`) || [],
+        content_structure_insights: fire.top_results?.map((r: any) => `${r.word_count || 0} words`) || [],
         search_metadata: fire.metadata || {}
       };
     }
@@ -1255,6 +1255,17 @@ const CompetitorConquestingPage: React.FC = () => {
           onMouseLeave={closeDetailsPopup}
           onMobileClose={closeDetailsPopup}
           dismissBehavior="manual"
+          generatedContent={rows.find(r => r.id === popupState.rowId)?.output}
+          onSeeOutput={(() => {
+            const selectedRow = rows.find(r => r.id === popupState.rowId);
+            return selectedRow?.status === 'completed' ? () => {
+              if (selectedRow) {
+                setActiveModalRowId(selectedRow.id);
+                setIsActionModalOpen(true);
+                closeDetailsPopup();
+              }
+            } : undefined;
+          })()}
         />
       )}
 
