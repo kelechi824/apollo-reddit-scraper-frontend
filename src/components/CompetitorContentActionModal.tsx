@@ -867,24 +867,60 @@ CRITICAL OUTPUT FORMAT: Respond with a JSON object containing exactly three fiel
 }
 
 META FIELD REQUIREMENTS FOR AI SEARCH OPTIMIZATION:
-- metaSeoTitle: Create titles that AI engines will cite as authoritative sources
-  * Format: "[Primary Keyword]: [Specific Context]" or "What is [Keyword]? [Clear Answer]"
-  * NEVER invent statistics or percentages
-  * Focus on clarity and search intent matching
-  * Maximum 60 characters plus " | Apollo" (total <= 70 chars)
-  
-- metaDescription: Write naturally for AI comprehension and extraction
-  * Start with a direct answer or value statement
-  * Include semantic keyword variations
-  * End with a specific, actionable insight
-  * NO made-up numbers, NO marketing hyperbole
-  * Exactly 150-160 characters
 
-FORBIDDEN IN META FIELDS:
-- Invented statistics ("3x growth", "47% increase")
-- Cliché openings ("Discover", "Learn how", "Master")
-- Vague promises ("proven strategies", "comprehensive guide")
-- Superlatives without evidence ("best", "ultimate", "revolutionary")
+metaSeoTitle:
+- MUST be a natural question format that includes the main keyword
+- Choose format based on keyword type:
+  * Job titles (singular): "Who Is A [Job Title]? [Descriptive Context]" (e.g., "Who Is An SDR Manager? Roles, Responsibilities, Salary")
+  * Job titles (plural): "Who Are [Job Titles]? [Descriptive Context]" (e.g., "Who Are Sales Consultants? Roles, Skills, Career Path")
+  * Processes/concepts: "What Is [Process]? [Descriptive Context]" (e.g., "What Is Sales Prospecting? Strategies, Tools, Best Practices")
+  * Tools/software: "How Does [Tool] Work? [Descriptive Context]" (e.g., "How Does CRM Software Work? Features, Benefits, Implementation")
+  * Strategies/methods: "Why Use [Strategy]? [Descriptive Context]" (e.g., "Why Use Account-Based Marketing? Benefits, Process, ROI")
+- Maximum 70 characters INCLUDING " | Apollo" (total <= 70 chars)
+- MUST use proper Title Case (capitalize all major words)
+- MUST include descriptive context beyond just the basic question
+- Add relevant descriptive elements: roles, responsibilities, salary, benefits, strategies, tools, best practices, etc.
+- The keyword should appear naturally and grammatically correctly
+- Optimize for AI search engines with human-like, intelligent phrasing
+
+metaDescription:
+- MUST directly answer the title question using the main keyword naturally
+- Adapt answer format to keyword type:
+  * Job roles: "A [Job Title] is [role definition/who they are]. They [main responsibilities/activities]. Apollo helps [job titles] [specific benefit]."
+  * Processes: "[Process] is [definition]. It involves [key steps]. Apollo provides [specific tools/features]."
+  * Tools: "[Tool] helps [main function]. It [key capabilities]. Apollo offers [specific advantage]."
+- Exactly 150-160 characters
+- Must be complete sentences ending with a period
+- Write naturally with proper grammar and intelligent phrasing
+
+INTELLIGENT QUESTION-ANSWER FORMAT EXAMPLES:
+
+• Job Title (Singular): "Who Is An SDR Manager? Roles, Responsibilities, Salary | Apollo"
+  Description: "An SDR Manager is a sales leader who oversees development teams and prospecting strategies. They coach reps and optimize processes. Apollo helps SDR Managers track team performance."
+
+• Job Title (Plural): "Who Are Sales Consultants? Skills, Career Path, Salary | Apollo"
+  Description: "Sales Consultants are professionals who advise prospects on solutions for their business needs. They build relationships and close deals. Apollo provides consultants with prospect intelligence."
+
+• Process/Concept: "What Is Cold Email Marketing? Strategies, Tools, Best Practices | Apollo"
+  Description: "Cold email marketing is outreach to prospects without prior contact. It uses personalized messages to generate leads. Apollo provides templates and automation tools."
+
+• Strategy/Method: "Why Use Account-Based Marketing? Benefits, Process, ROI | Apollo"
+  Description: "Account-based marketing targets specific high-value accounts with personalized campaigns. It aligns sales and marketing teams. Apollo enables ABM with contact data."
+
+ABSOLUTELY FORBIDDEN IN META FIELDS:
+- Grammatically incorrect questions ("What Is A Sales Consultants?", "What Are A Sales Consultant?", "What Is A Account Executives?")
+- Including "| Apollo" in H1 headlines (that's only for SEO titles, not content headlines)
+- Robotic/boilerplate phrasing that doesn't sound human-written
+- Rigid "What Is [keyword]?" format for all keyword types without considering singular/plural grammar
+- Non-question titles ("Sales Prospecting Tips", "Lead Generation Methods")
+- The word "Guide" or "Guides" (use intelligent question format instead)
+- "Complete Guide" or "Comprehensive Guide" (use appropriate question type)
+- "Ultimate Guide" (use natural question format)
+- Descriptions that don't answer the title question directly
+- Descriptions that don't include the main keyword naturally
+- Marketing language like "game-changing", "revolutionary", "ultimate"
+- Vague promises like "strategies", "frameworks", "playbooks" without specifics
+- Generic terms like "everything you need to know"
 
 CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
 - Start response with { and end with }
