@@ -23,23 +23,34 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
 
   // Analysis progress messages with timing
   const analysisMessages = [
-    'Deploying Agent...',
+    'Deploying AI Agent...',
     'Scraping Reddit...',
-    'Reading subreddit...',
-    'Generating insights...',
-    'Almost done...'
+    'Analyzing subreddit...',
+    'Identifying pain points...',
+    'Generating insights...'
   ];
 
   /**
    * Handle analysis progress animation
-   * Why this matters: Cycles through different status messages to show AI processing stages.
+   * Why this matters: Cycles through different status messages to show AI processing stages with realistic timing.
    */
   useEffect(() => {
     if (isAnalyzing) {
       setAnalysisStep(0);
       
-      // Step timing: 3s, 3s, 5s, 5s, then stay on last message
-      const stepTimings = [3000, 3000, 5000, 5000]; // milliseconds for each step
+      // Dynamic step timing based on number of posts being analyzed
+      // Reflects actual time for Reddit scraping, AI analysis, and content generation
+      const getStepTimings = (postCount: number) => {
+        if (postCount === 3) {
+          return [6000, 10000, 12000, 8000]; // 36s total for 3 posts (30-60s range)
+        } else if (postCount === 5) {
+          return [15000, 25000, 30000, 20000]; // 90s total for 5 posts (2-3min range)
+        } else {
+          return [25000, 40000, 50000, 35000]; // 150s total for 10 posts (3-5min range)
+        }
+      };
+      
+      const stepTimings = getStepTimings(limit);
       let currentStep = 0;
       
       const progressToNextStep = () => {
@@ -343,6 +354,31 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
               </>
             )}
           </button>
+          
+          {/* Estimated Time Display */}
+          {isAnalyzing && (
+            <p style={{ 
+              fontSize: '0.875rem', 
+              color: '#6b7280', 
+              textAlign: 'center', 
+              marginTop: '0.75rem',
+              lineHeight: '1.4'
+            }}>
+              Estimated time: {limit === 3 ? '30-60 seconds' : limit === 5 ? '2-3 minutes' : '3-5 minutes'}
+            </p>
+          )}
+          
+          {!isAnalyzing && !hasCompletedAnalysis && (
+            <p style={{ 
+              fontSize: '0.875rem', 
+              color: '#6b7280', 
+              textAlign: 'center', 
+              marginTop: '0.75rem',
+              lineHeight: '1.4'
+            }}>
+              Estimated time: {limit === 3 ? '30-60 seconds' : limit === 5 ? '2-3 minutes' : '3-5 minutes'}
+            </p>
+          )}
         </div>
       </div>
     </div>

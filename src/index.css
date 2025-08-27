@@ -3698,8 +3698,8 @@ footer {
 
 .dig-deeper-feedback-btn {
   /* Mobile: Touch-optimized feedback buttons */
-  min-width: 30.375rem;
-  min-height: 30.375rem;
+  min-width: 2.375rem;
+  min-height: 2.375rem;
   padding: 0.5rem;
   background: #f3f4f6;
   border: none;

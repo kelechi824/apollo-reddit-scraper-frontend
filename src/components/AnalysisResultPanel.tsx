@@ -29,8 +29,9 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   /**
-   * Format analysis text with proper line breaks and bullet points
+   * Format analysis text with proper line breaks, bullet points, and bold headlines
    * Why this matters: Converts backend-formatted text with \n and bullet points into properly rendered HTML
+   * with bold formatting for headlines ending with ":"
    */
   const formatAnalysisText = (text: string): React.ReactElement => {
     if (!text) {
@@ -44,6 +45,53 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       <div>
         {lines.map((line, index) => {
           const trimmedLine = line.trim();
+          
+          // Handle headlines ending with ":" - including inline colons
+          if (trimmedLine.endsWith(':') || /^[^:]+:\s/.test(trimmedLine)) {
+            // If it's a line that starts with text followed by colon and space, extract just the header part
+            const colonMatch = trimmedLine.match(/^([^:]+:)/);
+            if (colonMatch) {
+              const headerText = colonMatch[1];
+              const remainingText = trimmedLine.substring(headerText.length).trim();
+              
+              return (
+                <div key={index}>
+                  <h4 style={{ 
+                    fontWeight: '700',
+                    fontSize: '1rem',
+                    color: '#1f2937',
+                    marginTop: index > 0 ? '1.5rem' : '0',
+                    marginBottom: '0.75rem',
+                    lineHeight: '1.4'
+                  }}>
+                    {headerText}
+                  </h4>
+                  {remainingText && (
+                    <p style={{ 
+                      marginBottom: '0.75rem',
+                      lineHeight: '1.6'
+                    }}>
+                      {remainingText.charAt(0).toUpperCase() + remainingText.slice(1)}
+                    </p>
+                  )}
+                </div>
+              );
+            }
+            
+            // Fallback for lines that just end with colon
+            return (
+              <h4 key={index} style={{ 
+                fontWeight: '700',
+                fontSize: '1rem',
+                color: '#1f2937',
+                marginTop: index > 0 ? '1.5rem' : '0',
+                marginBottom: '0.75rem',
+                lineHeight: '1.4'
+              }}>
+                {trimmedLine}
+              </h4>
+            );
+          }
           
           // Handle bullet points
           if (trimmedLine.startsWith('•')) {
@@ -85,7 +133,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
               marginBottom: '0.75rem',
               lineHeight: '1.6'
             }}>
-              {trimmedLine}
+              {trimmedLine.charAt(0).toUpperCase() + trimmedLine.slice(1)}
             </p>
           );
         })}
@@ -503,6 +551,19 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           <div className="tab-content">
             {activeTab === 'original' && (
               <div className="tab-panel">
+                <h3 style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: '700', 
+                  color: '#1f2937', 
+                  marginBottom: '1.5rem',
+                  borderBottom: '2px solid #e5e7eb',
+                  paddingBottom: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ transform: 'translateY(-2px)' }}>📄</span> Original Reddit Post
+                </h3>
                 <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {renderPostContent(currentPost.content || 'No additional content')}
                 </div>
@@ -511,6 +572,19 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'pain' && (
               <div className="tab-panel">
+                <h3 style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: '700', 
+                  color: '#1f2937', 
+                  marginBottom: '1.5rem',
+                  borderBottom: '2px solid #e5e7eb',
+                  paddingBottom: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ transform: 'translateY(-2px)' }}>🎯</span> Pain Point Analysis
+                </h3>
                 <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {formatAnalysisText(currentPost.analysis.pain_point)}
                 </div>
@@ -542,6 +616,19 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'content' && (
               <div className="tab-panel">
+                <h3 style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: '700', 
+                  color: '#1f2937', 
+                  marginBottom: '1.5rem',
+                  borderBottom: '2px solid #e5e7eb',
+                  paddingBottom: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ transform: 'translateY(-2px)' }}>💡</span> Content Opportunity
+                </h3>
                 <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {formatAnalysisText(currentPost.analysis.content_opportunity)}
                 </div>
@@ -619,6 +706,19 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'audience' && (
               <div className="tab-panel">
+                <h3 style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: '700', 
+                  color: '#1f2937', 
+                  marginBottom: '1.5rem',
+                  borderBottom: '2px solid #e5e7eb',
+                  paddingBottom: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ transform: 'translateY(-2px)' }}>👥</span> Audience Summary
+                </h3>
                 <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {formatAnalysisText(currentPost.analysis.audience_insight)}
                 </div>

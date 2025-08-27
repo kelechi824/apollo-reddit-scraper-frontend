@@ -430,11 +430,17 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
   }, [isOpen, post, currentPostId]);
 
   /**
-   * Auto-scroll to bottom when new messages arrive
-   * Why this matters: Keeps the conversation flowing naturally.
+   * Auto-scroll to bottom only for user messages, not AI responses
+   * Why this matters: Allows users to read AI responses from the top without being forced to scroll back up.
    */
   useEffect(() => {
-    scrollToBottom();
+    // Only scroll to bottom if the last message is from the user
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'user') {
+        scrollToBottom();
+      }
+    }
   }, [messages]);
 
   /**
