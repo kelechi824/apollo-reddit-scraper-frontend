@@ -276,6 +276,11 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
   const [editableContent, setEditableContent] = useState('');
   const [showGeneratedContentModal, setShowGeneratedContentModal] = useState(false);
   
+  // Contextual CTA states
+  const [enableContextualCtas, setEnableContextualCtas] = useState(true);
+  const [isEnhancingWithCtas, setIsEnhancingWithCtas] = useState(false);
+  const [ctaEnhancementResult, setCtaEnhancementResult] = useState<any>(null);
+  
   // Google Sheets related states
   const [isOpeningSheets, setIsOpeningSheets] = useState(false);
   const [showSheetsMessage, setShowSheetsMessage] = useState(false);
@@ -306,6 +311,7 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
     'Analyzing prompts...',
     'Optimizing for AEO/LLM SEO...',
     'Formatting content...',
+    'Enhancing with contextual CTAs...',
     'Creating awesomeness...',
     'Almost done...'
   ];
@@ -419,13 +425,14 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
       }
 
       .generated-content-display a {
-        color: #3b82f6;
+        color: #2563eb;
         text-decoration: underline;
         font-weight: 500;
       }
 
       .generated-content-display a:hover {
         color: #1d4ed8;
+        text-decoration: underline;
       }
 
       .generated-content-display blockquote {
@@ -1196,61 +1203,62 @@ Return ONLY the JSON object, no additional text.`;
       // Use centralized API configuration
       // Why this matters: Ensures all deployments (Netlify, Vercel, local) use the correct backend URL
       
-      // Call the content generation API
-      const apiResult = await makeApiRequest(API_ENDPOINTS.generateContent, {
+      // Use streaming content generation for Reddit content with contextual CTAs
+      console.log('🚀 [ContentCreationModal] Using streaming generation for Reddit content...');
+      
+      if (enableContextualCtas) {
+        setIsEnhancingWithCtas(true);
+        console.log('🎯 [ContentCreationModal] Streaming generation with contextual CTAs enabled');
+      }
+      
+      // Use blog creator streaming endpoint for Reddit content with appropriate parameters
+      const apiResult = await makeApiRequest(API_ENDPOINTS.blogCreatorGenerateContentStreaming, {
         method: 'POST',
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          keyword: post.title, // Use Reddit post title as keyword
+          brand_kit: request.brand_kit,
+          sitemap_data: request.sitemap_data,
+          system_prompt: request.system_prompt,
+          user_prompt: request.user_prompt,
+          use_default_prompts: false,
+          target_audience: 'Reddit community members',
+          content_length: 'medium',
+          focus_areas: ['community_engagement', 'authentic_discussion'],
+          use_simple_cta_service: true // Use simple CTA service for sitemap-aware URLs
+        }),
       });
 
       if (!apiResult.success) {
-        throw new Error(apiResult.error || apiResult.message || 'Failed to generate content');
+        throw new Error(apiResult.error || apiResult.message || 'Failed to generate Reddit content with streaming approach');
       }
 
       const data = apiResult.data!;
+      console.log('📥 [ContentCreationModal] Streaming API Response:', data);
       
-      console.log('📥 FRONTEND - API Response Structure:', {
-        contentType: Array.isArray(data.content) ? 'array' : typeof data.content,
-        contentLength: Array.isArray(data.content) ? data.content.length : 'N/A',
-        hasMetaTitle: !!data.metaSeoTitle,
-        hasMetaDescription: !!data.metaDescription
-      });
-      
-      // Handle the API response structure - content is an array, meta fields are separate
-      let contentToUse = '';
-      if (Array.isArray(data.content) && data.content.length > 0) {
-        contentToUse = data.content[0]; // Use first content variation
-        console.log('✅ Using first content variation from array');
-      } else if (typeof data.content === 'string') {
-        contentToUse = data.content;
-        console.log('✅ Using string content directly');
-      } else {
-        console.error('❌ Invalid content format:', typeof data.content, data.content);
-        throw new Error('Invalid content format received from API');
-      }
-      
-      // Check if the content is still a JSON string that needs parsing
-      let finalContent = contentToUse;
+      // Handle streaming response - content is already enhanced with CTAs
+      let cleanedContent = data.content || '';
       let metaTitle = data.metaSeoTitle || '';
       let metaDesc = data.metaDescription || '';
       
-      if (typeof contentToUse === 'string' && contentToUse.trim().startsWith('{') && contentToUse.trim().endsWith('}')) {
-        try {
-          console.log('🔍 Content appears to be JSON, attempting to parse...');
-          const parsedContent = JSON.parse(contentToUse);
-          if (parsedContent.content) {
-            finalContent = parsedContent.content;
-            metaTitle = parsedContent.metaSeoTitle || metaTitle;
-            metaDesc = parsedContent.metaDescription || metaDesc;
-            console.log('✅ Successfully parsed JSON content from response');
-          }
-        } catch (e) {
-          console.log('⚠️ Failed to parse content as JSON, using as-is');
-          // Keep original content if JSON parsing fails
-        }
+      // Log CTA insertion results if available
+      if (data.ctaInsertions && enableContextualCtas) {
+        setCtaEnhancementResult({
+          totalCtasInserted: data.ctaInsertions.totalInserted,
+          insertionPoints: data.ctaInsertions.insertionPoints.map((point: any) => ({
+            paragraphIndex: point.paragraphIndex,
+            ctaText: point.cta,
+            reasoning: point.reasoning,
+            confidence: point.confidence
+          })),
+          processingTimeMs: data.processingTimeMs
+        });
+        console.log(`✅ [ContentCreationModal] Streaming generation inserted ${data.ctaInsertions.totalInserted} contextual CTAs for Reddit content`);
       }
       
-      // Clean the content and use the extracted meta fields
-      const cleanedContent = cleanAIContent(finalContent);
+      setIsEnhancingWithCtas(false);
+      
+      // Clean the content to ensure proper formatting
+      cleanedContent = cleanAIContent(cleanedContent);
       
       setGeneratedContent(cleanedContent);
       setEditableContent(cleanedContent);
@@ -2813,6 +2821,59 @@ Return ONLY the JSON object, no additional text.`;
                 />
               </div>
 
+              {/* Contextual CTA Toggle */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                padding: '1rem',
+                backgroundColor: '#f8fafc',
+                borderRadius: '0.5rem',
+                border: '0.0625rem solid #e2e8f0',
+                marginBottom: '1rem'
+              }}>
+                <div>
+                  <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem', display: 'block', marginBottom: '0.25rem' }}>
+                    Contextual CTAs
+                  </label>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0 }}>
+                    Automatically insert relevant Apollo CTAs at optimal paragraph endings
+                  </p>
+                </div>
+                <label style={{ position: 'relative', display: 'inline-block', width: '3rem', height: '1.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={enableContextualCtas}
+                    onChange={(e) => setEnableContextualCtas(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span style={{
+                    position: 'absolute',
+                    cursor: 'pointer',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: enableContextualCtas ? '#10b981' : '#d1d5db',
+                    transition: 'all 0.2s ease',
+                    borderRadius: '1.5rem'
+                  }}>
+                    <span style={{
+                      position: 'absolute',
+                      content: '""',
+                      height: '1.125rem',
+                      width: '1.125rem',
+                      left: enableContextualCtas ? '1.625rem' : '0.1875rem',
+                      bottom: '0.1875rem',
+                      backgroundColor: 'white',
+                      transition: 'all 0.2s ease',
+                      borderRadius: '50%',
+                      boxShadow: '0 0.125rem 0.25rem rgba(0, 0, 0, 0.2)'
+                    }} />
+                  </span>
+                </label>
+              </div>
+
               {/* Generate Button */}
               <div style={{ 
                 display: 'flex', 
@@ -3258,6 +3319,41 @@ Return ONLY the JSON object, no additional text.`;
                     boxShadow: '0 0.0625 0.1875rem rgba(0, 0, 0, 0.1)'
                   }}
                 >
+                  {/* CTA Enhancement Analytics */}
+                  {ctaEnhancementResult && (
+                    <div style={{ 
+                      marginBottom: '2rem',
+                      padding: '1rem',
+                      backgroundColor: '#f0fdf4',
+                      border: '0.0625rem solid #bbf7d0',
+                      borderRadius: '0.5rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <div style={{
+                          width: '1.5rem',
+                          height: '1.5rem',
+                          borderRadius: '50%',
+                          backgroundColor: '#10b981',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Check size={12} style={{ color: 'white' }} />
+                        </div>
+                        <strong style={{ color: '#065f46', fontSize: '0.875rem' }}>
+                          Contextual CTAs Enhanced
+                        </strong>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#047857', lineHeight: '1.4' }}>
+                        <div>• {ctaEnhancementResult.totalCtasInserted} contextual CTAs inserted</div>
+                        <div>• Average confidence: {ctaEnhancementResult.averageConfidenceScore.toFixed(1)}%</div>
+                        <div>• Insertion points: {ctaEnhancementResult.insertionPoints.map((point: any) => 
+                          `P${point.paragraphIndex + 1} (${point.confidenceScore}%)`
+                        ).join(', ')}</div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Meta SEO Fields - Show at the top */}
                   {(metaSeoTitle || metaDescription) && (
                     <div style={{ marginBottom: '2rem' }}>

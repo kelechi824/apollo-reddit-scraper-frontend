@@ -37,9 +37,12 @@ export const API_ENDPOINTS = {
   // Content generation endpoints
   generateContent: buildApiUrl('/api/content/generate'),
   generateMeta: buildApiUrl('/api/content/generate-meta'),
+  enhanceWithCtas: buildApiUrl('/api/content/enhance-with-ctas'),
+  enhanceWithSimpleCtas: buildApiUrl('/api/content/enhance-with-simple-ctas'),
   
   // Blog creator endpoints
   blogCreatorGenerateContent: buildApiUrl('/api/blog-creator/generate-content'),
+  blogCreatorGenerateContentStreaming: buildApiUrl('/api/blog-creator/generate-content-streaming'),
   blogCreatorGenerateContentAsync: buildApiUrl('/api/blog-creator/generate-content-async'),
   blogCreatorJobStatus: (jobId: string) => buildApiUrl(`/api/blog-creator/job-status/${jobId}`),
   

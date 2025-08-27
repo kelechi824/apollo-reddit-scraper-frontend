@@ -334,6 +334,11 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
+  
+  // Contextual CTA states
+  const [enableContextualCtas, setEnableContextualCtas] = useState(true);
+  const [isEnhancingWithCtas, setIsEnhancingWithCtas] = useState(false);
+  const [ctaEnhancementResult, setCtaEnhancementResult] = useState<any>(null);
 
   // Content display ref for link hover controls
   const contentDisplayRef = useRef<HTMLDivElement>(null);
@@ -530,6 +535,17 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       .generated-content-display th:last-child,
       .generated-content-display td:last-child {
         padding-right: 1.25rem;
+      }
+
+      .generated-content-display a {
+        color: #2563eb;
+        text-decoration: underline;
+        font-weight: 500;
+      }
+
+      .generated-content-display a:hover {
+        color: #1d4ed8;
+        text-decoration: underline;
       }
 
       /* Mobile backdrop for modals */
@@ -2640,16 +2656,23 @@ Return ONLY the JSON object with the three required fields. No additional text o
       console.log('📡 [BlogContentActionModal] API Request Body:', requestBody);
       console.log('📡 [BlogContentActionModal] Backend URL:', backendUrl);
 
+      // Use regular content generation with enhanced post-processing CTAs
+      console.log('🚀 [BlogContentActionModal] Using content generation with enhanced contextual CTAs...');
+      
       const apiResult = await makeApiRequest(
-        `${backendUrl.replace(/\/$/, '')}/api/content/generate`,
+        API_ENDPOINTS.blogCreatorGenerateContent,
         {
           method: 'POST',
           body: JSON.stringify({
-            post_context: postContext,
+            keyword: keywordRow.keyword,
             brand_kit: brandKit,
             sitemap_data: sitemapData,
             system_prompt: processedSystemPrompt,
-            user_prompt: processedUserPrompt
+            user_prompt: processedUserPrompt,
+            use_default_prompts: false, // We're providing custom prompts
+            target_audience: '',
+            content_length: 'medium',
+            focus_areas: []
           }),
         }
       );
@@ -2661,16 +2684,10 @@ Return ONLY the JSON object with the three required fields. No additional text o
       const data = apiResult.data!;
       console.log('📥 [BlogContentActionModal] API Response:', data);
       
-      // Handle the response - it might be a single content string or array
+      // Handle the response - extract content
       let contentResult = '';
       if (data.content) {
-        if (Array.isArray(data.content)) {
-          contentResult = data.content[0] || '';
-        } else {
-          contentResult = data.content;
-        }
-      } else if (data.variations && Array.isArray(data.variations)) {
-        contentResult = data.variations[0] || '';
+        contentResult = data.content;
       } else {
         console.log('❌ [BlogContentActionModal] No content found in response structure:', data);
         throw new Error('No content found in API response');
@@ -2681,8 +2698,58 @@ Return ONLY the JSON object with the three required fields. No additional text o
       // Parse the AI response to extract all fields
       const parsedResponse = parseAIResponse(contentResult);
       
-      setGeneratedContent(parsedResponse.content);
-      setEditableContent(parsedResponse.content);
+      // Enhance with contextual CTAs if enabled
+      let finalContent = parsedResponse.content;
+      if (enableContextualCtas && finalContent && finalContent.length > 100) {
+        try {
+          setIsEnhancingWithCtas(true);
+          console.log('🎯 [BlogContentActionModal] Enhancing content with contextual CTAs...');
+          
+          const targetKeyword = keywordRow.keyword;
+          const campaignType = 'blog_creator';
+          
+          // Get sitemap data from localStorage for intelligent URL selection
+          const getSitemapData = () => {
+            try {
+              const stored = localStorage.getItem('apollo_sitemap_data');
+              return stored ? JSON.parse(stored) : null;
+            } catch (error) {
+              console.warn('Failed to load sitemap data:', error);
+              return null;
+            }
+          };
+
+          // Use simple, reliable CTA service with sitemap-aware URL selection
+          const ctaResponse = await fetch(API_ENDPOINTS.enhanceWithSimpleCtas, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: finalContent,
+              contentFormat: 'html',
+              targetKeyword,
+              campaignType,
+              maxCtasPerArticle: 3,
+              sitemapData: getSitemapData()
+            })
+          });
+          
+          const ctaResult = await ctaResponse.json();
+          
+          if (ctaResult.success) {
+            finalContent = ctaResult.enhancedContent;
+            setCtaEnhancementResult(ctaResult.insertionAnalytics);
+            console.log(`✅ [BlogContentActionModal] Enhanced content with ${ctaResult.insertionAnalytics.totalCtasInserted} contextual CTAs`);
+          }
+        } catch (error) {
+          console.warn('⚠️ [BlogContentActionModal] Failed to enhance content with contextual CTAs, using original content:', error);
+          // Continue with original content if CTA enhancement fails
+        } finally {
+          setIsEnhancingWithCtas(false);
+        }
+      }
+      
+      setGeneratedContent(finalContent);
+      setEditableContent(finalContent);
       setIsEditingContent(false);
       
       // Set meta fields from API response or parsed content
@@ -2709,12 +2776,12 @@ Return ONLY the JSON object with the three required fields. No additional text o
         }
       }
 
-      // Auto-save the newly generated content
-      autoSaveContent(parsedResponse.content, metaTitle, metaDesc);
+      // Auto-save the newly generated content (use enhanced content)
+      autoSaveContent(finalContent, metaTitle, metaDesc);
 
       // Update the original keyword row if callback provided
       if (onContentUpdate) {
-        onContentUpdate(keywordRow.id, parsedResponse.content);
+        onContentUpdate(keywordRow.id, finalContent);
       }
 
     } catch (error) {
