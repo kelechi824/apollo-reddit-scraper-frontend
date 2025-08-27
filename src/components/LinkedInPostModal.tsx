@@ -645,7 +645,7 @@ Return as a JSON array of 3 completely different LinkedIn posts.`;
       // Get appropriate messages based on generation method
       const currentMessages = useExampleStyle ? getMimicryMessages() : getAdvancedMessages();
       
-      // Progress through generation steps with 5-second intervals
+      // Progress through generation steps with 8-second intervals
       const progressInterval = setInterval(() => {
         setGenerationStep(prev => {
           const nextStep = prev + 1;
@@ -655,7 +655,7 @@ Return as a JSON array of 3 completely different LinkedIn posts.`;
           }
           return nextStep;
         });
-      }, 5000);
+      }, 8000);
 
       let finalSystemPrompt = '';
       let finalUserPrompt = '';
