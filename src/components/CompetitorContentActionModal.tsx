@@ -271,6 +271,11 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
     api_key: '',
     cms_type: 'buttercms'
   });
+  
+  // Contextual CTA states
+  const [enableContextualCtas, setEnableContextualCtas] = useState(true);
+  const [isEnhancingWithCtas, setIsEnhancingWithCtas] = useState(false);
+  const [ctaEnhancementResult, setCtaEnhancementResult] = useState<any>(null);
 
   // Refs
   const systemRef = useRef<HTMLTextAreaElement | null>(null);
@@ -2137,6 +2142,14 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       console.log('📝 User prompt preview:', userPrompt.substring(0, 200));
       console.log('🎯 Brand kit:', kit);
 
+      // Use streaming content generation with built-in contextual CTAs for competitor content
+      console.log('🚀 [CompetitorContentActionModal] Using streaming content generation approach...');
+      
+      if (enableContextualCtas) {
+        setIsEnhancingWithCtas(true);
+        console.log('🎯 [CompetitorContentActionModal] Streaming generation with contextual CTAs enabled');
+      }
+      
       const resp = await fetch(API_ENDPOINTS.competitorGenerateContent, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2149,7 +2162,8 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
           content_length: 'medium',
           focus_areas: [],
           system_prompt: systemPrompt,  // Send raw prompts with {{ variables }}
-          user_prompt: userPrompt        // Backend will process these
+          user_prompt: userPrompt,      // Backend will process these
+          use_simple_cta_service: enableContextualCtas // Use simple CTA service for sitemap-aware URLs
         })
       });
 
@@ -2185,6 +2199,23 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       displayContent = cleanAIContent(parsed.content);
       console.log('🔍 After cleaning (first 500 chars):', displayContent.substring(0, 500));
       
+      // Handle streaming CTA results if available
+      if (data.ctaInsertions && enableContextualCtas) {
+        setCtaEnhancementResult({
+          totalCtasInserted: data.ctaInsertions.totalInserted,
+          insertionPoints: data.ctaInsertions.insertionPoints.map((point: any) => ({
+            paragraphIndex: point.paragraphIndex,
+            ctaText: point.cta,
+            reasoning: point.reasoning,
+            confidence: point.confidence
+          })),
+          processingTimeMs: data.processingTimeMs
+        });
+        console.log(`✅ [CompetitorContentActionModal] Streaming generation inserted ${data.ctaInsertions.totalInserted} contextual CTAs`);
+      }
+      
+      setIsEnhancingWithCtas(false);
+      
       setGeneratedContent(displayContent);
       setEditableContent(parsed.content); // Keep original format for editing
       setIsEditingContent(false);
@@ -2201,7 +2232,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
         } catch {}
       }
       
-      onContentUpdate?.(row.id, parsed.content);
+      onContentUpdate?.(row.id, displayContent);
     } catch (e) {
       console.error('Regenerate failed:', e);
       alert(`Generation failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
@@ -2291,6 +2322,8 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       .generated-content-display td { padding: 0.875rem 1rem; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 0.875rem; line-height: 1.5; }
       .generated-content-display tbody tr:hover { background-color: #f9fafb; }
       .generated-content-display tbody tr:last-child td { border-bottom: none; }
+      .generated-content-display a { color: #2563eb; text-decoration: underline; font-weight: 500; }
+      .generated-content-display a:hover { color: #1d4ed8; text-decoration: underline; }
     `;
     document.head.appendChild(style);
     return () => { if (document.head.contains(style)) document.head.removeChild(style); };
