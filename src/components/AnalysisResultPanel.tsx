@@ -29,6 +29,71 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   /**
+   * Format analysis text with proper line breaks and bullet points
+   * Why this matters: Converts backend-formatted text with \n and bullet points into properly rendered HTML
+   */
+  const formatAnalysisText = (text: string): React.ReactElement => {
+    if (!text) {
+      return <span>No analysis available</span>;
+    }
+
+    // Split by line breaks and process each line
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    
+    return (
+      <div>
+        {lines.map((line, index) => {
+          const trimmedLine = line.trim();
+          
+          // Handle bullet points
+          if (trimmedLine.startsWith('•')) {
+            return (
+              <div key={index} style={{ 
+                marginLeft: '1rem', 
+                marginBottom: '0.5rem',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.5rem'
+              }}>
+                <span style={{ color: '#2563eb', fontWeight: 'bold', minWidth: '0.5rem' }}>•</span>
+                <span>{trimmedLine.substring(1).trim()}</span>
+              </div>
+            );
+          }
+          
+          // Handle numbered lists
+          if (/^\d+\./.test(trimmedLine)) {
+            return (
+              <div key={index} style={{ 
+                marginLeft: '1rem', 
+                marginBottom: '0.5rem',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.5rem'
+              }}>
+                <span style={{ color: '#2563eb', fontWeight: 'bold', minWidth: '1.5rem' }}>
+                  {trimmedLine.match(/^\d+\./)?.[0]}
+                </span>
+                <span>{trimmedLine.replace(/^\d+\.\s*/, '')}</span>
+              </div>
+            );
+          }
+          
+          // Handle regular paragraphs
+          return (
+            <p key={index} style={{ 
+              marginBottom: '0.75rem',
+              lineHeight: '1.6'
+            }}>
+              {trimmedLine}
+            </p>
+          );
+        })}
+      </div>
+    );
+  };
+
+  /**
    * Highlight keywords in text content
    * Why this matters: Makes it easy for users to quickly identify where their search keywords appear in the post content
    */
@@ -446,9 +511,9 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'pain' && (
               <div className="tab-panel">
-                <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
-                  {currentPost.analysis.pain_point}
-                </p>
+                <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
+                  {formatAnalysisText(currentPost.analysis.pain_point)}
+                </div>
                 <div style={{ marginTop: '1.5rem', borderTop: '0.0625rem solid #e5e7eb', paddingTop: '1.5rem' }}>
                   <button
                     onClick={() => setIsDigDeeperModalOpen(true)}
@@ -477,9 +542,9 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'content' && (
               <div className="tab-panel">
-                <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
-                  {currentPost.analysis.content_opportunity}
-                </p>
+                <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
+                  {formatAnalysisText(currentPost.analysis.content_opportunity)}
+                </div>
                 <div style={{ marginTop: '1.5rem', borderTop: '0.0625rem solid #e5e7eb', paddingTop: '1.5rem' }}>
                   <div className="content-buttons-container" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                     <button
@@ -554,9 +619,9 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
             {activeTab === 'audience' && (
               <div className="tab-panel">
-                <p className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
-                  {currentPost.analysis.audience_insight}
-                </p>
+                <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
+                  {formatAnalysisText(currentPost.analysis.audience_insight)}
+                </div>
               </div>
             )}
           </div>
