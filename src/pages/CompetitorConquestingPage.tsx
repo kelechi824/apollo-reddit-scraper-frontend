@@ -1,10 +1,9 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import Papa, { ParseResult } from 'papaparse';
-import axios from 'axios';
 import BackendDetailsPopup from '../components/BackendDetailsPopup';
 import CompetitorContentActionModal from '../components/CompetitorContentActionModal';
-import { API_ENDPOINTS, buildApiUrl } from '../config/api';
+import { API_ENDPOINTS } from '../config/api';
 import { FEATURE_FLAGS } from '../utils/featureFlags';
 
 type RowStatus = 'idle' | 'queued' | 'running' | 'completed' | 'error';
@@ -88,7 +87,7 @@ const CompetitorConquestingPage: React.FC = () => {
   const [selectedCompetitor, setSelectedCompetitor] = React.useState<string>('');
   const [rows, setRows] = React.useState<CompetitorRow[]>([]);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const [loadedCount, setLoadedCount] = React.useState<number>(0);
+  const [, setLoadedCount] = React.useState<number>(0);
   const [error, setError] = React.useState<string | null>(null);
   const [sortField, setSortField] = React.useState<'monthlyVolume' | 'avgDifficulty' | null>(null);
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('desc');
@@ -301,6 +300,7 @@ const CompetitorConquestingPage: React.FC = () => {
    * clearPersistedData
    * Why this matters: Allows explicit reset when needed (kept internal to avoid accidental wipes).
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const clearPersistedData = () => {
     try { localStorage.removeItem('apollo_competitor_conquesting_progress'); } catch {}
   };
@@ -611,13 +611,14 @@ const CompetitorConquestingPage: React.FC = () => {
         console.warn('Failed to load brand kit:', e);
       }
 
-      // Load sitemap data from localStorage for internal linking
+      // Load and optimize sitemap data to prevent 413 payload errors
+      // Why this matters: Full sitemap data can exceed 1MB, causing 413 errors on Netlify/Vercel
       let sitemapData = null;
       try {
         const stored = localStorage.getItem('apollo_sitemap_data');
         if (stored) {
           const sitemaps = JSON.parse(stored);
-          // Flatten all sitemap URLs into a single array for content generation
+          // Flatten all sitemap URLs into a single array
           const allUrls = sitemaps.flatMap((sitemap: any) => 
             sitemap.urls.map((url: any) => ({
               title: url.title,
@@ -625,8 +626,119 @@ const CompetitorConquestingPage: React.FC = () => {
               url: url.url
             }))
           );
-          sitemapData = allUrls;
-          console.log(`🗺️ [CompetitorConquesting] Loaded ${allUrls.length} URLs from ${sitemaps.length} sitemaps for internal linking`);
+          
+          // Optimize payload size like BlogCreatorPage does
+          let optimizedUrls: any[] = [];
+          
+          if (allUrls.length <= 50) {
+            // For small sets, send all URLs with compressed format
+            optimizedUrls = allUrls.map((url: any) => ({
+              t: url.title?.substring(0, 80) || '', // Truncate title
+              u: url.url // Keep full URL
+            }));
+          } else {
+            // For larger sets, use smart sampling to maintain diversity across content types
+            // Why this matters: Ensures we get URLs from different sections like /magazine/, /insights/, /roles/, /leads/ etc.
+            const sampleSize = 500; // Send up to 500 URLs (compressed) for maximum internal link diversity
+            
+            // Group URLs by content type/section for diverse sampling
+            const urlGroups: { [key: string]: any[] } = {
+              magazine: [],
+              insights: [],
+              roles: [],
+              leads: [],
+              sitemaps: [],
+              blog: [],
+              resources: [],
+              tools: [],
+              guides: [],
+              other: []
+            };
+            
+            // Categorize URLs by their path patterns
+            allUrls.forEach((url: any) => {
+              const urlPath = url.url.toLowerCase();
+              if (urlPath.includes('/magazine/')) {
+                urlGroups.magazine.push(url);
+              } else if (urlPath.includes('/insights/') || urlPath.includes('/insight/')) {
+                urlGroups.insights.push(url);
+              } else if (urlPath.includes('/roles/') || urlPath.includes('/job/') || urlPath.includes('/career/')) {
+                urlGroups.roles.push(url);
+              } else if (urlPath.includes('/leads/') || urlPath.includes('/lead-generation/')) {
+                urlGroups.leads.push(url);
+              } else if (urlPath.includes('/sitemap/') || urlPath.includes('/sitemaps/')) {
+                urlGroups.sitemaps.push(url);
+              } else if (urlPath.includes('/blog/') || urlPath.includes('/post/')) {
+                urlGroups.blog.push(url);
+              } else if (urlPath.includes('/resource/') || urlPath.includes('/download/')) {
+                urlGroups.resources.push(url);
+              } else if (urlPath.includes('/tool/') || urlPath.includes('/calculator/')) {
+                urlGroups.tools.push(url);
+              } else if (urlPath.includes('/guide/') || urlPath.includes('/how-to/')) {
+                urlGroups.guides.push(url);
+              } else {
+                urlGroups.other.push(url);
+              }
+            });
+            
+            // Sample proportionally from each group to ensure diversity
+            const groupNames = Object.keys(urlGroups);
+            const totalGroups = groupNames.filter(name => urlGroups[name].length > 0).length;
+            
+            console.log(`🔍 [CompetitorConquesting] URL distribution:`, 
+              Object.fromEntries(groupNames.map(name => [name, urlGroups[name].length])));
+            
+            // Allocate URLs per group (minimum 10 per non-empty group, rest distributed proportionally)
+            const minPerGroup = Math.min(10, Math.floor(sampleSize / Math.max(totalGroups, 1)));
+            let remainingSlots = sampleSize;
+            
+            groupNames.forEach(groupName => {
+              const group = urlGroups[groupName];
+              if (group.length === 0) return;
+              
+              // Calculate how many URLs to take from this group
+              const groupAllocation = Math.min(
+                group.length,
+                Math.max(minPerGroup, Math.floor((group.length / allUrls.length) * sampleSize))
+              );
+              
+              // Sample evenly from this group
+              const step = Math.max(1, Math.floor(group.length / groupAllocation));
+              let taken = 0;
+              
+              for (let i = 0; i < group.length && taken < groupAllocation && optimizedUrls.length < sampleSize; i += step) {
+                optimizedUrls.push({
+                  t: group[i].title?.substring(0, 80) || '', // Truncate title
+                  u: group[i].url // Keep full URL
+                });
+                taken++;
+                remainingSlots--;
+              }
+            });
+            
+            // Fill remaining slots with recent/important URLs if we haven't hit the limit
+            if (optimizedUrls.length < sampleSize) {
+              const urlSet = new Set(optimizedUrls.map((u: any) => u.u));
+              const recentUrls = allUrls.slice(0, Math.min(50, sampleSize - optimizedUrls.length));
+              
+              recentUrls.forEach((url: any) => {
+                if (!urlSet.has(url.url) && optimizedUrls.length < sampleSize) {
+                  optimizedUrls.push({
+                    t: url.title?.substring(0, 80) || '',
+                    u: url.url
+                  });
+                }
+              });
+            }
+          }
+          
+          sitemapData = optimizedUrls;
+          
+          console.log(`🗺️ [CompetitorConquesting] Optimized sitemap: ${allUrls.length} URLs → ${optimizedUrls.length} compressed URLs (max 500 for maximum internal link diversity)`);
+          console.log(`📊 [CompetitorConquesting] Compression ratio: ${((1 - JSON.stringify(optimizedUrls).length / JSON.stringify(allUrls).length) * 100).toFixed(1)}% size reduction`);
+          console.log(`🔗 [CompetitorConquesting] Sample URLs:`, optimizedUrls.slice(0, 3));
+        } else {
+          console.log(`⚠️ [CompetitorConquesting] No sitemap data found in localStorage`);
         }
       } catch (error) {
         console.warn('Failed to load sitemap data:', error);
@@ -658,15 +770,26 @@ const CompetitorConquestingPage: React.FC = () => {
       
       console.log('🔍 [FRONTEND DEBUG] Full request payload:', requestPayload);
       
-      const asyncResp = await axios.post(API_ENDPOINTS.competitorGenerateContentAsync, requestPayload, {
+      // Use fetch instead of axios to match BlogCreatorPage approach and reduce bundle size
+      const asyncResp = await fetch(API_ENDPOINTS.competitorGenerateContentAsync, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
         signal: controller.signal
       });
       
-      if (!asyncResp.data.success || !asyncResp.data.jobId) {
+      if (!asyncResp.ok) {
+        throw new Error(`HTTP ${asyncResp.status}: Failed to start content generation`);
+      }
+      
+      const asyncData = await asyncResp.json();
+      if (!asyncData.success || !asyncData.jobId) {
         throw new Error('Failed to start content generation');
       }
       
-      const jobId = asyncResp.data.jobId;
+      const jobId = asyncData.jobId;
       console.log(`📋 Started async job ${jobId} for ${row.keyword}`);
       
       // Poll for job completion
@@ -687,11 +810,17 @@ const CompetitorConquestingPage: React.FC = () => {
         
         // Resilient poll: tolerate transient network issues and brief 404s right after job creation
         try {
-          const statusResp = await axios.get(API_ENDPOINTS.competitorJobStatus(jobId), {
+          const statusResp = await fetch(API_ENDPOINTS.competitorJobStatus(jobId), {
             signal: controller.signal
           });
+          
+          if (!statusResp.ok) {
+            throw new Error(`HTTP ${statusResp.status}`);
+          }
+          
+          const statusData = await statusResp.json();
           transientErrorStreak = 0; // reset on success
-          const jobData = statusResp.data.data;
+          const jobData = statusData.data;
           
           // Update progress in UI with pipeline stage information
           if (jobData.progress !== undefined) {
@@ -762,9 +891,14 @@ const CompetitorConquestingPage: React.FC = () => {
             throw new Error(jobData.error || 'Content generation failed');
           }
         } catch (pollErr: any) {
-          const status = pollErr?.response?.status;
+          // Extract status from fetch error or HTTP status
+          let status: number | undefined;
+          if (pollErr.message?.includes('HTTP ')) {
+            status = parseInt(pollErr.message.match(/HTTP (\d+)/)?.[1] || '');
+          }
+          
           const message = pollErr?.message || '';
-          const isNetworkFlap = message.includes('Network Error') || message.includes('net::ERR_NETWORK_CHANGED');
+          const isNetworkFlap = message.includes('Network Error') || message.includes('net::ERR_NETWORK_CHANGED') || message.includes('fetch');
           const isTransientStatus = status === 404 || status === 425 || status === 429 || status === 502 || status === 503 || status === 504;
           const withinWarmup = attempts < 10 && status === 404; // tolerate early 404s within first 10 polls
           if (isNetworkFlap || isTransientStatus || withinWarmup) {
@@ -797,11 +931,11 @@ const CompetitorConquestingPage: React.FC = () => {
         let errorMessage = 'Generation failed';
         if (err?.message?.includes('taking longer than expected')) {
           errorMessage = err.message;
-        } else if (err?.response?.status === 504 || err?.code === 'ECONNABORTED') {
+        } else if (err?.message?.includes('HTTP 504') || err?.name === 'AbortError') {
           errorMessage = 'Request timed out. The system is now using async generation to handle longer operations.';
-        } else if (err?.response?.status === 429) {
+        } else if (err?.message?.includes('HTTP 429')) {
           errorMessage = 'Rate limit exceeded. Please try again in a moment.';
-        } else if (err?.response?.status >= 500) {
+        } else if (err?.message?.includes('HTTP 5')) {
           errorMessage = 'Server error. Please try again.';
         } else if (err?.message) {
           errorMessage = err.message;
