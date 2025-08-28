@@ -2131,7 +2131,7 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                       type="checkbox"
                       checked={keywords.length > 0 && selectedRows.size === keywords.length}
                       onChange={toggleSelectAll}
-                      style={{ cursor: 'pointer' }}
+                      style={{ cursor: 'pointer', transform: 'translateY(3px)' }}
                     />
                   </th>
                 <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>KEYWORDS</th>
@@ -2165,7 +2165,7 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                           type="checkbox"
                           checked={selectedRows.has(keyword.id)}
                           onChange={() => toggleRowSelection(keyword.id)}
-                          style={{ cursor: 'pointer' }}
+                          style={{ cursor: 'pointer', transform: 'translateY(3px)' }}
                         />
                       </td>
 

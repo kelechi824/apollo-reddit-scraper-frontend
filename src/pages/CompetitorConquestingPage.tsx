@@ -1030,16 +1030,33 @@ const CompetitorConquestingPage: React.FC = () => {
           }
         `}
       </style>
-      <div style={{ padding: '2rem 1rem' }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-        Competitor Conquesting
-      </h1>
-      <p style={{ color: '#6b7280', fontSize: '0.9375rem' }}>
-        Run deep research on competitor keywords, perform gap analysis on their content, and generate 10x superior content
-      </p>
+      <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', padding: '2rem' }}>
+        {/* Header Section */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h1 style={{ 
+            fontSize: '2rem', 
+            fontWeight: '600', 
+            color: '#111827',
+            marginBottom: '0.5rem'
+          }}>
+            Competitor Conquesting
+          </h1>
+          <p style={{ 
+            fontSize: '0.875rem',
+            color: '#6b7280'
+          }}>
+            Run deep research on competitor keywords, perform gap analysis on their content, and generate 10x superior content
+          </p>
+        </div>
 
-      {/* Controls */}
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
+        {/* Controls Section */}
+        <div style={{ 
+          display: 'flex',
+          gap: '1rem', 
+          alignItems: 'center',
+          marginBottom: '1.5rem',
+          flexWrap: 'wrap'
+        }}>
         <label style={{ fontSize: '0.875rem', color: '#374151' }}>
           Competitor
           <select
@@ -1132,9 +1149,9 @@ const CompetitorConquestingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <div style={{ marginTop: '1rem', border: '1px solid #e5e7eb', borderRadius: '0.75rem', overflow: 'hidden' }}>
-        <div style={{ maxHeight: '65vh', overflow: 'auto' }}>
+        {/* Table Container */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
+          <div style={{ maxHeight: '65vh', overflow: 'auto' }}>
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
             <colgroup>
               <col style={{ width: '32px' }} />
@@ -1149,7 +1166,19 @@ const CompetitorConquestingPage: React.FC = () => {
             <thead>
               <tr>
                 <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>
-                  
+                  <input
+                    type="checkbox"
+                    checked={rows.length > 0 && selectedRows.size === rows.length}
+                    onChange={() => {
+                      const allSelected = selectedRows.size === rows.length && rows.length > 0;
+                      if ((selectionMadeBySelectAll && allSelected) || selectedRows.size > 0) {
+                        clearSelection();
+                      } else {
+                        selectAll();
+                      }
+                    }}
+                    style={{ cursor: 'pointer', marginTop: '4px' }}
+                  />
                 </th>
                 <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>KEYWORDS</th>
                  <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>URL</th>
@@ -1168,7 +1197,7 @@ const CompetitorConquestingPage: React.FC = () => {
               {paginatedRows.map((r) => (
                 <tr key={r.id}>
                   <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
-                    <input type="checkbox" aria-label={`select ${r.keyword}`} checked={selectedRows.has(r.id)} onChange={() => toggleRowSelection(r.id)} />
+                    <input type="checkbox" aria-label={`select ${r.keyword}`} checked={selectedRows.has(r.id)} onChange={() => toggleRowSelection(r.id)} style={{ marginTop: '8px' }} />
                   </td>
                   <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
                     <div style={clippedStyle} title={r.keyword}>{r.keyword}</div>
@@ -1273,15 +1302,21 @@ const CompetitorConquestingPage: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
 
-      {/* Pagination controls - Why this matters: limits rendered rows to keep UI snappy while browsing large datasets. */}
-      {rows.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+        {/* Pagination Footer */}
+        <div style={{ 
+          padding: '0.75rem 1rem',
+          borderTop: '1px solid #e5e7eb',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.875rem', 
+          color: '#6b7280'
+        }}>
+          <div>
             Page {page} of {totalPages} • Showing {paginatedRows.length} of {rows.length.toLocaleString()} rows
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <button onClick={() => setPage(1)} disabled={page === 1} style={{ padding: '0.3rem 0.6rem', border: '1px solid #e5e7eb', borderRadius: '0.375rem', background: page === 1 ? '#e5e7eb' : '#fff', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>{'<<'}</button>
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '0.3rem 0.6rem', border: '1px solid #e5e7eb', borderRadius: '0.375rem', background: page === 1 ? '#e5e7eb' : '#fff', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>{'<'}</button>
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '0.3rem 0.6rem', border: '1px solid #e5e7eb', borderRadius: '0.375rem', background: page === totalPages ? '#e5e7eb' : '#fff', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}>{'>'}</button>
@@ -1296,7 +1331,7 @@ const CompetitorConquestingPage: React.FC = () => {
             </label>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Delete Selected Confirmation Modal */}
       {showDeleteConfirm && (
