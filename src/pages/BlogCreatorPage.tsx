@@ -1106,7 +1106,7 @@ const BlogCreatorPage: React.FC = () => {
           );
           
           // Smart compression strategy to maximize URL diversity while staying within limits
-          let optimizedUrls = [];
+          let optimizedUrls: any[] = [];
           
           if (allUrls.length <= 100) {
             // If we have 100 or fewer URLs, send them all (still manageable size)
@@ -1116,37 +1116,104 @@ const BlogCreatorPage: React.FC = () => {
               // Skip description to save space - title is enough for matching
             }));
           } else {
-            // For larger sets, use smart sampling to maintain diversity
-            // Sample URLs evenly across the entire set to maintain topic diversity
-            const sampleSize = 100; // Send up to 100 URLs (compressed)
-            const step = Math.floor(allUrls.length / sampleSize);
+            // For larger sets, use smart sampling to maintain diversity across content types
+            // Why this matters: Ensures we get URLs from different sections like /magazine/, /insights/, /roles/, /leads/ etc.
+            const sampleSize = 500; // Send up to 500 URLs (compressed) for maximum internal link diversity
             
-            for (let i = 0; i < allUrls.length && optimizedUrls.length < sampleSize; i += step) {
-              optimizedUrls.push({
-                t: allUrls[i].title.substring(0, 80), // Truncate title
-                u: allUrls[i].url // Keep full URL
-              });
-            }
+            // Group URLs by content type/section for diverse sampling
+            const urlGroups: { [key: string]: any[] } = {
+              magazine: [],
+              insights: [],
+              roles: [],
+              leads: [],
+              sitemaps: [],
+              blog: [],
+              resources: [],
+              tools: [],
+              guides: [],
+              other: []
+            };
             
-            // Also ensure we include some recent/important URLs from the beginning
-            const importantUrls = allUrls.slice(0, 20).map((url: any) => ({
-              t: url.title.substring(0, 80),
-              u: url.url
-            }));
-            
-            // Merge and deduplicate
-            const urlSet = new Set(optimizedUrls.map((u: any) => u.u));
-            importantUrls.forEach((url: any) => {
-              if (!urlSet.has(url.u) && optimizedUrls.length < sampleSize) {
-                optimizedUrls.push(url);
-                urlSet.add(url.u);
+            // Categorize URLs by their path patterns
+            allUrls.forEach((url: any) => {
+              const urlPath = url.url.toLowerCase();
+              if (urlPath.includes('/magazine/')) {
+                urlGroups.magazine.push(url);
+              } else if (urlPath.includes('/insights/') || urlPath.includes('/insight/')) {
+                urlGroups.insights.push(url);
+              } else if (urlPath.includes('/roles/') || urlPath.includes('/job/') || urlPath.includes('/career/')) {
+                urlGroups.roles.push(url);
+              } else if (urlPath.includes('/leads/') || urlPath.includes('/lead-generation/')) {
+                urlGroups.leads.push(url);
+              } else if (urlPath.includes('/sitemap/') || urlPath.includes('/sitemaps/')) {
+                urlGroups.sitemaps.push(url);
+              } else if (urlPath.includes('/blog/') || urlPath.includes('/post/')) {
+                urlGroups.blog.push(url);
+              } else if (urlPath.includes('/resource/') || urlPath.includes('/download/')) {
+                urlGroups.resources.push(url);
+              } else if (urlPath.includes('/tool/') || urlPath.includes('/calculator/')) {
+                urlGroups.tools.push(url);
+              } else if (urlPath.includes('/guide/') || urlPath.includes('/how-to/')) {
+                urlGroups.guides.push(url);
+              } else {
+                urlGroups.other.push(url);
               }
             });
+            
+            // Sample proportionally from each group to ensure diversity
+            const groupNames = Object.keys(urlGroups);
+            const totalGroups = groupNames.filter(name => urlGroups[name].length > 0).length;
+            
+            console.log(`🔍 [BlogCreator] URL distribution:`, 
+              Object.fromEntries(groupNames.map(name => [name, urlGroups[name].length])));
+            
+            // Allocate URLs per group (minimum 10 per non-empty group, rest distributed proportionally)
+            const minPerGroup = Math.min(10, Math.floor(sampleSize / Math.max(totalGroups, 1)));
+            let remainingSlots = sampleSize;
+            
+            groupNames.forEach(groupName => {
+              const group = urlGroups[groupName];
+              if (group.length === 0) return;
+              
+              // Calculate how many URLs to take from this group
+              const groupAllocation = Math.min(
+                group.length,
+                Math.max(minPerGroup, Math.floor((group.length / allUrls.length) * sampleSize))
+              );
+              
+              // Sample evenly from this group
+              const step = Math.max(1, Math.floor(group.length / groupAllocation));
+              let taken = 0;
+              
+              for (let i = 0; i < group.length && taken < groupAllocation && optimizedUrls.length < sampleSize; i += step) {
+                optimizedUrls.push({
+                  t: group[i].title.substring(0, 80), // Truncate title
+                  u: group[i].url // Keep full URL
+                });
+                taken++;
+                remainingSlots--;
+              }
+            });
+            
+            // Fill remaining slots with recent/important URLs if we haven't hit the limit
+            if (optimizedUrls.length < sampleSize) {
+              const urlSet = new Set(optimizedUrls.map((u: any) => u.u));
+              const recentUrls = allUrls.slice(0, Math.min(50, sampleSize - optimizedUrls.length));
+              
+              recentUrls.forEach((url: any) => {
+                if (!urlSet.has(url.url) && optimizedUrls.length < sampleSize) {
+                  optimizedUrls.push({
+                    t: url.title.substring(0, 80),
+                    u: url.url
+                  });
+                }
+              });
+            }
           }
           
           sitemapData = optimizedUrls;
           
-          console.log(`🗺️ [BlogCreator] Optimized sitemap: ${allUrls.length} URLs → ${optimizedUrls.length} compressed URLs`);
+          console.log(`🗺️ [BlogCreator] Optimized sitemap: ${allUrls.length} URLs → ${optimizedUrls.length} compressed URLs (max 500 for maximum internal link diversity)`);
           console.log(`📊 [BlogCreator] Compression ratio: ${((1 - JSON.stringify(optimizedUrls).length / JSON.stringify(allUrls).length) * 100).toFixed(1)}% size reduction`);
           console.log(`🔗 [BlogCreator] Sample URLs:`, optimizedUrls.slice(0, 3));
         } else {
