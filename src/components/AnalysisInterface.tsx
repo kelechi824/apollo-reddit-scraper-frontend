@@ -21,7 +21,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
   const [hasCompletedAnalysis, setHasCompletedAnalysis] = useState<boolean>(false);
   const analysisTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting', 'startups', 'entrepreneur', 'marketing', 'smallbusiness', 'business', 'b2bmarketing', 'b2b_sales', 'b2bsaas'];
+  const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting', 'startups', 'entrepreneur', 'marketing', 'smallbusiness', 'business', 'b2bmarketing', 'b2b_sales', 'b2bsaas', 'coldemail', 'emailmarketing'];
 
 
   
@@ -271,13 +271,13 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
         {/* Keywords Input */}
         <div className="form-group">
           <label htmlFor="keywords" className="form-label">
-            Keyword <span style={{fontWeight: 'normal'}}>(single keyword only)</span>
+            Keyword
           </label>
           
           {!isKeywordSelected ? (
             // Input mode - user is typing
             <div className="input-container">
-              <Search className="input-icon" style={{transform: 'translateY(-0.1875rem)'}} />
+              <Search className="input-icon" />
               <input
                 id="keywords"
                 type="text"
@@ -289,7 +289,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
                 }}
                 onBlur={handleKeywordBlur}
                 onKeyDown={handleKeyDown}
-                placeholder="e.g., apollo"
+                placeholder="e.g., apollo, b2b sales"
                 className="apollo-input"
                 disabled={isAnalyzing}
               />

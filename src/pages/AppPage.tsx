@@ -70,10 +70,10 @@ const apiUrl = API_BASE_URL;
         ) : (
           <div className="results-empty">
             <div className="apollo-logo" style={{width: '4rem', height: '4rem', opacity: 0.3}}>
-              <img src="/Apollo_logo_transparent.png" alt="Apollo Logo" />
+              <img src="/apollo logo only.png" alt="Apollo Logo" />
             </div>
-            <h3>No Insights Yet</h3>
-            <p>Run an analysis to see business insights here</p>
+            <h3>No Reddit Insights Yet</h3>
+            <p>Run an analysis to see Reddit insights here</p>
           </div>
         )}
       </div>
