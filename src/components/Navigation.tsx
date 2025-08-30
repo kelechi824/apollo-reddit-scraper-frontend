@@ -78,7 +78,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
                   onClick={onItemClick}
                 >
                   <BarChart3 className="nav-icon" />
-                  Insights Generator
+                  Subreddit Analyzer
                 </NavLink>
                 <NavLink 
                   to="/reddit-analysis-history" 

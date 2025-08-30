@@ -6,13 +6,15 @@ import { makeApiRequest } from '../utils/apiHelpers';
 interface AnalysisInterfaceProps {
   apiUrl: string;
   onAnalysisComplete: (results: WorkflowResponse) => void;
+  onClearResults?: () => void;
 }
 
-const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysisComplete }) => {
+const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysisComplete, onClearResults }) => {
   const [keywords, setKeywords] = useState<string>('');
   const [isKeywordSelected, setIsKeywordSelected] = useState<boolean>(false);
   const [selectedSubreddit, setSelectedSubreddit] = useState<string>('sales');
   const [limit, setLimit] = useState<number>(5);
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'recent' | 'older'>('recent');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [analysisStep, setAnalysisStep] = useState<number>(0);
@@ -20,6 +22,14 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
   const analysisTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting'];
+
+
+  
+  // Time filter options for Reddit post recency
+  const timeframeOptions = [
+    { value: 'recent' as const, label: 'Recent Posts' },
+    { value: 'older' as const, label: 'Older Posts' }
+  ];
 
   // Analysis progress messages with timing
   const analysisMessages = [
@@ -117,6 +127,26 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
     setIsKeywordSelected(false);
   };
 
+  /**
+   * Handle timeframe change
+   * Why this matters: Clears results and resets state when user switches between Recent/Older posts
+   */
+  const handleTimeframeChange = (newTimeframe: 'recent' | 'older') => {
+    console.log(`🔄 Timeframe changed from ${selectedTimeframe} to ${newTimeframe}`);
+    setSelectedTimeframe(newTimeframe);
+    setHasCompletedAnalysis(false);
+    // Clear cached results
+    localStorage.removeItem('apollo-analysis-results');
+    console.log('🗑️ Cleared localStorage apollo-analysis-results');
+    // Clear current results in parent component
+    if (onClearResults) {
+      console.log('🗑️ Calling onClearResults');
+      onClearResults();
+    } else {
+      console.log('⚠️ onClearResults not available');
+    }
+  };
+
 
 
 
@@ -147,10 +177,12 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
       const request: WorkflowRequest = {
         keywords: keywordList,
         subreddits: [selectedSubreddit],
-        limit: limit
+        limit: limit,
+        timeframe: selectedTimeframe
       };
 
       console.log('🚀 Starting analysis workflow:', request);
+      console.log(`📊 Current selectedTimeframe state: ${selectedTimeframe}`);
 
       // Step 1: Start the workflow (returns immediately with workflow ID)
       const startResult = await makeApiRequest<{workflow_id: string; status: string}>(
@@ -334,6 +366,28 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Time Filter Selection */}
+        <div className="form-group">
+          <label htmlFor="timeframe" className="form-label">
+            Post Recency Filter
+          </label>
+          <select
+            id="timeframe"
+            value={selectedTimeframe}
+            onChange={(e) => handleTimeframeChange(e.target.value as 'recent' | 'older')}
+            className="apollo-input"
+            style={{maxWidth: '24rem'}}
+            disabled={isAnalyzing}
+          >
+            {timeframeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
         </div>
 
         {/* Limit Selection */}

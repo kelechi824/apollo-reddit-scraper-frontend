@@ -29,6 +29,22 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   /**
+   * Check for stored target post index on component mount
+   * Why this matters: Allows navigation to specific posts when coming from history
+   */
+  React.useEffect(() => {
+    const targetIndex = localStorage.getItem('apollo-analysis-target-index');
+    if (targetIndex !== null) {
+      const index = parseInt(targetIndex, 10);
+      if (index >= 0 && index < analyzedPosts.length) {
+        setCurrentIndex(index);
+      }
+      // Clear the stored index after using it
+      localStorage.removeItem('apollo-analysis-target-index');
+    }
+  }, [analyzedPosts.length]);
+
+  /**
    * Format analysis text with proper line breaks, bullet points, and bold headlines
    * Why this matters: Converts backend-formatted text with \n and bullet points into properly rendered HTML
    * with bold formatting for headlines ending with ":"
@@ -287,7 +303,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           marginTop: '0.75rem',
           lineHeight: '1.4'
         }}>
-          Get personalized sales coaching through guided discovery questions
+          Get AI-powered conversation starters to engage naturally in Reddit discussions
         </p>
       </div>
     );
@@ -410,7 +426,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
         <div style={{flex: 1}}>
           <h3 className="analysis-panel-title">Key Insights from Reddit</h3>
           <p className="analysis-panel-subtitle">
-            Found {totalFound} posts, showing insight {currentIndex + 1} of {analyzedPosts.length}
+            Analyzed {analyzedPosts.length} posts, showing insight {currentIndex + 1} of {analyzedPosts.length}
           </p>
         </div>
         <button 
@@ -497,6 +513,14 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
               <span className="tab-label-mobile" style={{ display: 'none' }}>Post</span>
             </button>
             <button
+              className={`tab-btn ${activeTab === 'audience' ? 'active' : ''}`}
+              onClick={() => setActiveTab('audience')}
+              style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
+            >
+              <span className="tab-label-desktop">Audience Summary</span>
+              <span className="tab-label-mobile" style={{ display: 'none' }}>Audience</span>
+            </button>
+            <button
               className={`tab-btn ${activeTab === 'pain' ? 'active' : ''}`}
               onClick={() => setActiveTab('pain')}
               style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
@@ -511,14 +535,6 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
             >
               <span className="tab-label-desktop">Content Opportunity</span>
               <span className="tab-label-mobile" style={{ display: 'none' }}>Content</span>
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'audience' ? 'active' : ''}`}
-              onClick={() => setActiveTab('audience')}
-              style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
-            >
-              <span className="tab-label-desktop">Audience Summary</span>
-              <span className="tab-label-mobile" style={{ display: 'none' }}>Audience</span>
             </button>
           </div>
 
@@ -599,7 +615,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                     }}
                   >
                     <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
-                    Ask Conversation AI Assistant
+                    Get Conversation Starter Tips
                   </button>
                   <p style={{ 
                     fontSize: '0.75rem', 
@@ -608,7 +624,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                     marginTop: '0.75rem',
                     lineHeight: '1.4'
                   }}>
-                    Get personalized sales coaching through guided discovery questions
+                    Get AI-powered conversation starters to engage naturally in Reddit discussions
                   </p>
                 </div>
               </div>

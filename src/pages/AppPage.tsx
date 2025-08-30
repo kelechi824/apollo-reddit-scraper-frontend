@@ -53,6 +53,7 @@ const apiUrl = API_BASE_URL;
         <AnalysisInterface 
           apiUrl={apiUrl} 
           onAnalysisComplete={handleAnalysisComplete}
+          onClearResults={handleClearResults}
         />
       </div>
 

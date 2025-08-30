@@ -116,6 +116,7 @@ export interface WorkflowRequest {
   keywords: string[];
   subreddits: string[];
   limit?: number;
+  timeframe?: 'recent' | 'older' | 'hour' | 'day' | 'week' | 'month' | 'year';
   export_to_sheets?: {
     spreadsheet_id: string;
     sheet_name?: string;
