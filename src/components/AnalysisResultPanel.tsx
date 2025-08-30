@@ -4,6 +4,7 @@ import { AnalyzedPost } from '../types';
 import DigDeeperModal from './DigDeeperModal';
 import ContentCreationModal from './ContentCreationModal';
 import LinkedInPostModal from './LinkedInPostModal';
+import RedditEngagementPanel from './RedditEngagementPanel';
 
 interface AnalysisResultPanelProps {
   analyzedPosts: AnalyzedPost[];
@@ -21,12 +22,26 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   onClear
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState<'original' | 'pain' | 'audience' | 'content'>('original');
+  const [activeTab, setActiveTab] = useState<'original' | 'pain' | 'audience' | 'content' | 'creator'>('original');
   const [isPostExpanded, setIsPostExpanded] = useState(false);
   const [isDigDeeperModalOpen, setIsDigDeeperModalOpen] = useState(false);
   const [isContentCreationModalOpen, setIsContentCreationModalOpen] = useState(false);
   const [isLinkedInPostModalOpen, setIsLinkedInPostModalOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  
+  // Reddit Engagement State - lifted up to persist across tab switches
+  const [redditResponses, setRedditResponses] = useState<any[]>([]);
+  const [redditIsLoading, setRedditIsLoading] = useState(false);
+  const [redditError, setRedditError] = useState<string | null>(null);
+  const [redditHasGenerated, setRedditHasGenerated] = useState(false);
+  
+  // Reset Reddit engagement state when switching posts
+  const resetRedditEngagementState = () => {
+    setRedditResponses([]);
+    setRedditIsLoading(false);
+    setRedditError(null);
+    setRedditHasGenerated(false);
+  };
 
   /**
    * Check for stored target post index on component mount
@@ -366,6 +381,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       setCurrentIndex(currentIndex + 1);
       setActiveTab('original'); // Reset to first tab when changing posts
       resetPostExpansion(); // Reset expansion state
+      resetRedditEngagementState(); // Reset Reddit engagement state
     }
   };
 
@@ -378,6 +394,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       setCurrentIndex(currentIndex - 1);
       setActiveTab('original'); // Reset to first tab when changing posts
       resetPostExpansion(); // Reset expansion state
+      resetRedditEngagementState(); // Reset Reddit engagement state
     }
   };
 
@@ -583,8 +600,16 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
               onClick={() => setActiveTab('content')}
               style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
             >
-              <span className="tab-label-desktop">Content Opportunity</span>
-              <span className="tab-label-mobile" style={{ display: 'none' }}>Content</span>
+              <span className="tab-label-desktop">Engage</span>
+              <span className="tab-label-mobile" style={{ display: 'none' }}>Engage</span>
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'creator' ? 'active' : ''}`}
+              onClick={() => setActiveTab('creator')}
+              style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
+            >
+              <span className="tab-label-desktop">Post Creator</span>
+              <span className="tab-label-mobile" style={{ display: 'none' }}>Create</span>
             </button>
           </div>
 
@@ -693,11 +718,65 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                   alignItems: 'center',
                   gap: '0.5rem'
                 }}>
-                  <span style={{ transform: 'translateY(-2px)' }}>💡</span> Content Opportunity
+                  <span style={{ transform: 'translateY(-2px)' }}>🚀</span> Engage
+                </h3>
+                {/* Reddit Engagement Section */}
+                <div style={{ marginTop: '0', marginBottom: '0' }}>
+                  <RedditEngagementPanel 
+                    post={currentPost}
+                    responses={redditResponses}
+                    setResponses={setRedditResponses}
+                    isLoading={redditIsLoading}
+                    setIsLoading={setRedditIsLoading}
+                    error={redditError}
+                    setError={setRedditError}
+                    hasGenerated={redditHasGenerated}
+                    setHasGenerated={setRedditHasGenerated}
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'audience' && (
+              <div className="tab-panel">
+                <h3 style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: '700', 
+                  color: '#1f2937', 
+                  marginBottom: '1.5rem',
+                  borderBottom: '2px solid #e5e7eb',
+                  paddingBottom: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ transform: 'translateY(-2px)' }}>👥</span> Audience Summary
+                </h3>
+                <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
+                  {formatAnalysisText(currentPost.analysis.audience_insight)}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'creator' && (
+              <div className="tab-panel">
+                <h3 style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: '700', 
+                  color: '#1f2937', 
+                  marginBottom: '1.5rem',
+                  borderBottom: '2px solid #e5e7eb',
+                  paddingBottom: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ transform: 'translateY(-2px)' }}>✨</span> Post Creator
                 </h3>
                 <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
                   {formatAnalysisText(currentPost.analysis.content_opportunity)}
                 </div>
+                
                 <div style={{ marginTop: '1.5rem', borderTop: '0.0625rem solid #e5e7eb', paddingTop: '1.5rem' }}>
                   <div className="content-buttons-container" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                     <button
@@ -766,27 +845,6 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                   }}>
                     Generate AEO-optimized content or viral LinkedIn posts using Reddit insights and Apollo brand kit
                   </p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'audience' && (
-              <div className="tab-panel">
-                <h3 style={{ 
-                  fontSize: '1.25rem', 
-                  fontWeight: '700', 
-                  color: '#1f2937', 
-                  marginBottom: '1.5rem',
-                  borderBottom: '2px solid #e5e7eb',
-                  paddingBottom: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <span style={{ transform: 'translateY(-2px)' }}>👥</span> Audience Summary
-                </h3>
-                <div className="tab-panel-content" style={{ fontSize: '1rem', lineHeight: '1.7' }}>
-                  {formatAnalysisText(currentPost.analysis.audience_insight)}
                 </div>
               </div>
             )}
