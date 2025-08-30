@@ -21,7 +21,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
   const [hasCompletedAnalysis, setHasCompletedAnalysis] = useState<boolean>(false);
   const analysisTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting'];
+  const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting', 'startups', 'entrepreneur', 'marketing', 'smallbusiness', 'business', 'b2bmarketing', 'b2b_sales', 'b2bsaas'];
 
 
   
@@ -371,7 +371,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
         {/* Time Filter Selection */}
         <div className="form-group">
           <label htmlFor="timeframe" className="form-label">
-            Post Recency Filter
+            Post Filter
           </label>
           <select
             id="timeframe"

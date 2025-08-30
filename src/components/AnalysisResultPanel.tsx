@@ -45,6 +45,54 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   }, [analyzedPosts.length]);
 
   /**
+   * Format Unix timestamp to relative time (Reddit-style with exact days)
+   * Why this matters: Matches Reddit's exact time calculation method using UTC dates for consistency
+   */
+  const formatRelativeTime = (created_utc: number): string => {
+    // Use UTC dates to match Reddit's calculation exactly
+    const now = new Date();
+    const postDate = new Date(created_utc * 1000);
+    
+    // Calculate difference in milliseconds, then convert to seconds
+    const diffMs = now.getTime() - postDate.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    
+    const minute = 60;
+    const hour = minute * 60;
+    const day = hour * 24;
+    const month = day * 30;
+    const year = day * 365;
+    
+    if (diffSeconds < minute) {
+      return 'just now';
+    } else if (diffSeconds < hour) {
+      const minutes = Math.floor(diffSeconds / minute);
+      return `${minutes} min. ago`;
+    } else if (diffSeconds < day) {
+      const hours = Math.floor(diffSeconds / hour);
+      return `${hours} hr. ago`;
+    } else if (diffSeconds < month) {
+      // Use calendar days instead of 24-hour periods for more accurate day counting
+      const nowUTC = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+      const postUTC = new Date(postDate.getUTCFullYear(), postDate.getUTCMonth(), postDate.getUTCDate());
+      const daysDiff = Math.floor((nowUTC.getTime() - postUTC.getTime()) / (24 * 60 * 60 * 1000));
+      
+      if (daysDiff === 0) {
+        const hours = Math.floor(diffSeconds / hour);
+        return `${hours} hr. ago`;
+      } else {
+        return `${daysDiff} day${daysDiff === 1 ? '' : 's'} ago`;
+      }
+    } else if (diffSeconds < year) {
+      const months = Math.floor(diffSeconds / month);
+      return `${months} mo. ago`;
+    } else {
+      const years = Math.floor(diffSeconds / year);
+      return `${years} yr. ago`;
+    }
+  };
+
+  /**
    * Format analysis text with proper line breaks, bullet points, and bold headlines
    * Why this matters: Converts backend-formatted text with \n and bullet points into properly rendered HTML
    * with bold formatting for headlines ending with ":"
@@ -476,7 +524,9 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
             <h4 className="post-title">{currentPost.title}</h4>
             <div className="post-meta">
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
-                <span className="post-subreddit">r/{currentPost.subreddit}</span>
+                <span className="post-subreddit">
+                  r/{currentPost.subreddit} • {formatRelativeTime(currentPost.created_utc)}
+                </span>
                 <a
                   href={currentPost.permalink}
                   target="_blank"
