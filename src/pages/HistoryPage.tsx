@@ -72,9 +72,16 @@ const HistoryPage: React.FC = () => {
    * Restore analysis results and navigate to app page
    * Why this matters: Allows users to view historical analysis results in the full interface
    */
-  const restoreAnalysis = (historyItem: HistoryItem) => {
+  const restoreAnalysis = (historyItem: HistoryItem, postIndex?: number) => {
     // Save the historical results to the current analysis localStorage key
     localStorage.setItem('apollo-analysis-results', JSON.stringify(historyItem.results));
+    
+    // Save the target post index if provided
+    if (postIndex !== undefined) {
+      localStorage.setItem('apollo-analysis-target-index', postIndex.toString());
+    } else {
+      localStorage.removeItem('apollo-analysis-target-index');
+    }
     
     // Navigate to the app page where the results will be displayed
     navigate('/app');
@@ -305,7 +312,7 @@ const HistoryPage: React.FC = () => {
             {historyItems.map((item) => (
               <div
                 key={item.id}
-                onClick={() => window.innerWidth <= 768 ? showMobileModalForItem(item) : setSelectedItem(item)}
+                onClick={() => restoreAnalysis(item)}
                 className={`history-card ${selectedItem?.id === item.id ? 'selected' : ''}`}
               >
                 <div className="history-card-header">
@@ -377,7 +384,7 @@ const HistoryPage: React.FC = () => {
                       <div 
                         key={post.id} 
                         className="insight-summary clickable"
-                        onClick={() => restoreAnalysis(selectedItem)}
+                        onClick={() => restoreAnalysis(selectedItem, index)}
                         title="Click to view full analysis"
                       >
                         <div className="insight-header">
