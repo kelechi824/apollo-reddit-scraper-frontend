@@ -871,8 +871,12 @@ footer {
     position: fixed;
     top: 0; /* Start from top of viewport */
     left: 0;
+    width: 220px;
     height: 100vh; /* Full viewport height */
     z-index: 100;
+    background: #ffffff;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    border-right: 1px solid #e5e7eb;
   }
   
   /* Navigation container - always expanded */
@@ -1115,15 +1119,19 @@ footer {
 /* Tablet and up: Add left margin to account for sidebar */
 @media (min-width: 48.0625rem) {
   .page-content {
-    margin-left: 240px; /* Account for 220px navigation + 20px spacing */
+    margin-left: 220px; /* Account for 220px navigation sidebar */
+    width: calc(100vw - 220px); /* Ensure content doesn't overflow */
     padding: 2rem; /* Add padding for content */
     height: 100vh; /* Full viewport height */
     overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal overflow */
+    box-sizing: border-box; /* Include padding in width calculation */
   }
   
-  /* Ensure proper spacing with expanded sidebar */
+  /* When sidebar is expanded, keep same margin since it overlays */
   .sidebar-expanded .page-content {
-    margin-left: 240px; /* 220px sidebar + 20px spacing */
+    margin-left: 220px; /* Match navigation width */
+    width: calc(100vw - 220px); /* Ensure content doesn't overflow */
   }
 }
 
