@@ -2112,9 +2112,9 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
         </div>
 
                 {/* Table Container */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '0.5rem', border: '1px solid #e5e7eb', overflowX: 'auto' }}>
           <div style={{ maxHeight: '65vh', overflow: 'auto' }}>
-            <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
+            <table style={{ width: '100%', minWidth: '1200px', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
             <colgroup>
               <col style={{ width: '32px' }} />
               <col style={{ width: '60%' }} />

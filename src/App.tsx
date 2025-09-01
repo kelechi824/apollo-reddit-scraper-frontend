@@ -69,52 +69,16 @@ const AppLayout: React.FC = () => {
     }, 300); // Match animation duration
   };
 
+
+
   return (
     <div className="app-container">
-      {/* Header */}
-      <header>
-        <div className="header-container">
-          <div className="header-left">
-            <Link to="/" className="apollo-logo-header">
-              <img src="/Apollo_logo_transparent.png" alt="Apollo Logo" />
-            </Link>
-          </div>
-          
-          {/* Header Actions */}
-          <div className="header-actions">
-            <button className="header-signup-btn">Sign up for free</button>
-            
-            {/* Mobile Hamburger Menu Button - Right aligned on mobile */}
-            <button 
-              className="mobile-menu-toggle mobile-only"
-              onClick={toggleMobileMenu}
-              aria-label="Toggle navigation menu"
-            >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className={`mobile-menu-overlay mobile-only ${isClosing ? 'closing' : ''}`} 
-          onClick={closeMobileMenu}
-        >
-          <div 
-            className={`mobile-menu-content ${isClosing ? 'closing' : ''}`} 
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Navigation onItemClick={closeMobileMenu} />
-          </div>
-        </div>
-      )}
-
-      {/* Main Layout */}
-      <div className="main-layout">
+      {/* Main Layout - Full viewport without header */}
+      <div className="main-layout sidebar-expanded">
         {/* Left Navigation */}
-        <Navigation />
+        <div className="navigation-container">
+          <Navigation />
+        </div>
 
         {/* Page Content */}
         <div className="page-content">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target, MessageCircle, Workflow, Swords, Database, Map } from 'lucide-react';
+import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target, MessageCircle, Workflow, Swords, Database, Map, Package, Brain } from 'lucide-react';
 import { FEATURE_FLAGS, FeatureFlags } from '../utils/featureFlags';
 
 interface NavigationProps {
@@ -12,19 +12,19 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
   const [showRedditAnalysisSubMenu, setShowRedditAnalysisSubMenu] = useState(false);
   const [showKitsSection, setShowKitsSection] = useState(false);
   const [showKnowledgeBaseSection, setShowKnowledgeBaseSection] = useState(false);
-  const [showSettingsSection, setShowSettingsSection] = useState(false);
+
 
   /**
-   * Handle Blog Creator hover/click to show sub-menu
-   * Why this matters: Provides access to blog history via hover/click interaction
+   * Handle Blog Creator click to toggle sub-menu
+   * Why this matters: Provides access to blog history via click interaction
    */
   const handleBlogCreatorInteraction = (show: boolean) => {
     setShowBlogSubMenu(show);
   };
 
   /**
-   * Handle Reddit Analysis hover/click to show sub-menu
-   * Why this matters: Provides access to analysis history via hover/click interaction
+   * Handle Reddit Analysis click to toggle sub-menu
+   * Why this matters: Provides access to analysis history via click interaction
    */
   const handleRedditAnalysisInteraction = (show: boolean) => {
     setShowRedditAnalysisSubMenu(show);
@@ -46,23 +46,22 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
     setShowKnowledgeBaseSection(!showKnowledgeBaseSection);
   };
 
-  /**
-   * Toggle Settings section visibility
-   * Why this matters: Allows users to expand/collapse the Settings section for cleaner navigation
-   */
-  const toggleSettingsSection = () => {
-    setShowSettingsSection(!showSettingsSection);
-  };
+
 
   return (
-    <nav className="navigation">
+    <nav className="navigation navigation-expanded">
+      {/* Apollo Logo Section */}
+      <div className="nav-logo-section">
+        <div className="apollo-logo-container">
+          <img src="/Apollo_logo_transparent.png" alt="Apollo" className="apollo-logo-full" />
+        </div>
+      </div>
+      
       <div className="nav-menu">
-        <div className="nav-section">
-          <div className="nav-section-title">Tools</div>
+        <div className="nav-section nav-section-main">
           <div 
             className="nav-item-with-submenu"
-            onMouseEnter={() => handleRedditAnalysisInteraction(true)}
-            onMouseLeave={() => handleRedditAnalysisInteraction(false)}
+            onClick={() => handleRedditAnalysisInteraction(!showRedditAnalysisSubMenu)}
           >
             <div className="nav-item nav-item-unclickable">
               <MessageCircle className="nav-icon" />
@@ -94,8 +93,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
           
           <div 
             className="nav-item-with-submenu"
-            onMouseEnter={() => handleBlogCreatorInteraction(true)}
-            onMouseLeave={() => handleBlogCreatorInteraction(false)}
+            onClick={() => handleBlogCreatorInteraction(!showBlogSubMenu)}
           >
             <div className="nav-item nav-item-unclickable">
               <PenTool className="nav-icon" />
@@ -181,84 +179,82 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             onClick={onItemClick}
           >
             <FileText className="nav-icon" />
-            Playbooks Creator
+            Playbook Creator
           </NavLink>
           
         </div>
         
-        <div className="nav-section">
-          <div 
-            className="nav-section-title clickable" 
-            onClick={toggleKitsSection}
-          >
-            <span>Kits</span>
-            <ChevronRight className={`nav-submenu-icon ${showKitsSection ? 'rotated' : ''}`} />
-          </div>
-          {showKitsSection && (
-            <div className="nav-section-content">
-              <NavLink 
-                to="/brand-kit" 
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                onClick={onItemClick}
-              >
-                <BookOpen className="nav-icon" />
-                Brand Kit
-              </NavLink>
-              
-              <NavLink 
-                to="/voc-kit" 
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                onClick={onItemClick}
-              >
-                <Users className="nav-icon" />
-                VoC Kit
-              </NavLink>
+        {/* Bottom utility sections */}
+        <div className="nav-section-bottom">
+          <div className="nav-section">
+            <div 
+              className="nav-item-with-submenu"
+              onClick={toggleKitsSection}
+            >
+              <div className="nav-item nav-item-unclickable">
+                <Package className="nav-icon" />
+                <span>Kits</span>
+                <ChevronRight className={`nav-submenu-icon ${showKitsSection ? 'rotated' : ''}`} />
+              </div>
             </div>
-          )}
-        </div>
-        
-        <div className="nav-section">
-          <div 
-            className="nav-section-title clickable" 
-            onClick={toggleKnowledgeBaseSection}
-          >
-            <span>Knowledge Base</span>
-            <ChevronRight className={`nav-submenu-icon ${showKnowledgeBaseSection ? 'rotated' : ''}`} />
+            {showKitsSection && (
+              <div className="nav-submenu">
+                <NavLink 
+                  to="/brand-kit" 
+                  className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
+                  onClick={onItemClick}
+                >
+                  <BookOpen className="nav-icon" />
+                  Brand Kit
+                </NavLink>
+                
+                <NavLink 
+                  to="/voc-kit" 
+                  className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
+                  onClick={onItemClick}
+                >
+                  <Users className="nav-icon" />
+                  VoC Kit
+                </NavLink>
+              </div>
+            )}
           </div>
-          {showKnowledgeBaseSection && (
-            <div className="nav-section-content">
-              <NavLink 
-                to="/knowledge-base/sitemap" 
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                onClick={onItemClick}
-              >
-                <Map className="nav-icon" />
-                Sitemap
-              </NavLink>
+          
+          <div className="nav-section">
+            <div 
+              className="nav-item-with-submenu"
+              onClick={toggleKnowledgeBaseSection}
+            >
+              <div className="nav-item nav-item-unclickable">
+                <Brain className="nav-icon" />
+                <span>Knowledge Base</span>
+                <ChevronRight className={`nav-submenu-icon ${showKnowledgeBaseSection ? 'rotated' : ''}`} />
+              </div>
             </div>
-          )}
-        </div>
-        
-        <div className="nav-section">
-          <div 
-            className="nav-section-title clickable" 
-            onClick={toggleSettingsSection}
-          >
-            <span>Settings</span>
-            <ChevronRight className={`nav-submenu-icon ${showSettingsSection ? 'rotated' : ''}`} />
+            {showKnowledgeBaseSection && (
+              <div className="nav-submenu">
+                <NavLink 
+                  to="/knowledge-base/sitemap" 
+                  className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
+                  onClick={onItemClick}
+                >
+                  <Map className="nav-icon" />
+                  Sitemap
+                </NavLink>
+              </div>
+            )}
           </div>
-          {showSettingsSection && (
-            <div className="nav-section-content">
-              <NavLink 
-                to="/settings" 
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                onClick={onItemClick}
-              >
-                <Settings className="nav-icon" />
-                Settings
-              </NavLink>
-            </div>
-          )}
+          
+          <div className="nav-section">
+            <NavLink 
+              to="/settings" 
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              onClick={onItemClick}
+            >
+              <Settings className="nav-icon" />
+              <span>Settings</span>
+            </NavLink>
+          </div>
         </div>
       </div>
 
@@ -273,7 +269,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             width: 1rem;
             height: 1rem;
             margin-left: auto;
-            transition: transform 0.2s ease;
+
           }
 
           .nav-submenu-icon.rotated {
@@ -291,13 +287,12 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
           .nav-submenu-item {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
             color: #6b7280;
             text-decoration: none;
             border-radius: 0.5rem;
-            transition: all 0.2s ease;
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             margin-bottom: 0.25rem;
           }
 
@@ -313,8 +308,8 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
           }
 
           .nav-submenu-item .nav-icon {
-            width: 1rem;
-            height: 1rem;
+            width: 0.875rem;
+            height: 0.875rem;
           }
 
           .nav-item-unclickable {
@@ -325,7 +320,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             color: #374151;
             text-decoration: none;
             border-radius: 0.5rem;
-            transition: all 0.2s ease;
+
             cursor: default;
           }
 
@@ -339,7 +334,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             font-size: 0.75rem;
             font-weight: 600;
             user-select: none;
-            transition: color 0.2s ease;
+
           }
 
           .nav-section-title.clickable:hover {
