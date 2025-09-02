@@ -29,19 +29,50 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   const [isLinkedInPostModalOpen, setIsLinkedInPostModalOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   
-  // Reddit Engagement State - lifted up to persist across tab switches
+  // Reddit Engagement State - simple approach with localStorage persistence
   const [redditResponses, setRedditResponses] = useState<any[]>([]);
   const [redditIsLoading, setRedditIsLoading] = useState(false);
   const [redditError, setRedditError] = useState<string | null>(null);
   const [redditHasGenerated, setRedditHasGenerated] = useState(false);
   
-  // Reset Reddit engagement state when switching posts
-  const resetRedditEngagementState = () => {
-    setRedditResponses([]);
-    setRedditIsLoading(false);
-    setRedditError(null);
-    setRedditHasGenerated(false);
-  };
+  // Load persisted data when switching posts
+  React.useEffect(() => {
+    const currentPost = analyzedPosts[currentIndex];
+    if (currentPost) {
+      const postKey = currentPost.id || `post-${currentIndex}`;
+      const stored = localStorage.getItem(`reddit-engagement-${workflowId}-${postKey}`);
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          setRedditResponses(data.responses || []);
+          setRedditHasGenerated(data.hasGenerated || false);
+          setRedditError(null);
+          setRedditIsLoading(false);
+        } catch (error) {
+          console.error('Error loading stored Reddit engagement data:', error);
+        }
+      } else {
+        // Reset state for new post
+        setRedditResponses([]);
+        setRedditHasGenerated(false);
+        setRedditError(null);
+        setRedditIsLoading(false);
+      }
+    }
+  }, [currentIndex, analyzedPosts, workflowId]);
+  
+  // Save data when responses change
+  React.useEffect(() => {
+    const currentPost = analyzedPosts[currentIndex];
+    if (currentPost && (redditResponses.length > 0 || redditHasGenerated)) {
+      const postKey = currentPost.id || `post-${currentIndex}`;
+      const dataToStore = {
+        responses: redditResponses,
+        hasGenerated: redditHasGenerated
+      };
+      localStorage.setItem(`reddit-engagement-${workflowId}-${postKey}`, JSON.stringify(dataToStore));
+    }
+  }, [redditResponses, redditHasGenerated, currentIndex, analyzedPosts, workflowId]);
 
   /**
    * Check for stored target post index on component mount
@@ -381,7 +412,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       setCurrentIndex(currentIndex + 1);
       setActiveTab('original'); // Reset to first tab when changing posts
       resetPostExpansion(); // Reset expansion state
-      resetRedditEngagementState(); // Reset Reddit engagement state
+      // Reddit engagement state now persists per-post, no reset needed
     }
   };
 
@@ -394,7 +425,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       setCurrentIndex(currentIndex - 1);
       setActiveTab('original'); // Reset to first tab when changing posts
       resetPostExpansion(); // Reset expansion state
-      resetRedditEngagementState(); // Reset Reddit engagement state
+      // Reddit engagement state now persists per-post, no reset needed
     }
   };
 
@@ -598,10 +629,52 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
             <button
               className={`tab-btn ${activeTab === 'content' ? 'active' : ''}`}
               onClick={() => setActiveTab('content')}
-              style={{ fontSize: '1rem', padding: '0.875rem 1.25rem' }}
+              style={{ 
+                fontSize: '1rem', 
+                padding: '0.875rem 1.25rem',
+                position: 'relative',
+                overflow: 'visible'
+              }}
             >
               <span className="tab-label-desktop">Engage</span>
               <span className="tab-label-mobile" style={{ display: 'none' }}>Engage</span>
+              
+              {/* New Feature Badge */}
+              <span 
+                className="new-feature-badge"
+                style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  fontSize: '0.625rem',
+                  fontWeight: '600',
+                  padding: '3px 6px',
+                  borderRadius: '12px',
+                  animation: 'pulse-glow 2s infinite',
+                  boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)',
+                  zIndex: 10,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                NEW
+              </span>
+              
+              {/* Shimmer Effect */}
+              <div 
+                className="shimmer-effect"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                  animation: 'shimmer 3s infinite',
+                  pointerEvents: 'none'
+                }}
+              />
             </button>
             <button
               className={`tab-btn ${activeTab === 'creator' ? 'active' : ''}`}
@@ -613,11 +686,41 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
             </button>
           </div>
 
-          {/* Mobile-specific CSS */}
+          {/* Mobile-specific CSS and New Feature Animations */}
           <style>
             {`
               .content-buttons-container {
                 justify-content: flex-start;
+              }
+
+              /* New Feature Animations */
+              @keyframes pulse-glow {
+                0%, 100% {
+                  transform: scale(1);
+                  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+                }
+                50% {
+                  transform: scale(1.1);
+                  box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
+                }
+              }
+
+              @keyframes shimmer {
+                0% {
+                  left: -100%;
+                }
+                100% {
+                  left: 100%;
+                }
+              }
+
+              /* Hide animations when tab is active */
+              .tab-btn.active .new-feature-badge {
+                display: none;
+              }
+
+              .tab-btn.active .shimmer-effect {
+                display: none;
               }
 
               @media (max-width: 768px) {
@@ -633,6 +736,15 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                 }
                 .content-buttons-container {
                   justify-content: center;
+                }
+                
+                /* Adjust badge size for mobile */
+                .new-feature-badge {
+                  font-size: 0.5rem !important;
+                  padding: 2px 4px !important;
+                  top: -6px !important;
+                  right: -6px !important;
+                  border-radius: 8px !important;
                 }
               }
             `}

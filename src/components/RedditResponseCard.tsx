@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, Search, X, Edit3, RefreshCw, Save } from 'lucide-react';
+import { Copy, Check, Search, X, Edit3, RefreshCw, Save, ExternalLink } from 'lucide-react';
 import { RedditResponse, AnalyzedPost } from '../types';
 
 interface RedditResponseCardProps {
@@ -17,6 +17,7 @@ interface RedditResponseCardProps {
  */
 const RedditResponseCard: React.FC<RedditResponseCardProps> = ({ response, index, post, onEdit, onRegenerate }) => {
   const [copied, setCopied] = useState(false);
+  const [copiedAndOpened, setCopiedAndOpened] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(response.content);
@@ -173,6 +174,45 @@ const RedditResponseCard: React.FC<RedditResponseCardProps> = ({ response, index
         setTimeout(() => setCopied(false), 2000);
       } catch (fallbackError) {
         console.error('Fallback copy failed:', fallbackError);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  /**
+   * Handle copy and open post functionality
+   * Why this matters: Streamlines workflow by combining copy and navigation actions
+   */
+  const handleCopyAndOpenPost = async () => {
+    try {
+      // First copy the content
+      await navigator.clipboard.writeText(response.content);
+      setCopiedAndOpened(true);
+      
+      // Then open the Reddit post in a new tab
+      window.open(post.permalink, '_blank', 'noopener,noreferrer');
+      
+      // Reset state after 2 seconds
+      setTimeout(() => {
+        setCopiedAndOpened(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy and open post:', error);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = response.content;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopiedAndOpened(true);
+        
+        // Still try to open the post
+        window.open(post.permalink, '_blank', 'noopener,noreferrer');
+        
+        setTimeout(() => setCopiedAndOpened(false), 2000);
+      } catch (fallbackError) {
+        console.error('Fallback copy and open failed:', fallbackError);
       }
       document.body.removeChild(textArea);
     }
@@ -377,7 +417,7 @@ const RedditResponseCard: React.FC<RedditResponseCardProps> = ({ response, index
             Regenerate this comment
           </button>
 
-          {/* Copy Button */}
+          {/* Copy to Clipboard Button */}
           <button
             onClick={handleCopy}
             style={{
@@ -413,7 +453,48 @@ const RedditResponseCard: React.FC<RedditResponseCardProps> = ({ response, index
             ) : (
               <>
                 <Copy style={{ width: '0.875rem', height: '0.875rem' }} />
-                Copy
+                Copy to clipboard
+              </>
+            )}
+          </button>
+
+          {/* Copy & Open Post Button */}
+          <button
+            onClick={handleCopyAndOpenPost}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              padding: '0.5rem 0.75rem',
+              backgroundColor: copiedAndOpened ? '#10b981' : '#D93801',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.5rem',
+              fontSize: '0.75rem',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (!copiedAndOpened) {
+                e.currentTarget.style.backgroundColor = '#B8300A';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!copiedAndOpened) {
+                e.currentTarget.style.backgroundColor = '#D93801';
+              }
+            }}
+          >
+            {copiedAndOpened ? (
+              <>
+                <Check style={{ width: '0.875rem', height: '0.875rem' }} />
+                Copied & opened!
+              </>
+            ) : (
+              <>
+                <ExternalLink style={{ width: '0.875rem', height: '0.875rem' }} />
+                Copy & open post
               </>
             )}
           </button>
