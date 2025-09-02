@@ -1,7 +1,7 @@
 /**
  * Contextual CTA Service
  * Why this matters: Provides a centralized service for enhancing content with contextual CTAs
- * across all workflows (Blog Creator, Competitor Conquesting, Reddit Content Creation)
+ * across all workflows (Blog Agents, Outrank Competitors, Reddit Content Creation)
  */
 
 import { API_ENDPOINTS } from '../config/api';

@@ -9,25 +9,25 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
   const [showBlogSubMenu, setShowBlogSubMenu] = useState(false);
-  const [showRedditAnalysisSubMenu, setShowRedditAnalysisSubMenu] = useState(false);
+  const [showRedditAgentsSubMenu, setShowRedditAgentsSubMenu] = useState(false);
   const [showKitsSection, setShowKitsSection] = useState(false);
   const [showKnowledgeBaseSection, setShowKnowledgeBaseSection] = useState(false);
 
 
   /**
-   * Handle Blog Creator click to toggle sub-menu
+   * Handle Blog Agents click to toggle sub-menu
    * Why this matters: Provides access to blog history via click interaction
    */
-  const handleBlogCreatorInteraction = (show: boolean) => {
+  const handleBlogAgentsInteraction = (show: boolean) => {
     setShowBlogSubMenu(show);
   };
 
   /**
-   * Handle Reddit Analysis click to toggle sub-menu
+   * Handle Reddit Agents click to toggle sub-menu
    * Why this matters: Provides access to analysis history via click interaction
    */
-  const handleRedditAnalysisInteraction = (show: boolean) => {
-    setShowRedditAnalysisSubMenu(show);
+  const handleRedditAgentsInteraction = (show: boolean) => {
+    setShowRedditAgentsSubMenu(show);
   };
 
   /**
@@ -61,15 +61,15 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
         <div className="nav-section nav-section-main">
           <div 
             className="nav-item-with-submenu"
-            onClick={() => handleRedditAnalysisInteraction(!showRedditAnalysisSubMenu)}
+            onClick={() => handleRedditAgentsInteraction(!showRedditAgentsSubMenu)}
           >
             <div className="nav-item nav-item-unclickable">
               <MessageCircle className="nav-icon" />
-              Reddit Analysis
-              <ChevronRight className={`nav-submenu-icon ${showRedditAnalysisSubMenu ? 'rotated' : ''}`} />
+              Reddit Agents
+              <ChevronRight className={`nav-submenu-icon ${showRedditAgentsSubMenu ? 'rotated' : ''}`} />
             </div>
             
-            {showRedditAnalysisSubMenu && (
+            {showRedditAgentsSubMenu && (
               <div className="nav-submenu">
                 <NavLink 
                   to="/app" 
@@ -93,11 +93,11 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
           
           <div 
             className="nav-item-with-submenu"
-            onClick={() => handleBlogCreatorInteraction(!showBlogSubMenu)}
+            onClick={() => handleBlogAgentsInteraction(!showBlogSubMenu)}
           >
             <div className="nav-item nav-item-unclickable">
               <PenTool className="nav-icon" />
-              Blog Creator
+              Blog Agents
               <ChevronRight className={`nav-submenu-icon ${showBlogSubMenu ? 'rotated' : ''}`} />
             </div>
             
@@ -109,7 +109,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
                   onClick={onItemClick}
                 >
                   <Workflow className="nav-icon" />
-                  Create
+                  Create AEO Articles
                 </NavLink>
                 <NavLink 
                   to="/competitor-conquesting" 
@@ -117,7 +117,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
                   onClick={onItemClick}
                 >
                   <Swords className="nav-icon" />
-                  Competitor Conquesting
+                  Outrank Competitors
                 </NavLink>
                 <NavLink 
                   to="/blog-history" 
@@ -125,7 +125,7 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
                   onClick={onItemClick}
                 >
                   <Clock className="nav-icon" />
-                  Blog Content History
+                  History
                 </NavLink>
               </div>
             )}
