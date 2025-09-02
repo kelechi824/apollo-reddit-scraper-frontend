@@ -301,7 +301,7 @@ const VariablesMenu: React.FC<{
 
 /**
  * BlogContentActionModal Component
- * Why this matters: Provides post-generation actions for Blog Creator content that are identical to ContentCreationModal
+ * Why this matters: Provides post-generation actions for Blog Agents content that are identical to ContentCreationModal
  * for consistent UX - edit, publish, copy, and manage generated articles with brand kit integration.
  */
 const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({ 
@@ -406,7 +406,7 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
   const rightPanelRef = useRef<HTMLDivElement>(null);
   const editableContentRef = useRef<HTMLTextAreaElement>(null);
 
-  // Generation progress messages for Blog Creator
+  // Generation progress messages for Blog Agents
   const generationMessages = [
     'Extracting content from top search results with Firecrawl...',
     'Performing comprehensive OpenAI Deep Research...',
@@ -1399,7 +1399,7 @@ Respond with JSON:
   };
 
   /**
-   * Generate system and user prompts for Blog Creator context
+   * Generate system and user prompts for Blog Agents context
    * Why this matters: Creates targeted prompts for regenerating or editing existing content.
    */
   const generateInitialPrompts = () => {

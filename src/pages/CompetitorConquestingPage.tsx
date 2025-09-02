@@ -872,7 +872,7 @@ const CompetitorConquestingPage: React.FC = () => {
               output: completedContent,
               workflowDetails,
               metadata: {
-                title: metadata.title || `${row.keyword} - Competitor Conquesting`,
+                title: metadata.title || `${row.keyword} - Outrank Competitors`,
                 description: metadata.description || `Outranking competitor for ${row.keyword}`,
                 metaSeoTitle: metadata.metaSeoTitle || undefined, // Include AI-generated meta title
                 metaDescription: metadata.metaDescription || undefined, // Include AI-generated meta description
@@ -1039,7 +1039,7 @@ const CompetitorConquestingPage: React.FC = () => {
             color: '#111827',
             marginBottom: '0.5rem'
           }}>
-            Competitor Conquesting
+            Outrank Competitors
           </h1>
           <p style={{ 
             fontSize: '0.875rem',

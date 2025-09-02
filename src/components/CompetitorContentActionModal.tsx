@@ -1978,7 +1978,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       };
       
       // Use the competitor-specific function which creates/uses a spreadsheet titled
-      // "Apollo Competitor Conquesting Content - {date}"
+      // "Apollo Outrank Competitors Content - {date}"
       const result = await (googleDocsService as any).appendCompetitorData(blogData);
       
       if (result.success) {

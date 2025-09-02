@@ -47,7 +47,7 @@ interface BackendDetailsPopupProps {
   onMobileClose?: () => void;
   /**
    * Dismiss behavior control
-   * Why this matters: Competitor Conquesting requires X-only close; other pages keep hover-delay.
+   * Why this matters: Outrank Competitors requires X-only close; other pages keep hover-delay.
    */
   dismissBehavior?: 'manual' | 'hover-delay';
   /**

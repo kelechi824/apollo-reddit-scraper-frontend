@@ -458,10 +458,10 @@ const BlogCreatorPage: React.FC = () => {
 
   /**
    * Load saved progress from localStorage on mount
-   * Why this matters: Restores user's Blog Creator workflow progress across page refreshes, preventing data loss.
+   * Why this matters: Restores user's Blog Agents workflow progress across page refreshes, preventing data loss.
    */
   useEffect(() => {
-    const savedProgress = localStorage.getItem('apollo_blog_creator_progress');
+    const savedProgress = localStorage.getItem('apollo_blog_agents_progress');
     
     if (savedProgress) {
       try {
@@ -506,11 +506,11 @@ const BlogCreatorPage: React.FC = () => {
           setSequentialRemaining(progress.sequentialRemaining);
         }
         
-        console.log('Blog Creator progress restored from localStorage');
+        console.log('Blog Agents progress restored from localStorage');
       } catch (error) {
-        console.error('Error loading saved Blog Creator progress:', error);
+        console.error('Error loading saved Blog Agents progress:', error);
         // Clear corrupted data
-        localStorage.removeItem('apollo_blog_creator_progress');
+        localStorage.removeItem('apollo_blog_agents_progress');
       }
     }
 
@@ -556,14 +556,14 @@ const BlogCreatorPage: React.FC = () => {
         };
         
         try {
-          localStorage.setItem('apollo_blog_creator_progress', JSON.stringify(progressData));
+          localStorage.setItem('apollo_blog_agents_progress', JSON.stringify(progressData));
           setAutoSaveStatus('saved');
         } catch (storageError: any) {
           // Handle localStorage quota exceeded
           if (storageError.name === 'QuotaExceededError') {
             console.warn('LocalStorage quota exceeded, clearing old data and retrying...');
             // Clear old auto-save data and try again with minimal data
-            localStorage.removeItem('apollo_blog_creator_progress');
+            localStorage.removeItem('apollo_blog_agents_progress');
             const minimalData = {
               keywords: keywords.map(keyword => ({
                 id: keyword.id,
@@ -579,7 +579,7 @@ const BlogCreatorPage: React.FC = () => {
               selectedRows: Array.from(selectedRows),
               timestamp: new Date().toISOString()
             };
-            localStorage.setItem('apollo_blog_creator_progress', JSON.stringify(minimalData));
+            localStorage.setItem('apollo_blog_agents_progress', JSON.stringify(minimalData));
             setAutoSaveStatus('saved');
           } else {
             throw storageError;
@@ -589,7 +589,7 @@ const BlogCreatorPage: React.FC = () => {
         // Clear the "saved" status after 2 seconds
         setTimeout(() => setAutoSaveStatus(''), 2000);
       } catch (error) {
-        console.error('Blog Creator auto-save failed:', error);
+        console.error('Blog Agents auto-save failed:', error);
         setAutoSaveStatus('');
       }
     }, 1000); // Save after 1 second of inactivity
@@ -623,7 +623,7 @@ const BlogCreatorPage: React.FC = () => {
    * Why this matters: Allows users to start fresh by clearing localStorage data.
    */
   const clearSavedProgress = (): void => {
-    localStorage.removeItem('apollo_blog_creator_progress');
+    localStorage.removeItem('apollo_blog_agents_progress');
     setKeywords([]);
     setSelectedRows(new Set());
     setSortField(null);
@@ -632,7 +632,7 @@ const BlogCreatorPage: React.FC = () => {
     setIsSequentialRunning(false);
     setUploadError(null);
     setUploadSuccess(null);
-    console.log('Blog Creator progress cleared');
+    console.log('Blog Agents progress cleared');
   };
 
   /**
@@ -2009,7 +2009,7 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
             color: '#111827',
             marginBottom: '0.5rem'
           }}>
-              Blog Creator
+              Blog Agents
             </h1>
           <p style={{ 
                  fontSize: '0.875rem',

@@ -791,8 +791,8 @@ class GoogleDocsService {
   }
 
   /**
-   * Create new Apollo Competitor Conquesting Content tracking spreadsheet
-   * Why this matters: Creates a properly formatted spreadsheet with headers for tracking competitor content generation.
+   * Create new Apollo Outrank Competitors Content tracking spreadsheet
+   * Why this matters: Creates a properly formatted spreadsheet with headers for tracking outrank competitors content generation.
    */
   async createCompetitorSpreadsheet(): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
     if (!this.isAuthenticated()) {
@@ -803,7 +803,7 @@ class GoogleDocsService {
       window.gapi.client.setToken({ access_token: this.accessToken });
 
       const today = new Date().toLocaleDateString();
-      const spreadsheetTitle = `Apollo Competitor Conquesting Content - ${today}`;
+      const spreadsheetTitle = `Apollo Outrank Competitors Content - ${today}`;
 
       // Create new spreadsheet
       const createResponse = await window.gapi.client.sheets.spreadsheets.create({
