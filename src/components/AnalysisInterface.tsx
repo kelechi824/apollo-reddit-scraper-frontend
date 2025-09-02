@@ -21,7 +21,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
   const [hasCompletedAnalysis, setHasCompletedAnalysis] = useState<boolean>(false);
   const analysisTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting', 'startups', 'entrepreneur', 'marketing', 'smallbusiness', 'business', 'b2bmarketing', 'b2b_sales', 'b2bsaas', 'coldemail', 'emailmarketing'];
+  const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting', 'startups', 'entrepreneur', 'marketing', 'smallbusiness', 'business', 'b2bmarketing', 'b2b_sales', 'b2bsaas', 'coldemail', 'emailmarketing', 'salesdevelopment', 'saas', 'leadgeneration', 'coldcalling', 'leadgen', 'marketingautomation', 'crm'];
 
 
   
@@ -414,7 +414,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
           <div className="error-container">
             <AlertCircle className="error-icon" />
             <div>
-              <p className="error-title">Analysis Error</p>
+              <p className="error-title">No Results Found</p>
               <p className="error-text">{error}</p>
             </div>
           </div>

@@ -683,29 +683,50 @@ main {
 /* Error Styles */
 .error-container {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
   padding: 1.5rem;
   background: #fef2f2;
-  border: 0.125rem solid #fecaca;
-  border-radius: 1.5rem;
+  border: 0.0625rem solid #fecaca;
+  border-radius: 1rem;
   color: #991b1b;
+  box-shadow: 0 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1), 0 0.125rem 0.25rem -0.125rem rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.error-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0.25rem;
+  background: linear-gradient(90deg, #dc2626, #ef4444);
 }
 
 .error-icon {
-  width: 2rem;
-  height: 2rem;
+  width: 1.5rem;
+  height: 1.5rem;
   flex-shrink: 0;
+  color: #dc2626;
+  margin-top: 0.125rem;
 }
 
 .error-title {
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 600;
   margin: 0;
+  color: #7f1d1d;
+  letter-spacing: -0.025em;
 }
 
 .error-text {
-  margin: 0.25rem 0 0 0;
+  margin: 0.5rem 0 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #991b1b;
 }
 
 /* Footer */
