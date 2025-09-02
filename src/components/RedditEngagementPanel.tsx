@@ -41,7 +41,7 @@ const RedditEngagementPanel: React.FC<RedditEngagementPanelProps> = ({
   setResponses, 
   isLoading, 
   setIsLoading, 
-  error, 
+  error,
   setError, 
   hasGenerated, 
   setHasGenerated 
@@ -252,7 +252,7 @@ const RedditEngagementPanel: React.FC<RedditEngagementPanelProps> = ({
           margin: 0,
           marginBottom: '0.75rem'
         }}>
-          Reddit Engagement Responses
+          Let's Engage!
         </h4>
         <p style={{ 
           fontSize: '0.875rem', 
@@ -261,7 +261,7 @@ const RedditEngagementPanel: React.FC<RedditEngagementPanelProps> = ({
           lineHeight: '1.5',
           marginBottom: '0.5rem'
         }}>
-          Get 5 ready-to-use responses tailored to this Reddit post.
+          Get 5 ready-to-use comments tailored to this Reddit post.
         </p>
 
 
@@ -292,7 +292,7 @@ const RedditEngagementPanel: React.FC<RedditEngagementPanelProps> = ({
               }}
             >
               <MessageSquare style={{ width: '1rem', height: '1rem' }} />
-              Generate 5 Reddit Responses
+              Generate comments
             </button>
           </div>
         )}
@@ -347,14 +347,14 @@ const RedditEngagementPanel: React.FC<RedditEngagementPanelProps> = ({
             margin: 0,
             marginBottom: '0.5rem'
           }}>
-            Generating Reddit Responses...
+            Generating comments...
           </p>
           <p style={{ 
             fontSize: '0.8125rem', 
             color: '#6b7280',
             margin: 0
           }}>
-            Creating authentic responses for this post that follow Reddit community guidelines
+            Creating authentic responses for this post that follow Reddit community guidelines...
           </p>
         </div>
       )}
