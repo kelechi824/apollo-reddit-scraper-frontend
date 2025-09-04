@@ -247,7 +247,7 @@ const RedditResponseCard: React.FC<RedditResponseCardProps> = ({ response, index
         };
       case 'RESOURCE_RECOMMENDATION':
         return {
-          label: 'Recommend Resource',
+          label: 'Resourceful',
           emoji: '📚',
           color: '#ea580c', // Orange
           bgColor: '#fff7ed'
@@ -343,7 +343,7 @@ const RedditResponseCard: React.FC<RedditResponseCardProps> = ({ response, index
             }}
           >
             <Search style={{ width: '0.75rem', height: '0.75rem' }} />
-            See Original Post
+            Original Post
           </span>
         </div>
         
@@ -414,7 +414,7 @@ const RedditResponseCard: React.FC<RedditResponseCardProps> = ({ response, index
             }}
           >
             <RefreshCw style={{ width: '0.875rem', height: '0.875rem' }} />
-            Regenerate this comment
+            Regenerate comment
           </button>
 
           {/* Copy to Clipboard Button */}
@@ -453,7 +453,7 @@ const RedditResponseCard: React.FC<RedditResponseCardProps> = ({ response, index
             ) : (
               <>
                 <Copy style={{ width: '0.875rem', height: '0.875rem' }} />
-                Copy to clipboard
+                Copy comment
               </>
             )}
           </button>
@@ -727,9 +727,12 @@ const RedditResponseCard: React.FC<RedditResponseCardProps> = ({ response, index
                     backgroundColor: '#f9fafb',
                     padding: '1rem',
                     borderRadius: '0.5rem',
-                    border: '1px solid #f3f4f6'
+                    border: '1px solid #f3f4f6',
+                    whiteSpace: 'pre-wrap',
+                    maxHeight: '300px',
+                    overflowY: 'auto'
                   }}>
-                    {post.content}
+                    {post.content.replace(/\\n/g, '\n')}
                   </div>
                 )}
               </div>
