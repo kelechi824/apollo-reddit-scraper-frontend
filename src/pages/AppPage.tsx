@@ -4,6 +4,7 @@ import AnalysisResultPanel from '../components/AnalysisResultPanel';
 import { WorkflowResponse } from '../types';
 import { API_BASE_URL, buildApiUrl } from '../config/api';
 import { StorageManager } from '../utils/StorageManager';
+import { StorageDebug } from '../utils/storageDebug';
 import { FEATURE_FLAGS } from '../utils/featureFlags';
 
 const AppPage: React.FC = () => {
@@ -19,15 +20,14 @@ const AppPage: React.FC = () => {
    * Why this matters: Preserves user's analysis results when they navigate away and come back
    */
   useEffect(() => {
-    const savedResults = localStorage.getItem('apollo-analysis-results');
+    const savedResults = StorageManager.getAnalysisResults();
     if (savedResults) {
-      try {
-        const parsedResults = JSON.parse(savedResults) as WorkflowResponse;
-        setCurrentResults(parsedResults);
-      } catch (error) {
-        console.error('Failed to parse saved results:', error);
-        localStorage.removeItem('apollo-analysis-results');
-      }
+      setCurrentResults(savedResults as WorkflowResponse);
+    }
+    
+    // Initialize storage debugging in development
+    if (process.env.NODE_ENV === 'development') {
+      StorageDebug.logStorageUsage();
     }
   }, []);
 
@@ -52,10 +52,28 @@ const AppPage: React.FC = () => {
    * Why this matters: Updates the results panel with new analysis data and saves to localStorage
    */
   const handleAnalysisComplete = (results: WorkflowResponse) => {
+    console.log('🎯 AppPage received analysis results:', results);
+    console.log('🎯 Results structure check:', {
+      analyzed_posts: results?.analyzed_posts?.length,
+      workflow_id: results?.workflow_id,
+      reddit_results: results?.reddit_results,
+      pattern_analysis: !!results?.pattern_analysis
+    });
+    console.log('🎯 Setting currentResults state...');
     setCurrentResults(results);
     setIsAnalyzing(false);
-    // Save results to localStorage for persistence
-    localStorage.setItem('apollo-analysis-results', JSON.stringify(results));
+    console.log('🎯 Analysis state updated, isAnalyzing set to false');
+    
+    // Force a re-render check after state update
+    setTimeout(() => {
+      console.log('🎯 State should be updated now, checking...');
+    }, 100);
+    
+    // Save results to localStorage for persistence using smart storage manager
+    const saved = StorageManager.saveAnalysisResults(results);
+    if (!saved) {
+      console.warn('Failed to save analysis results to localStorage due to size constraints');
+    }
   };
 
   /**
@@ -77,12 +95,22 @@ const AppPage: React.FC = () => {
           onClearResults={handleClearResults}
           onAnalysisStart={handleAnalysisStart}
           onAnalysisError={handleAnalysisError}
+          showAllSubreddits={FEATURE_FLAGS.showAllSubreddits}
         />
       </div>
 
       {/* Full Width Results Panel */}
       <div className="results-section-fullwidth">
-        {currentResults || isAnalyzing ? (
+        {(() => {
+          console.log('🎯 Render check - currentResults:', !!currentResults, 'isAnalyzing:', isAnalyzing);
+          if (currentResults) {
+            console.log('🎯 currentResults data structure:', currentResults);
+            console.log('🎯 currentResults analyzed_posts:', currentResults.analyzed_posts?.length);
+            console.log('🎯 currentResults workflow_id:', currentResults.workflow_id);
+            console.log('🎯 currentResults reddit_results:', currentResults.reddit_results);
+          }
+          return currentResults || isAnalyzing;
+        })() ? (
           <AnalysisResultPanel
             analyzedPosts={currentResults?.analyzed_posts || []}
             workflowId={currentResults?.workflow_id || ''}
@@ -91,6 +119,7 @@ const AppPage: React.FC = () => {
             patternAnalysis={currentResults?.pattern_analysis || null}
             onClear={handleClearResults}
             isAnalyzing={isAnalyzing}
+            showIndividualPostsView={FEATURE_FLAGS.showIndividualPostsView}
           />
         ) : (
           <div className="results-empty-fullwidth">
@@ -106,4 +135,4 @@ const AppPage: React.FC = () => {
   );
 };
 
-export default AppPage; 
+export default AppPage;
