@@ -149,7 +149,9 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
             total_comments: post.comment_analysis.total_comments_analyzed,
             keyword_mentions: post.comment_analysis.keyword_mentions,
             key_themes: post.comment_analysis.key_themes,
-            top_comments: post.comment_analysis.top_comments?.slice(0, 3) || [] // Include top 3 comments for context
+            top_comments: post.comment_analysis.top_comments?.slice(0, 3) || [], // Include top 3 comments for context
+            brand_sentiment_breakdown: post.comment_analysis.brand_sentiment_breakdown,
+            helpfulness_sentiment_breakdown: post.comment_analysis.helpfulness_sentiment_breakdown
           }
         } : {})
       };
