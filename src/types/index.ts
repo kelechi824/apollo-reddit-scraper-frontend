@@ -62,6 +62,34 @@ export interface AnalyzedPost extends RedditPost {
   analysis: ContentAnalysisResult;
   post_rank: number;
   analysis_timestamp: string;
+  comment_analysis?: {
+    total_comments_analyzed: number;
+    keyword_mentions: number;
+    brand_sentiment_breakdown: {
+      positive: number;
+      negative: number;
+      neutral: number;
+    };
+    helpfulness_sentiment_breakdown: {
+      positive: number;
+      negative: number;
+      neutral: number;
+    };
+    top_comments: Array<{
+      id: string;
+      content: string;
+      author: string;
+      score: number;
+      created_utc: number;
+      post_id: string;
+      keyword_matches: string[];
+      brand_sentiment: 'positive' | 'negative' | 'neutral';
+      helpfulness_sentiment: 'positive' | 'negative' | 'neutral';
+      excerpt: string;
+    }>;
+    key_themes: string[];
+  };
+  has_comment_insights?: boolean;
 }
 
 // Chat Types for "Dig Deeper" Feature
@@ -93,6 +121,43 @@ export interface StartConversationRequest {
   content: string;
   pain_point: string;
   audience_insight: string;
+  // Enhanced context for better AI coaching
+  subreddit?: string;
+  score?: number;
+  comments?: number;
+  post_url?: string;
+  permalink?: string;
+  content_opportunity?: string;
+  urgency_level?: 'high' | 'medium' | 'low';
+  comment_insights?: {
+    total_comments: number;
+    keyword_mentions: number;
+    key_themes: string[];
+    top_comments: Array<{
+      id: string;
+      content: string;
+      author: string;
+      score: number;
+      created_utc: number;
+      post_id: string;
+      parent_id: string;
+      depth: number;
+      keyword_matches: string[];
+      brand_sentiment: 'positive' | 'negative' | 'neutral';
+      helpfulness_sentiment: 'positive' | 'negative' | 'neutral';
+      excerpt: string;
+    }>;
+    brand_sentiment_breakdown: {
+      positive: number;
+      negative: number;
+      neutral: number;
+    };
+    helpfulness_sentiment_breakdown: {
+      positive: number;
+      negative: number;
+      neutral: number;
+    };
+  };
 }
 
 export interface StartConversationResponse {
@@ -135,6 +200,7 @@ export interface WorkflowResponse {
   success: boolean;
   reddit_results: RedditSearchResponse;
   analyzed_posts: AnalyzedPost[];
+  pattern_analysis?: PatternAnalysisResult;
   sheets_export?: any;
   workflow_id: string;
   completed_at: string;
@@ -286,6 +352,116 @@ export interface RedditEngagementRequest {
     audience_summary: string;
   };
   brand_kit?: any;
+}
+
+// Comment Generation Types
+export interface CommentResponse {
+  id: string;
+  content: string;
+  engagement_strategy: string;
+  tone_match: string;
+  value_provided: string;
+}
+
+export interface CommentGenerationResponse {
+  success: boolean;
+  response: CommentResponse;
+  metadata: {
+    subreddit: string;
+    post_title: string;
+    comment_author: string;
+    comment_sentiment: 'positive' | 'negative' | 'neutral';
+    keywords_matched: string[];
+    generation_timestamp: string;
+    brand_context_applied: boolean;
+  };
+}
+
+export interface CommentGenerationRequest {
+  comment_context: {
+    content: string;
+    author: string;
+    sentiment: 'positive' | 'negative' | 'neutral';
+    keyword_matches: string[];
+    score?: number;
+    created_utc?: number;
+  };
+  post_context: {
+    title: string;
+    subreddit: string;
+    pain_point: string;
+    audience_summary: string;
+    content?: string;
+  };
+  brand_kit?: any;
+}
+
+// Pattern Analysis Types
+export interface PatternCategory {
+  id: string;
+  name: string;
+  description: string;
+  post_count: number;
+  total_upvotes: number;
+  total_comments: number;
+  posts: Array<{
+    id: string;
+    title: string;
+    excerpt: string;
+    subreddit: string;
+    score: number;
+    comments: number;
+    created_utc: number;
+    permalink: string;
+    author: string;
+    post_rank: number;
+    comment_mentions?: number;
+  }>;
+  key_themes: string[];
+  urgency_level: 'high' | 'medium' | 'low';
+  comment_mentions: number;
+  avg_comment_sentiment: number;
+  has_comment_mentions: boolean;
+  top_comments?: Array<{
+    id: string;
+    content: string;
+    author: string;
+    sentiment: 'positive' | 'negative' | 'neutral';
+    excerpt: string;
+  }>;
+  comment_insights?: {
+    key_theme: string;
+    sentiment_summary: string;
+  };
+}
+
+export interface PatternAnalysisResult {
+  categories: PatternCategory[];
+  overall_summary: {
+    total_posts: number;
+    total_upvotes: number;
+    total_comments: number;
+    most_active_subreddit: string;
+    dominant_themes: string[];
+    community_narrative: string; // Rich, human-readable summary of what the community is discussing
+    time_range: {
+      oldest_post: number;
+      newest_post: number;
+    };
+    comment_summary?: {
+      total_comments_analyzed: number;
+      total_keyword_mentions: number;
+      most_active_comment_subreddit: string;
+      overall_sentiment: 'positive' | 'negative' | 'neutral';
+      sentiment_summary: string;
+    };
+  };
+  analysis_timestamp: string;
+}
+
+export interface PatternAnalysisRequest {
+  analyzed_posts: AnalyzedPost[];
+  keywords: string;
 }
 
 // API Endpoints

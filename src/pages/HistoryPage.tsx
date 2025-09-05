@@ -15,11 +15,25 @@ const HistoryPage: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showMobileModal, setShowMobileModal] = useState(false);
+  const [storageNotification, setStorageNotification] = useState<{
+    type: 'compressed' | 'minimal' | null;
+    show: boolean;
+  }>({ type: null, show: false });
   const navigate = useNavigate();
 
   useEffect(() => {
     const savedAnalyses = JSON.parse(localStorage.getItem('apollo-analyses') || '[]');
     setHistoryItems(savedAnalyses);
+    
+    // Check if any analyses are compressed or minimal and show notification
+    const hasCompressed = savedAnalyses.some((item: any) => item._compressed);
+    const hasMinimal = savedAnalyses.some((item: any) => item._minimal);
+    
+    if (hasMinimal) {
+      setStorageNotification({ type: 'minimal', show: true });
+    } else if (hasCompressed) {
+      setStorageNotification({ type: 'compressed', show: true });
+    }
     
     // Automatically select the first item if any exist
     if (savedAnalyses.length > 0) {
@@ -61,7 +75,14 @@ const HistoryPage: React.FC = () => {
   const clearItem = (itemId: string) => {
     const updatedItems = historyItems.filter(item => item.id !== itemId);
     setHistoryItems(updatedItems);
-    localStorage.setItem('apollo-analyses', JSON.stringify(updatedItems));
+    
+    // Safe localStorage update with quota handling
+    try {
+      localStorage.setItem('apollo-analyses', JSON.stringify(updatedItems));
+    } catch (storageError) {
+      console.error('Failed to update localStorage after item removal:', storageError);
+      // If storage fails, at least update the UI state
+    }
     
     if (selectedItem?.id === itemId) {
       setSelectedItem(null);
@@ -164,6 +185,69 @@ const HistoryPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Storage Notification */}
+      {storageNotification.show && (
+        <div style={{
+          padding: '1rem',
+          backgroundColor: storageNotification.type === 'compressed' ? '#fef3c7' : '#fee2e2',
+          border: `1px solid ${storageNotification.type === 'compressed' ? '#f59e0b' : '#f87171'}`,
+          borderRadius: '0.5rem',
+          margin: '1rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '0.75rem'
+        }}>
+          <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>
+            {storageNotification.type === 'compressed' ? '📦' : '⚠️'}
+          </span>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              color: storageNotification.type === 'compressed' ? '#92400e' : '#dc2626',
+              marginBottom: '0.25rem'
+            }}>
+              {storageNotification.type === 'compressed' ? 'Some History Data Compressed' : 'Limited History Data Saved'}
+            </div>
+            <p style={{
+              fontSize: '0.8125rem',
+              color: storageNotification.type === 'compressed' ? '#78350f' : '#b91c1c',
+              margin: 0,
+              lineHeight: '1.4'
+            }}>
+              {storageNotification.type === 'compressed' 
+                ? 'Some analysis data was compressed to fit browser storage limits. Key insights are preserved, but some detailed content may be truncated.'
+                : 'Only essential data could be saved due to storage constraints. Some detailed analysis may not be available in history.'
+              }
+            </p>
+          </div>
+          <button
+            onClick={() => setStorageNotification({ type: null, show: false })}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: storageNotification.type === 'compressed' ? '#78350f' : '#b91c1c',
+              cursor: 'pointer',
+              padding: '0.25rem',
+              borderRadius: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = storageNotification.type === 'compressed' ? 'rgba(120, 53, 15, 0.1)' : 'rgba(185, 28, 28, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <X style={{ width: '1rem', height: '1rem' }} />
+          </button>
+        </div>
+      )}
 
       {/* Enhanced Header Styles */}
       <style>

@@ -2,17 +2,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Play, AlertCircle, Clock } from 'lucide-react';
 import { WorkflowRequest, WorkflowResponse } from '../types';
 import { makeApiRequest } from '../utils/apiHelpers';
+import { StorageManager } from '../utils/storageManager';
 
 interface AnalysisInterfaceProps {
   apiUrl: string;
   onAnalysisComplete: (results: WorkflowResponse) => void;
   onClearResults?: () => void;
+  onAnalysisStart?: () => void;
+  onAnalysisError?: () => void;
+  showAllSubreddits?: boolean;
 }
 
-const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysisComplete, onClearResults }) => {
+const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysisComplete, onClearResults, onAnalysisStart, onAnalysisError, showAllSubreddits = true }) => {
   const [keywords, setKeywords] = useState<string>('');
   const [isKeywordSelected, setIsKeywordSelected] = useState<boolean>(false);
-  const [selectedSubreddit, setSelectedSubreddit] = useState<string>('sales');
+  const [selectedSubreddit, setSelectedSubreddit] = useState<string>('all');
   const [limit, setLimit] = useState<number>(5);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'recent' | 'older'>('recent');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
@@ -22,6 +26,17 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
   const analysisTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting', 'startups', 'entrepreneur', 'marketing', 'smallbusiness', 'business', 'b2bmarketing', 'b2b_sales', 'b2bsaas', 'coldemail', 'emailmarketing', 'salesdevelopment', 'saas', 'leadgeneration', 'coldcalling', 'leadgen', 'marketingautomation', 'crm'];
+
+  /**
+   * Handle feature flag changes for showAllSubreddits
+   * Why this matters: When "All Subreddits" option is hidden, we need to automatically 
+   * select a specific subreddit to prevent invalid state
+   */
+  useEffect(() => {
+    if (!showAllSubreddits && selectedSubreddit === 'all') {
+      setSelectedSubreddit(availableSubreddits[0]); // Default to first subreddit
+    }
+  }, [showAllSubreddits, selectedSubreddit, availableSubreddits]);
 
 
   
@@ -169,14 +184,24 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
 
     setIsAnalyzing(true);
     setError('');
+    
+    // Notify parent that analysis has started
+    if (onAnalysisStart) {
+      onAnalysisStart();
+    }
 
     try {
       // Single keyword only - no comma splitting needed
       const keywordList = [keywords.trim()];
       
+      // Handle "all" subreddits selection
+      const subredditList = selectedSubreddit === 'all' 
+        ? availableSubreddits 
+        : [selectedSubreddit];
+      
       const request: WorkflowRequest = {
         keywords: keywordList,
-        subreddits: [selectedSubreddit],
+        subreddits: subredditList,
         limit: limit,
         timeframe: selectedTimeframe
       };
@@ -237,16 +262,20 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
       
       console.log('✅ Analysis complete:', data);
       
-      // Save to localStorage for history
-      const savedAnalyses = JSON.parse(localStorage.getItem('apollo-analyses') || '[]');
-      savedAnalyses.unshift({
+      // Save analysis to localStorage for history using StorageManager
+      const analysis = {
         id: data.workflow_id,
         keywords: keywordList,
-        subreddits: [selectedSubreddit],
+        subreddits: subredditList,
+        timestamp: new Date().toISOString(),
         results: data,
-        timestamp: new Date().toISOString()
-      });
-      localStorage.setItem('apollo-analyses', JSON.stringify(savedAnalyses.slice(0, 10))); // Keep last 10
+        _full: true // Flag to indicate this is full data
+      };
+      
+      const saved = StorageManager.updateAnalysesHistory(analysis);
+      if (!saved) {
+        console.warn('Failed to save analysis to history due to storage constraints');
+      }
       
       // Notify parent component
       onAnalysisComplete(data);
@@ -257,6 +286,11 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
     } catch (err) {
       console.error('❌ Analysis failed:', err);
       setError(err instanceof Error ? err.message : 'Analysis failed');
+      
+      // Notify parent that analysis has stopped due to error
+      if (onAnalysisError) {
+        onAnalysisError();
+      }
     } finally {
       setIsAnalyzing(false);
     }
@@ -265,18 +299,18 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
   // Legacy function - no longer used, replaced by handleSubredditSelect
 
   return (
-    <div className="analysis-interface">
-      {/* Analysis Form */}
-      <div className="interface-form">
+    <div className="analysis-interface-header">
+      {/* Horizontal Analysis Form */}
+      <div className="interface-form-horizontal">
         {/* Keywords Input */}
-        <div className="form-group">
-          <label htmlFor="keywords" className="form-label">
+        <div className="form-group-horizontal-inline">
+          <label htmlFor="keywords" className="form-label-horizontal-inline">
             Keyword
           </label>
           
           {!isKeywordSelected ? (
             // Input mode - user is typing
-            <div className="input-container">
+            <div className="input-container-horizontal">
               <Search className="input-icon" />
               <input
                 id="keywords"
@@ -290,15 +324,15 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
                 onBlur={handleKeywordBlur}
                 onKeyDown={handleKeyDown}
                 placeholder="e.g., apollo, b2b sales"
-                className="apollo-input"
+                className="apollo-input-horizontal"
                 disabled={isAnalyzing}
               />
             </div>
           ) : (
             // Selected mode - show modern keyword chip with pill-form buttons
-            <div className="flex flex-wrap gap-6 p-4 border border-apollo-gray-100 rounded-xl bg-white min-h-[3.5rem] items-center shadow-sm">
+            <div className="keyword-selected-horizontal">
               <div 
-                className="inline-flex items-center gap-2 px-4 py-2 font-medium"
+                className="keyword-chip-horizontal"
                 style={{
                   backgroundColor: '#dcfce7',
                   border: '0.125rem solid #16a34a',
@@ -306,14 +340,14 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
                   borderRadius: '0.625rem'
                 }}
               >
-                <span className="text-sm font-medium">{keywords}</span>
+                <span className="keyword-text">{keywords}</span>
               </div>
               
               {/* Modern edit button with inline styles */}
               <button
                 onClick={handleKeywordEdit}
                 disabled={isAnalyzing}
-                className="inline-flex items-center px-4 py-2 rounded-full text-xs font-medium transition-all duration-200"
+                className="keyword-edit-btn"
                 style={{
                   backgroundColor: '#f3f4f6',
                   color: '#6b7280',
@@ -334,7 +368,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
                 title="Edit keyword"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '0.5rem'}}>
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2-2v-7"/>
                   <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
                 Edit
@@ -343,24 +377,26 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
           )}
           
           {keywords.includes(',') && !isKeywordSelected && (
-            <p className="text-sm text-apollo-gray-600 mt-2">
+            <p className="error-text-horizontal">
               Only one keyword allowed per analysis. Please remove commas.
             </p>
           )}
         </div>
 
         {/* Subreddit Selection */}
-        <div className="form-group">
-          <label htmlFor="subreddit" className="form-label">Select Subreddit</label>
-                      <select
-              id="subreddit"
-              value={selectedSubreddit}
-              onChange={(e) => setSelectedSubreddit(e.target.value)}
-              className="apollo-input"
-              style={{maxWidth: '24rem'}}
-              disabled={isAnalyzing}
-            >
-              {availableSubreddits.map((subreddit) => (
+        <div className="form-group-horizontal-inline">
+          <label htmlFor="subreddit" className="form-label-horizontal-inline">Subreddit</label>
+          <select
+            id="subreddit"
+            value={selectedSubreddit}
+            onChange={(e) => setSelectedSubreddit(e.target.value)}
+            className="apollo-input-horizontal-dropdown"
+            disabled={isAnalyzing}
+          >
+            {showAllSubreddits && (
+              <option value="all">All Subreddits ({availableSubreddits.length})</option>
+            )}
+            {availableSubreddits.map((subreddit) => (
               <option key={subreddit} value={subreddit}>
                 r/{subreddit}
               </option>
@@ -369,16 +405,15 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
         </div>
 
         {/* Time Filter Selection */}
-        <div className="form-group">
-          <label htmlFor="timeframe" className="form-label">
+        <div className="form-group-horizontal-inline">
+          <label htmlFor="timeframe" className="form-label-horizontal-inline">
             Post Filter
           </label>
           <select
             id="timeframe"
             value={selectedTimeframe}
             onChange={(e) => handleTimeframeChange(e.target.value as 'recent' | 'older')}
-            className="apollo-input"
-            style={{maxWidth: '24rem'}}
+            className="apollo-input-horizontal-dropdown"
             disabled={isAnalyzing}
           >
             {timeframeOptions.map((option) => (
@@ -387,91 +422,76 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
               </option>
             ))}
           </select>
-
         </div>
 
         {/* Limit Selection */}
-        <div className="form-group">
-          <label htmlFor="limit" className="form-label">
-            Number of Posts to Analyze
+        <div className="form-group-horizontal-inline">
+          <label htmlFor="limit" className="form-label-horizontal-inline">
+            Posts
           </label>
           <select
             id="limit"
             value={limit}
             onChange={(e) => setLimit(parseInt(e.target.value))}
-            className="apollo-input"
-            style={{maxWidth: '24rem'}}
+            className="apollo-input-horizontal-dropdown"
             disabled={isAnalyzing}
           >
-            <option value={3}>3 posts (Quick Analysis)</option>
-            <option value={5}>5 posts (Recommended)</option>
-            <option value={10}>10 posts (Comprehensive)</option>
+            <option value={3}>3 posts</option>
+            <option value={5}>5 posts</option>
+            <option value={10}>10 posts</option>
           </select>
         </div>
 
-        {/* Error Display */}
-        {error && (
-          <div className="error-container">
-            <AlertCircle className="error-icon" />
-            <div>
-              <p className="error-title">No Results Found</p>
-              <p className="error-text">{error}</p>
+        {/* Action Button */}
+        <div className="form-group-horizontal-inline">
+          <div className="run-analysis-container-horizontal">
+            <button
+              onClick={handleAnalysis}
+              disabled={isAnalyzing}
+              className={`apollo-btn-primary ${isAnalyzing ? 'analysis-run-btn-horizontal-dynamic' : 'analysis-run-btn-horizontal-sized'}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {isAnalyzing ? (
+                <>
+                  <Clock className="animate-spin" style={{width: '1rem', height: '1rem'}} />
+                  {analysisMessages[analysisStep]}
+                </>
+              ) : (
+                <>
+                  <Play style={{width: '1rem', height: '1rem'}} />
+                  {hasCompletedAnalysis ? 'Run Again' : 'Run Analysis'}
+                </>
+              )}
+            </button>
+            
+            {/* Estimated Time Display - to the right of button */}
+            <div className="time-estimate-right-of-button">
+              <p>
+                Est. time: {limit === 3 ? '15-20 seconds' : limit === 5 ? '20-30 seconds' : '30-60 seconds'}
+              </p>
             </div>
           </div>
-        )}
-
-        {/* Action Button */}
-        <div className="btn-center">
-          <button
-            onClick={handleAnalysis}
-            disabled={isAnalyzing}
-            className="apollo-btn-primary btn-large analysis-run-btn"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem'
-            }}
-          >
-            {isAnalyzing ? (
-              <>
-                <Clock className="animate-spin" style={{width: '1rem', height: '1rem'}} />
-                {analysisMessages[analysisStep]}
-              </>
-            ) : (
-              <>
-                <Play style={{width: '1rem', height: '1rem'}} />
-                {hasCompletedAnalysis ? 'Run Again' : 'Run Analysis'}
-              </>
-            )}
-          </button>
-          
-          {/* Estimated Time Display */}
-          {isAnalyzing && (
-            <p style={{ 
-              fontSize: '0.875rem', 
-              color: '#6b7280', 
-              textAlign: 'center', 
-              marginTop: '0.75rem',
-              lineHeight: '1.4'
-            }}>
-              Estimated time: {limit === 3 ? '15-20 seconds' : limit === 5 ? '20-30 seconds' : '30-60 seconds'}
-            </p>
-          )}
-          
-          {!isAnalyzing && (
-            <p style={{ 
-              fontSize: '0.875rem', 
-              color: '#6b7280', 
-              textAlign: 'center', 
-              marginTop: '0.75rem',
-              lineHeight: '1.4'
-            }}>
-              Estimated time: {limit === 3 ? '15-20 seconds' : limit === 5 ? '20-30 seconds' : '30-60 seconds'}
-            </p>
-          )}
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="error-container-horizontal">
+          <AlertCircle className="error-icon" />
+          <div>
+            <p className="error-title">No Results Found</p>
+            <p className="error-text">{error}</p>
+          </div>
+        </div>
+      )}
+
+
     </div>
   );
 };

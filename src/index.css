@@ -1177,6 +1177,33 @@ footer {
   }
 }
 
+/* New Header + Full Width Layout */
+.home-layout-new {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+}
+
+/* Header Analysis Interface Section */
+.analysis-header-section {
+  background: #E2E8F0;
+  border-bottom: 0.0625rem solid var(--apollo-gray-200);
+  padding: 1rem;
+  flex: 0 0 auto;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+  position: relative;
+  margin-top: -2.5rem; /* Move the interface up more to position nicely at top */
+}
+
+@media (min-width: 48.0625rem) {
+  .analysis-header-section {
+    padding: 1.5rem 2rem;
+  }
+}
+
 
 
 /* Mobile-First Analysis Interface Styles */
@@ -1207,6 +1234,384 @@ footer {
 .analysis-interface {
   max-width: 700px;
   margin: 0 auto;
+}
+
+/* Horizontal Analysis Interface Styles */
+.analysis-interface-header {
+  width: 100%;
+  max-width: none;
+}
+
+.interface-form-horizontal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem; /* Keep mobile gap small */
+  align-items: end;
+  background: white;
+  border: 0.0625rem solid var(--apollo-gray-100);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 0.25rem 0.75rem -0.125rem rgba(0, 0, 0, 0.08);
+}
+
+@media (min-width: 48.0625rem) {
+  .interface-form-horizontal {
+    flex-wrap: nowrap;
+    gap: 0.75rem; /* Reduced gap to bring elements closer */
+    padding: 1.5rem 2rem;
+    border-radius: 1.25rem;
+    box-shadow: 0 0.375rem 1.25rem -0.1875rem rgba(0, 0, 0, 0.1);
+  }
+}
+
+.form-group-horizontal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.form-group-horizontal:last-child {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 48rem) {
+  .form-group-horizontal {
+    min-width: calc(50% - 0.5rem);
+  }
+  
+  .form-group-horizontal:last-child {
+    min-width: 100%;
+    flex: 1;
+  }
+}
+
+.form-label-horizontal {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--apollo-gray-700);
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+}
+
+/* Inline form groups with labels on the left */
+.form-group-horizontal-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+/* Keyword form group needs fixed width to prevent overlap */
+.form-group-horizontal-inline:first-child {
+  flex: 0 0 auto;
+  width: 350px; /* Reduced width: ~70px label + 0.375rem gap + 280px input */
+}
+
+@media (min-width: 48.0625rem) {
+  .form-group-horizontal-inline:first-child {
+    width: 370px; /* Reduced width to match smaller search box */
+  }
+}
+
+/* Button form group should be flexible to accommodate button + time estimate */
+.form-group-horizontal-inline:last-child {
+  flex: 1 1 auto;
+  justify-content: flex-start;
+}
+
+.form-label-horizontal-inline {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--apollo-gray-700);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 48rem) {
+  .form-group-horizontal-inline {
+    min-width: calc(50% - 0.5rem);
+  }
+}
+
+.apollo-input-horizontal {
+  padding: 0.75rem 1rem;
+  border: 1px solid #9ca3af;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  background: white;
+  transition: all 0.2s ease;
+  min-width: 0;
+  width: 280px; /* Reduced width for search box */
+  flex-shrink: 0;
+}
+
+.apollo-input-horizontal:focus {
+  outline: none;
+  border-color: #EBF212;
+  box-shadow: 0 0 0 3px rgba(235, 242, 18, 0.1);
+}
+
+/* Narrower dropdown inputs */
+.apollo-input-horizontal-dropdown {
+  padding: 0.75rem 1rem;
+  border: 1px solid #9ca3af;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  background: white;
+  transition: all 0.2s ease;
+  min-width: 0;
+  width: 11rem; /* Increased width for dropdowns (176px) */
+  flex-shrink: 0;
+}
+
+.apollo-input-horizontal-dropdown:focus {
+  outline: none;
+  border-color: #EBF212;
+  box-shadow: 0 0 0 3px rgba(235, 242, 18, 0.1);
+}
+
+@media (max-width: 48rem) {
+  .apollo-input-horizontal {
+    width: 200px; /* Slightly smaller on mobile but still wider than before */
+  }
+  
+  .apollo-input-horizontal-dropdown {
+    width: 140px; /* Even narrower on mobile */
+  }
+}
+
+.input-container-horizontal {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-container-horizontal .input-icon {
+  position: absolute;
+  left: 0.75rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--apollo-gray-400);
+  z-index: 1;
+}
+
+.input-container-horizontal .apollo-input-horizontal {
+  padding-left: 2.5rem;
+}
+
+.keyword-selected-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid #9ca3af;
+  border-radius: 0.5rem;
+  background: white;
+  min-height: 3rem;
+  width: 280px; /* Match search box width */
+  flex-shrink: 0;
+}
+
+@media (max-width: 48rem) {
+  .apollo-input-horizontal {
+    width: 220px; /* Reduced mobile width for search box */
+  }
+  
+  .apollo-input-horizontal-dropdown {
+    width: 8.5rem; /* Increased mobile width (136px) */
+  }
+  
+  .keyword-selected-horizontal {
+    width: 220px; /* Match mobile search box width */
+  }
+  
+  .analysis-run-btn-horizontal-sized {
+    width: 7.5rem; /* Reduced mobile button width (120px) */
+    font-size: 0.8125rem; /* Slightly smaller font on mobile */
+  }
+  
+  .analysis-run-btn-horizontal-dynamic {
+    min-width: 7.5rem; /* Minimum mobile button width */
+    font-size: 0.8125rem; /* Slightly smaller font on mobile */
+  }
+}
+
+.keyword-chip-horizontal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.keyword-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.analysis-run-btn-horizontal {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  min-width: 140px;
+}
+
+/* New button sizing to match dropdowns */
+.analysis-run-btn-horizontal-sized {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  width: 9.5rem; /* Reduced width for button (152px) */
+  height: 48px; /* Same height as dropdowns */
+  flex-shrink: 0;
+}
+
+/* Dynamic width button for loading states */
+.analysis-run-btn-horizontal-dynamic {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  min-width: 9.5rem; /* Minimum width to match fixed size */
+  width: auto; /* Allow dynamic width based on content */
+  height: 48px; /* Same height as dropdowns */
+  flex-shrink: 0;
+}
+
+.error-container-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border: 0.0625rem solid #fecaca;
+  border-radius: 0.5rem;
+  margin-top: 1rem;
+}
+
+.error-container-horizontal .error-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.error-text-horizontal {
+  font-size: 0.75rem;
+  color: var(--apollo-gray-600);
+  margin-top: 0.25rem;
+}
+
+.time-estimate-horizontal {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.time-estimate-horizontal p {
+  font-size: 0.875rem;
+  color: var(--apollo-gray-600);
+  margin: 0;
+}
+
+/* New time estimate below button styling */
+.run-analysis-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Vertical container for button with time estimate below */
+.run-analysis-container-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Container for button with time estimate above (like a label) */
+.run-analysis-container-with-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* Horizontal container for button with time estimate to the right */
+.run-analysis-container-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* Reduced gap to bring button and time estimate closer */
+}
+
+.time-estimate-below-button {
+  text-align: center;
+}
+
+.time-estimate-below-button p {
+  font-size: 0.75rem;
+  color: var(--apollo-gray-600);
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* New italic time estimate below button */
+.time-estimate-below-button-italic {
+  text-align: center;
+}
+
+.time-estimate-below-button-italic p {
+  font-size: 0.71875rem; /* Same reduced size as before */
+  font-weight: normal; /* Remove bold */
+  font-style: italic; /* Make italic */
+  color: var(--apollo-gray-600);
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Time estimate above button (like a label) */
+.time-estimate-above-button-italic {
+  text-align: center;
+}
+
+.time-estimate-above-button-italic p {
+  font-size: 0.71875rem; /* Same reduced size */
+  font-weight: normal; /* Remove bold */
+  font-style: italic; /* Make italic */
+  color: var(--apollo-gray-600);
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Time estimate positioned to the right of button */
+.time-estimate-right-of-button {
+  display: flex;
+  align-items: center;
+}
+
+.time-estimate-right-of-button p {
+  font-size: 0.71875rem; /* Same reduced size */
+  font-weight: normal; /* Remove bold */
+  font-style: italic; /* Make italic */
+  color: var(--apollo-gray-600);
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .interface-header {
@@ -1337,6 +1742,39 @@ footer {
     flex: initial;
     min-height: initial;
   }
+}
+
+/* Full Width Results Panel */
+.results-section-fullwidth {
+  background: #f8fafc;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.results-empty-fullwidth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 50vh;
+  text-align: center;
+  color: var(--apollo-gray-600);
+  padding: 2rem;
+}
+
+.results-empty-fullwidth h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--apollo-gray-700);
+  margin: 1rem 0 0.5rem 0;
+}
+
+.results-empty-fullwidth p {
+  font-size: 1rem;
+  margin: 0;
+  opacity: 0.8;
 }
 
 .analysis-panel {
@@ -3520,8 +3958,9 @@ footer {
     right: 0 !important;
     bottom: 0;
     left: auto !important;
-    width: 100%;
-    max-width: 42rem;
+    width: 80vw;
+    max-width: 75rem;
+    min-width: 46.875rem;
     background-color: white;
     box-shadow: -0.25rem 0 1.5625rem rgba(0, 0, 0, 0.2);
     border-radius: 0;
@@ -3804,10 +4243,10 @@ footer {
 }
 
 .dig-deeper-message-content {
-  /* Mobile: Narrow content bubbles */
+  /* Mobile: Wider content bubbles for better space utilization */
   font-size: 0.75rem;
   line-height: 1.5;
-  max-width: 26rem;
+  max-width: 85%;
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   white-space: pre-wrap;
@@ -3815,10 +4254,10 @@ footer {
   overflow-wrap: break-word;
 }
 
-/* Tablet and up: Wider content bubbles */
+/* Tablet and up: Even wider content bubbles to match larger modal */
 @media (min-width: 48.0625rem) {
   .dig-deeper-message-content {
-    max-width: 24rem;
+    max-width: 75%;
     padding: 1rem 1.25rem;
     font-size: 0.875rem;
   }
