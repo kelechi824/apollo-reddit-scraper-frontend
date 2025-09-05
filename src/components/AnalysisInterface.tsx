@@ -473,7 +473,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
             {/* Estimated Time Display - to the right of button */}
             <div className="time-estimate-right-of-button">
               <p>
-                Est. time: {limit === 3 ? '15-20 seconds' : limit === 5 ? '20-30 seconds' : '30-60 seconds'}
+                Est. time: 60 seconds
               </p>
             </div>
           </div>
