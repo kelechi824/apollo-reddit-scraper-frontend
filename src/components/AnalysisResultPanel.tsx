@@ -577,6 +577,8 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
               score: post.score,
               comments: post.comments,
               permalink: post.permalink,
+              url: post.url, // Preserve URL for enhanced context
+              author: post.author, // Preserve author for enhanced context
               // Keep only first 500 chars of content to save space
               content: post.content ? post.content.substring(0, 500) + (post.content.length > 500 ? '...' : '') : '',
               // Keep analysis but truncate long text
@@ -636,7 +638,17 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
               created_utc: post.created_utc,
               score: post.score,
               comments: post.comments,
-              permalink: post.permalink
+              permalink: post.permalink,
+              url: post.url, // Preserve URL for enhanced context
+              author: post.author, // Preserve author for enhanced context
+              content: post.content || '', // Preserve content even in minimal backup
+              // Preserve analysis for DigDeeperModal
+              analysis: {
+                pain_point: post.analysis?.pain_point || '',
+                audience_insight: post.analysis?.audience_insight || '',
+                content_opportunity: post.analysis?.content_opportunity || '',
+                urgency_level: post.analysis?.urgency_level || 'medium'
+              }
             })),
             workflowId,
             totalFound,
@@ -2780,7 +2792,20 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       {/* Dig Deeper Modal */}
       <DigDeeperModal
         isOpen={isDigDeeperModalOpen}
-        onClose={() => setIsDigDeeperModalOpen(false)}
+        onClose={() => {
+          // Debug logging to see what currentPost contains
+          console.log('🔍 [DEBUG] AnalysisResultPanel currentPost:', {
+            id: currentPost?.id,
+            title: currentPost?.title,
+            subreddit: currentPost?.subreddit,
+            score: currentPost?.score,
+            comments: currentPost?.comments,
+            score_type: typeof currentPost?.score,
+            comments_type: typeof currentPost?.comments,
+            has_all_fields: !!(currentPost?.subreddit && currentPost?.score !== undefined && currentPost?.comments !== undefined)
+          });
+          setIsDigDeeperModalOpen(false);
+        }}
         post={currentPost}
       />
 
