@@ -140,19 +140,19 @@ export interface StartConversationRequest {
       score: number;
       created_utc: number;
       post_id: string;
-      parent_id: string;
-      depth: number;
+      parent_id?: string;
+      depth?: number;
       keyword_matches: string[];
       brand_sentiment: 'positive' | 'negative' | 'neutral';
       helpfulness_sentiment: 'positive' | 'negative' | 'neutral';
       excerpt: string;
     }>;
-    brand_sentiment_breakdown: {
+    brand_sentiment_breakdown?: {
       positive: number;
       negative: number;
       neutral: number;
     };
-    helpfulness_sentiment_breakdown: {
+    helpfulness_sentiment_breakdown?: {
       positive: number;
       negative: number;
       neutral: number;

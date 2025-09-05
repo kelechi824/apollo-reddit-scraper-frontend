@@ -3,7 +3,7 @@
  * Why this matters: Helps developers monitor and debug storage usage issues
  */
 
-import { StorageManager } from './storageManager';
+import { StorageManager } from './StorageManager';
 
 export class StorageDebug {
   /**

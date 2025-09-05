@@ -3,8 +3,9 @@ import AnalysisInterface from '../components/AnalysisInterface';
 import AnalysisResultPanel from '../components/AnalysisResultPanel';
 import { WorkflowResponse } from '../types';
 import { API_BASE_URL, buildApiUrl } from '../config/api';
-import { StorageManager } from '../utils/storageManager';
+import { StorageManager } from '../utils/StorageManager';
 import { StorageDebug } from '../utils/storageDebug';
+import { FEATURE_FLAGS } from '../utils/featureFlags';
 
 const AppPage: React.FC = () => {
   const [currentResults, setCurrentResults] = useState<WorkflowResponse | null>(null);
@@ -94,6 +95,7 @@ const AppPage: React.FC = () => {
           onClearResults={handleClearResults}
           onAnalysisStart={handleAnalysisStart}
           onAnalysisError={handleAnalysisError}
+          showAllSubreddits={FEATURE_FLAGS.showAllSubreddits}
         />
       </div>
 
@@ -117,6 +119,7 @@ const AppPage: React.FC = () => {
             patternAnalysis={currentResults?.pattern_analysis || null}
             onClear={handleClearResults}
             isAnalyzing={isAnalyzing}
+            showIndividualPostsView={FEATURE_FLAGS.showIndividualPostsView}
           />
         ) : (
           <div className="results-empty-fullwidth">
@@ -132,4 +135,4 @@ const AppPage: React.FC = () => {
   );
 };
 
-export default AppPage; 
+export default AppPage;
