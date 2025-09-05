@@ -7,6 +7,7 @@ import LinkedInPostModal from './LinkedInPostModal';
 import RedditEngagementPanel from './RedditEngagementPanel';
 import RedditEngagementModal from './RedditEngagementModal';
 import CommentPreviewModal from './CommentPreviewModal';
+import LoadingJokes from './LoadingJokes';
 import { StorageManager } from '../utils/storageManager';
 
 interface AnalysisResultPanelProps {
@@ -1170,6 +1171,16 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           
           <Skeleton style={{ height: '2.5rem', width: '4rem' }} />
         </div>
+
+        {/* Loading Jokes - Entertainment during analysis */}
+        <LoadingJokes 
+          keywords={effectiveKeywords}
+          rotationInterval={20000}
+          style={{ 
+            margin: '1rem',
+            marginBottom: '2rem'
+          }}
+        />
 
         {/* Skeleton Pattern View */}
         <div className="patterns-view">
