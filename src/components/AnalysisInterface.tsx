@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Play, AlertCircle, Clock } from 'lucide-react';
 import { WorkflowRequest, WorkflowResponse } from '../types';
 import { makeApiRequest } from '../utils/apiHelpers';
+import { StorageManager } from '../utils/storageManager';
 
 interface AnalysisInterfaceProps {
   apiUrl: string;
@@ -249,120 +250,19 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
       
       console.log('✅ Analysis complete:', data);
       
-      // Save to localStorage for history with quota handling
-      try {
-        const savedAnalyses = JSON.parse(localStorage.getItem('apollo-analyses') || '[]');
-        const newAnalysis = {
-          id: data.workflow_id,
-          keywords: keywordList,
-          subreddits: subredditList,
-          results: data,
-          timestamp: new Date().toISOString()
-        };
-        
-        savedAnalyses.unshift(newAnalysis);
-        const trimmedAnalyses = savedAnalyses.slice(0, 10); // Keep last 10
-        
-        // Try to save full data first
-        const dataString = JSON.stringify(trimmedAnalyses);
-        
-        // Check if data is too large (estimate ~4MB limit to be safe)
-        if (dataString.length > 4 * 1024 * 1024) {
-          console.warn('Analysis data too large for localStorage, creating compressed version');
-          
-          // Create compressed version with essential data only
-          const compressedAnalyses = trimmedAnalyses.map((analysis: any) => ({
-            id: analysis.id,
-            keywords: analysis.keywords,
-            subreddits: analysis.subreddits,
-            timestamp: analysis.timestamp,
-            results: {
-              workflow_id: analysis.results.workflow_id,
-              total_found: analysis.results.reddit_results?.total_found || 0,
-              analyzed_posts: analysis.results.analyzed_posts?.map((post: any) => ({
-                id: post.id,
-                title: post.title,
-                subreddit: post.subreddit,
-                created_utc: post.created_utc,
-                score: post.score,
-                comments: post.comments,
-                permalink: post.permalink,
-                // Keep only first 300 chars of content to save space
-                content: post.content ? post.content.substring(0, 300) + (post.content.length > 300 ? '...' : '') : '',
-                // Keep analysis but truncate long text
-                analysis: {
-                  pain_point: post.analysis?.pain_point?.substring(0, 500) || '',
-                  audience_insight: post.analysis?.audience_insight?.substring(0, 500) || '',
-                  content_opportunity: post.analysis?.content_opportunity?.substring(0, 500) || ''
-                },
-                has_comment_insights: post.has_comment_insights
-              })) || [],
-              pattern_analysis: analysis.results.pattern_analysis ? {
-                overall_summary: {
-                  total_posts: analysis.results.pattern_analysis.overall_summary.total_posts,
-                  total_upvotes: analysis.results.pattern_analysis.overall_summary.total_upvotes,
-                  total_comments: analysis.results.pattern_analysis.overall_summary.total_comments,
-                  most_active_subreddit: analysis.results.pattern_analysis.overall_summary.most_active_subreddit,
-                  dominant_themes: analysis.results.pattern_analysis.overall_summary.dominant_themes?.slice(0, 5) || [],
-                  // Truncate community narrative
-                  community_narrative: analysis.results.pattern_analysis.overall_summary.community_narrative?.substring(0, 500) || ''
-                },
-                categories: analysis.results.pattern_analysis.categories?.slice(0, 5).map((cat: any) => ({
-                  id: cat.id,
-                  name: cat.name,
-                  description: cat.description.substring(0, 300) + (cat.description.length > 300 ? '...' : ''),
-                  post_count: cat.post_count,
-                  total_upvotes: cat.total_upvotes,
-                  total_comments: cat.total_comments,
-                  posts: cat.posts.slice(0, 5) // Keep only first 5 posts per category
-                })) || []
-              } : null
-            },
-            _compressed: true // Flag to indicate this is compressed data
-          }));
-          
-          localStorage.setItem('apollo-analyses', JSON.stringify(compressedAnalyses));
-        } else {
-          localStorage.setItem('apollo-analyses', dataString);
-        }
-      } catch (storageError) {
-        console.error('Failed to save analysis to localStorage:', storageError);
-        
-        // If even compressed version fails, try minimal backup
-        try {
-          // Clear any existing data first to free up space
-          localStorage.removeItem('apollo-analyses');
-          
-          // Create minimal backup with just essential navigation data
-          const savedAnalyses = JSON.parse(localStorage.getItem('apollo-analyses') || '[]');
-          const minimalAnalysis = {
-            id: data.workflow_id,
-            keywords: keywordList,
-            subreddits: subredditList,
-            timestamp: new Date().toISOString(),
-            results: {
-              workflow_id: data.workflow_id,
-              total_found: data.reddit_results?.total_found || 0,
-              analyzed_posts: data.analyzed_posts?.map((post: any) => ({
-                id: post.id,
-                title: post.title,
-                subreddit: post.subreddit,
-                created_utc: post.created_utc,
-                score: post.score,
-                comments: post.comments,
-                permalink: post.permalink
-              })) || []
-            },
-            _minimal: true // Flag to indicate this is minimal data
-          };
-          
-          savedAnalyses.unshift(minimalAnalysis);
-          localStorage.setItem('apollo-analyses', JSON.stringify(savedAnalyses.slice(0, 5))); // Keep only 5 for minimal version
-          console.warn('Saved minimal analysis backup due to storage constraints');
-        } catch (minimalError) {
-          console.error('Failed to save even minimal backup:', minimalError);
-          // If all else fails, just continue without saving to history
-        }
+      // Save analysis to localStorage for history using StorageManager
+      const analysis = {
+        id: data.workflow_id,
+        keywords: keywordList,
+        subreddits: subredditList,
+        timestamp: new Date().toISOString(),
+        results: data,
+        _full: true // Flag to indicate this is full data
+      };
+      
+      const saved = StorageManager.updateAnalysesHistory(analysis);
+      if (!saved) {
+        console.warn('Failed to save analysis to history due to storage constraints');
       }
       
       // Notify parent component

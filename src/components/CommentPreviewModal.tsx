@@ -554,19 +554,6 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
                         Brand: {comment.brand_sentiment === 'positive' ? '😊 Positive' : 
                                comment.brand_sentiment === 'negative' ? '😞 Negative' : '😐 Neutral'}
                       </span>
-                      <span style={{
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '0.25rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '500',
-                        backgroundColor: comment.helpfulness_sentiment === 'positive' ? '#dcfce7' : 
-                                       comment.helpfulness_sentiment === 'negative' ? '#fef2f2' : '#f3f4f6',
-                        color: comment.helpfulness_sentiment === 'positive' ? '#166534' : 
-                               comment.helpfulness_sentiment === 'negative' ? '#dc2626' : '#374151'
-                      }}>
-                        Help: {comment.helpfulness_sentiment === 'positive' ? '🤝 Helpful' : 
-                              comment.helpfulness_sentiment === 'negative' ? '🚫 Unhelpful' : '😐 Neutral'}
-                      </span>
                     </div>
                   </div>
                   

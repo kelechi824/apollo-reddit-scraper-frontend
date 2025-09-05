@@ -121,6 +121,43 @@ export interface StartConversationRequest {
   content: string;
   pain_point: string;
   audience_insight: string;
+  // Enhanced context for better AI coaching
+  subreddit?: string;
+  score?: number;
+  comments?: number;
+  post_url?: string;
+  permalink?: string;
+  content_opportunity?: string;
+  urgency_level?: 'high' | 'medium' | 'low';
+  comment_insights?: {
+    total_comments: number;
+    keyword_mentions: number;
+    key_themes: string[];
+    top_comments: Array<{
+      id: string;
+      content: string;
+      author: string;
+      score: number;
+      created_utc: number;
+      post_id: string;
+      parent_id: string;
+      depth: number;
+      keyword_matches: string[];
+      brand_sentiment: 'positive' | 'negative' | 'neutral';
+      helpfulness_sentiment: 'positive' | 'negative' | 'neutral';
+      excerpt: string;
+    }>;
+    brand_sentiment_breakdown: {
+      positive: number;
+      negative: number;
+      neutral: number;
+    };
+    helpfulness_sentiment_breakdown: {
+      positive: number;
+      negative: number;
+      neutral: number;
+    };
+  };
 }
 
 export interface StartConversationResponse {

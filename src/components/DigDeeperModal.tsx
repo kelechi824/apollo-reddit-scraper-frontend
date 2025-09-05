@@ -117,7 +117,14 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
         title: post.title,
         content: post.content || '',
         pain_point: post.analysis.pain_point,
-        audience_insight: post.analysis.audience_insight
+        audience_insight: post.analysis.audience_insight,
+        // Include engagement metrics for better context
+        subreddit: post.subreddit,
+        score: post.score,
+        comments: post.comments,
+        permalink: post.permalink,
+        content_opportunity: post.analysis.content_opportunity,
+        urgency_level: post.analysis.urgency_level
       };
 
       // Determine backend URL based on environment
@@ -806,6 +813,27 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
             <p className="dig-deeper-modal-context-post">{post.title}</p>
             <div className="dig-deeper-modal-context-meta">
               <span className="dig-deeper-modal-badge">r/{post.subreddit}</span>
+              
+              {/* Engagement Metrics */}
+              <span className="dig-deeper-modal-engagement" style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.25rem 0.5rem',
+                backgroundColor: '#f3f4f6',
+                borderRadius: '0.25rem',
+                fontSize: '0.75rem',
+                color: '#6b7280',
+                fontWeight: '500'
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  ↑ {post.score || 0}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  💬 {post.comments || 0}
+                </span>
+              </span>
+              
               {conversationStage && (
                 <span className="dig-deeper-modal-stage">
                   {conversationStage}

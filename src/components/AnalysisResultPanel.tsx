@@ -7,6 +7,7 @@ import LinkedInPostModal from './LinkedInPostModal';
 import RedditEngagementPanel from './RedditEngagementPanel';
 import RedditEngagementModal from './RedditEngagementModal';
 import CommentPreviewModal from './CommentPreviewModal';
+import { StorageManager } from '../utils/storageManager';
 
 interface AnalysisResultPanelProps {
   analyzedPosts: AnalyzedPost[];
@@ -481,6 +482,23 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   const effectiveKeywords = keywords || (backupAnalysisData?.keywords || '');
   const effectivePatternAnalysis = propPatternAnalysis || backupAnalysisData?.patternAnalysis || null;
 
+  // Debug logging to see what data we're working with
+  console.log('🎯 AnalysisResultPanel props:', {
+    analyzedPosts: analyzedPosts.length,
+    workflowId,
+    totalFound,
+    keywords,
+    patternAnalysis: !!propPatternAnalysis
+  });
+  
+  console.log('🎯 AnalysisResultPanel effective data:', {
+    effectiveAnalyzedPosts: effectiveAnalyzedPosts.length,
+    effectiveWorkflowId,
+    effectiveTotalFound,
+    effectiveKeywords,
+    effectivePatternAnalysis: !!effectivePatternAnalysis
+  });
+
   // View toggle state - 'patterns' is the new default view, with localStorage persistence
   const [viewMode, setViewMode] = useState<'patterns' | 'individual'>(() => {
     const savedViewMode = localStorage.getItem('apollo-analysis-view-mode');
@@ -558,100 +576,11 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       };
       setBackupAnalysisData(backupData);
       
-      // Safely store in localStorage with quota handling
-      try {
-        const dataString = JSON.stringify(backupData);
-        
-        // Check if data is too large (estimate ~4MB limit to be safe)
-        if (dataString.length > 4 * 1024 * 1024) {
-          console.warn('Analysis data too large for localStorage, creating compressed backup');
-          setStorageNotification({ type: 'compressed', show: true });
-          
-          // Create a compressed version with essential data only
-          const compressedBackup = {
-            analyzedPosts: analyzedPosts.map(post => ({
-              id: post.id,
-              title: post.title,
-              subreddit: post.subreddit,
-              created_utc: post.created_utc,
-              score: post.score,
-              comments: post.comments,
-              permalink: post.permalink,
-              // Keep only first 500 chars of content to save space
-              content: post.content ? post.content.substring(0, 500) + (post.content.length > 500 ? '...' : '') : '',
-              // Keep analysis but truncate long text
-              analysis: {
-                pain_point: post.analysis?.pain_point?.substring(0, 1000) || '',
-                audience_insight: post.analysis?.audience_insight?.substring(0, 1000) || '',
-                content_opportunity: post.analysis?.content_opportunity?.substring(0, 1000) || ''
-              },
-              has_comment_insights: post.has_comment_insights,
-              comment_analysis: post.comment_analysis ? {
-                total_comments_analyzed: post.comment_analysis.total_comments_analyzed,
-                keyword_mentions: post.comment_analysis.keyword_mentions,
-                brand_sentiment_breakdown: post.comment_analysis.brand_sentiment_breakdown,
-                helpfulness_sentiment_breakdown: post.comment_analysis.helpfulness_sentiment_breakdown,
-                // Keep only first 5 comments to save space
-                top_comments: post.comment_analysis.top_comments?.slice(0, 5) || [],
-                key_themes: post.comment_analysis.key_themes?.slice(0, 10) || []
-              } : undefined
-            })),
-            workflowId,
-            totalFound,
-            keywords,
-            patternAnalysis: propPatternAnalysis ? {
-              ...propPatternAnalysis,
-              // Compress pattern analysis
-              overall_summary: {
-                ...propPatternAnalysis.overall_summary,
-                community_narrative: propPatternAnalysis.overall_summary.community_narrative?.substring(0, 1000) || ''
-              },
-              categories: propPatternAnalysis.categories.map(cat => ({
-                ...cat,
-                description: cat.description.substring(0, 500) + (cat.description.length > 500 ? '...' : ''),
-                posts: cat.posts.slice(0, 10) // Keep only first 10 posts per category
-              }))
-            } : null,
-            _compressed: true // Flag to indicate this is compressed data
-          };
-          
-          localStorage.setItem('apollo-analysis-backup', JSON.stringify(compressedBackup));
-        } else {
-          localStorage.setItem('apollo-analysis-backup', dataString);
-        }
-      } catch (error) {
-        console.error('Failed to save analysis backup to localStorage:', error);
-        
-        // If even compressed version fails, clear old data and try minimal backup
-        try {
-          // Clear any existing backup first
-          localStorage.removeItem('apollo-analysis-backup');
-          
-          // Create minimal backup with just essential navigation data
-          const minimalBackup = {
-            analyzedPosts: analyzedPosts.map(post => ({
-              id: post.id,
-              title: post.title,
-              subreddit: post.subreddit,
-              created_utc: post.created_utc,
-              score: post.score,
-              comments: post.comments,
-              permalink: post.permalink
-            })),
-            workflowId,
-            totalFound,
-            keywords,
-            patternAnalysis: null,
-            _minimal: true // Flag to indicate this is minimal data
-          };
-          
-          localStorage.setItem('apollo-analysis-backup', JSON.stringify(minimalBackup));
-          console.warn('Saved minimal analysis backup due to storage constraints');
-          setStorageNotification({ type: 'minimal', show: true });
-        } catch (minimalError) {
-          console.error('Failed to save even minimal backup:', minimalError);
-          // If all else fails, just continue without backup
-        }
+      // Use StorageManager to safely store backup with quota handling
+      const saved = StorageManager.saveAnalysisBackup(backupData);
+      if (!saved) {
+        console.warn('Failed to save analysis backup due to storage constraints');
+        setStorageNotification({ type: 'minimal', show: true });
       }
     }
   }, [analyzedPosts, workflowId, totalFound, keywords, propPatternAnalysis]);
@@ -1408,6 +1337,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   }
 
   if (effectiveAnalyzedPosts.length === 0) {
+    console.log('🎯 AnalysisResultPanel: No analyzed posts, showing empty state');
     return (
       <div className="analysis-panel">
         <div className="analysis-panel-empty" style={{
@@ -1429,8 +1359,16 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
   const currentPost = effectiveAnalyzedPosts[currentIndex];
   
+  console.log('🎯 AnalysisResultPanel: About to render with:', {
+    currentPost: !!currentPost,
+    currentIndex,
+    viewMode,
+    isAnalyzing
+  });
+  
   // Safety check in case currentPost is undefined
   if (!currentPost) {
+    console.log('🎯 AnalysisResultPanel: No current post, showing error state');
     return (
       <div className="analysis-panel">
         <div className="analysis-panel-empty">
@@ -1440,6 +1378,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
     );
   }
 
+  console.log('🎯 AnalysisResultPanel: Rendering main component');
   return (
     <div className="analysis-panel">
       {/* Storage Notification */}

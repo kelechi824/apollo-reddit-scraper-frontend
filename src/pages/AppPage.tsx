@@ -3,6 +3,8 @@ import AnalysisInterface from '../components/AnalysisInterface';
 import AnalysisResultPanel from '../components/AnalysisResultPanel';
 import { WorkflowResponse } from '../types';
 import { API_BASE_URL, buildApiUrl } from '../config/api';
+import { StorageManager } from '../utils/storageManager';
+import { StorageDebug } from '../utils/storageDebug';
 
 const AppPage: React.FC = () => {
   const [currentResults, setCurrentResults] = useState<WorkflowResponse | null>(null);
@@ -17,15 +19,14 @@ const AppPage: React.FC = () => {
    * Why this matters: Preserves user's analysis results when they navigate away and come back
    */
   useEffect(() => {
-    const savedResults = localStorage.getItem('apollo-analysis-results');
+    const savedResults = StorageManager.getAnalysisResults();
     if (savedResults) {
-      try {
-        const parsedResults = JSON.parse(savedResults) as WorkflowResponse;
-        setCurrentResults(parsedResults);
-      } catch (error) {
-        console.error('Failed to parse saved results:', error);
-        localStorage.removeItem('apollo-analysis-results');
-      }
+      setCurrentResults(savedResults as WorkflowResponse);
+    }
+    
+    // Initialize storage debugging in development
+    if (process.env.NODE_ENV === 'development') {
+      StorageDebug.logStorageUsage();
     }
   }, []);
 
@@ -50,10 +51,28 @@ const AppPage: React.FC = () => {
    * Why this matters: Updates the results panel with new analysis data and saves to localStorage
    */
   const handleAnalysisComplete = (results: WorkflowResponse) => {
+    console.log('🎯 AppPage received analysis results:', results);
+    console.log('🎯 Results structure check:', {
+      analyzed_posts: results?.analyzed_posts?.length,
+      workflow_id: results?.workflow_id,
+      reddit_results: results?.reddit_results,
+      pattern_analysis: !!results?.pattern_analysis
+    });
+    console.log('🎯 Setting currentResults state...');
     setCurrentResults(results);
     setIsAnalyzing(false);
-    // Save results to localStorage for persistence
-    localStorage.setItem('apollo-analysis-results', JSON.stringify(results));
+    console.log('🎯 Analysis state updated, isAnalyzing set to false');
+    
+    // Force a re-render check after state update
+    setTimeout(() => {
+      console.log('🎯 State should be updated now, checking...');
+    }, 100);
+    
+    // Save results to localStorage for persistence using smart storage manager
+    const saved = StorageManager.saveAnalysisResults(results);
+    if (!saved) {
+      console.warn('Failed to save analysis results to localStorage due to size constraints');
+    }
   };
 
   /**
@@ -80,12 +99,21 @@ const AppPage: React.FC = () => {
 
       {/* Full Width Results Panel */}
       <div className="results-section-fullwidth">
-        {currentResults || isAnalyzing ? (
+        {(() => {
+          console.log('🎯 Render check - currentResults:', !!currentResults, 'isAnalyzing:', isAnalyzing);
+          if (currentResults) {
+            console.log('🎯 currentResults data structure:', currentResults);
+            console.log('🎯 currentResults analyzed_posts:', currentResults.analyzed_posts?.length);
+            console.log('🎯 currentResults workflow_id:', currentResults.workflow_id);
+            console.log('🎯 currentResults reddit_results:', currentResults.reddit_results);
+          }
+          return currentResults || isAnalyzing;
+        })() ? (
           <AnalysisResultPanel
             analyzedPosts={currentResults?.analyzed_posts || []}
             workflowId={currentResults?.workflow_id || ''}
-            totalFound={currentResults?.reddit_results.total_found || 0}
-            keywords={currentResults?.reddit_results.keywords_used || ''}
+            totalFound={currentResults?.reddit_results?.total_found || 0}
+            keywords={currentResults?.reddit_results?.keywords_used || ''}
             patternAnalysis={currentResults?.pattern_analysis || null}
             onClear={handleClearResults}
             isAnalyzing={isAnalyzing}
