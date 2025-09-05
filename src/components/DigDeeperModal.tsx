@@ -27,6 +27,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationStage, setConversationStage] = useState<string>('');
   const [isInitializing, setIsInitializing] = useState(false);
@@ -99,7 +100,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
 
   /**
    * Start new conversation when modal opens
-   * Why this matters: Initializes the socratic learning journey with specific Reddit post context.
+   * Why this matters: Initializes the socratic learning journey with specific Reddit post context using streaming.
    */
   const startConversation = async () => {
     if (!post) return;
@@ -123,7 +124,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
       // Why this matters: Ensures production deployments use the correct backend URL  
       // Use centralized API configuration
       
-      const response = await fetch(buildApiUrl('/api/chat/start-conversation'), {
+      const response = await fetch(buildApiUrl('/api/chat/start-conversation/stream'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,29 +136,92 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
         throw new Error('Failed to start conversation');
       }
 
-      const data: StartConversationResponse = await response.json();
-      
-      // Ensure minimum animation time has passed
+      // Create placeholder assistant message for streaming
+      const assistantMessageId = `assistant-initial-${Date.now()}`;
+      const assistantMessage: ChatMessage = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString()
+      };
+
+      // Ensure minimum animation time has passed before starting stream
       const elapsedTime = Date.now() - startTime;
       const remainingTime = Math.max(0, minAnimationTime - elapsedTime);
       
       if (remainingTime > 0) {
         await new Promise(resolve => setTimeout(resolve, remainingTime));
       }
-      
-      setConversationId(data.conversation_id);
-      setMessages([data.initial_message]);
-      setConversationStage('Pain Exploration');
 
-      // Save initial conversation to history
-      chatHistoryService.saveConversation(
-        post.id,
-        post.title,
-        post.subreddit,
-        data.conversation_id,
-        [data.initial_message],
-        'Pain Exploration'
-      );
+      // Now end initialization and start streaming
+      setIsInitializing(false);
+      
+      // Set up streaming state
+      setMessages([assistantMessage]);
+      setIsStreaming(true);
+      
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response stream available');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let conversationIdFromStream: string | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'conversation_id') {
+                conversationIdFromStream = data.conversation_id;
+                setConversationId(data.conversation_id);
+              } else if (data.type === 'content') {
+                // Update the assistant message with streaming content
+                setMessages(prev => prev.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, content: msg.content + data.content }
+                    : msg
+                ));
+              } else if (data.type === 'complete') {
+                // Handle completion with metadata
+                const newStage = data.metadata?.conversation_stage || 'Pain Exploration';
+                setConversationStage(newStage);
+                setIsStreaming(false);
+
+                // Save initial conversation to history
+                if (conversationIdFromStream) {
+                  setMessages(currentMessages => {
+                    chatHistoryService.saveConversation(
+                      post.id,
+                      post.title,
+                      post.subreddit,
+                      conversationIdFromStream!,
+                      currentMessages,
+                      newStage
+                    );
+                    return currentMessages;
+                  });
+                }
+              } else if (data.type === 'error') {
+                throw new Error(data.error);
+              }
+            } catch (parseError) {
+              console.error('Error parsing streaming data:', parseError);
+            }
+          }
+        }
+      }
 
     } catch (error) {
       console.error('Error starting conversation:', error);
@@ -170,23 +234,52 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
         await new Promise(resolve => setTimeout(resolve, remainingTime));
       }
       
-      // Add fallback message
+      // End initialization before starting fallback streaming
+      setIsInitializing(false);
+      
+      // Add fallback message with streaming effect
       const fallbackMessage: ChatMessage = {
         id: 'fallback-1',
         role: 'assistant',
-        content: `Welcome to the discovery process! I'm here to help you dig deeper into this pain point: "${post.analysis.pain_point}"\n\nWhat specific challenges do you think this person faces in their daily workflow?`,
+        content: '',
         timestamp: new Date().toISOString()
       };
+      
+      const fallbackContent = `Welcome to the discovery process! I'm here to help you dig deeper into this pain point: "${post.analysis.pain_point}"\n\nWhat specific challenges do you think this person faces in their daily workflow?`;
+      
       setMessages([fallbackMessage]);
-      setConversationId('fallback-conversation'); // Set fallback conversation ID
-    } finally {
-      setIsInitializing(false);
+      setConversationId('fallback-conversation');
+      setIsStreaming(true);
+      
+      // Simulate streaming for fallback message
+      let currentIndex = 0;
+      const streamFallback = () => {
+        if (currentIndex < fallbackContent.length) {
+          const chunkSize = Math.random() * 3 + 1; // Random chunk size 1-4
+          const chunk = fallbackContent.slice(currentIndex, currentIndex + chunkSize);
+          currentIndex += chunkSize;
+          
+          setMessages(prev => prev.map(msg => 
+            msg.id === 'fallback-1' 
+              ? { ...msg, content: msg.content + chunk }
+              : msg
+          ));
+          
+          setTimeout(streamFallback, Math.random() * 50 + 30); // Random delay 30-80ms
+        } else {
+          setIsStreaming(false);
+          setConversationStage('Pain Exploration');
+        }
+      };
+      
+      setTimeout(streamFallback, 500); // Start streaming after 500ms
+      
     }
   };
 
   /**
-   * Send message to AI and get response
-   * Why this matters: Continues the socratic discovery process with contextual AI responses.
+   * Send message to AI and get streaming response
+   * Why this matters: Provides real-time streaming responses for better UX during socratic discovery.
    */
   const sendMessage = async () => {
     if (!inputMessage.trim() || !conversationId || isLoading) return;
@@ -198,48 +291,113 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
       timestamp: new Date().toISOString()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    // Create placeholder assistant message for streaming
+    const assistantMessageId = `assistant-${Date.now()}`;
+    const assistantMessage: ChatMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, userMessage, assistantMessage]);
     setInputMessage('');
     setIsLoading(true);
+    setIsStreaming(false);
+
+    // Immediately scroll to show user message and prepare for AI response
+    setTimeout(() => {
+      scrollToBottom();
+    }, 50);
 
     try {
-      // Determine backend URL based on environment
-    // Why this matters: Ensures production deployments use the correct backend URL
-    const baseUrl = API_BASE_URL;
-      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat/message`, {
+      // Use streaming endpoint
+      const baseUrl = API_BASE_URL;
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat/message/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           conversation_id: conversationId,
-          message: inputMessage.trim()
+          message: userMessage.content
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        // Handle specific error status codes
+        if (response.status === 404) {
+          throw new Error('Conversation not found or expired');
+        }
+        throw new Error(`Failed to send message: ${response.status}`);
       }
 
-      const data: SendMessageResponse = await response.json();
-      const updatedMessages = [...messages, userMessage, data.assistant_message];
-      setMessages(updatedMessages);
-      
-      const newStage = data.conversation_stage || conversationStage;
-      if (data.conversation_stage) {
-        setConversationStage(newStage);
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response stream available');
       }
 
-      // Save conversation to history
-      if (conversationId) {
-        chatHistoryService.saveConversation(
-          post.id,
-          post.title,
-          post.subreddit,
-          conversationId,
-          updatedMessages,
-          newStage
-        );
+      // Stream started successfully, hide loading and show streaming
+      setIsLoading(false);
+      setIsStreaming(true);
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'content') {
+                // Update the assistant message with streaming content
+                setMessages(prev => prev.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, content: msg.content + data.content }
+                    : msg
+                ));
+              } else if (data.type === 'complete') {
+                // Handle completion with metadata
+                const newStage = data.metadata?.conversation_stage || conversationStage;
+                if (data.metadata?.conversation_stage) {
+                  setConversationStage(newStage);
+                }
+
+                // Save conversation to history
+                if (conversationId) {
+                  setMessages(currentMessages => {
+                    const updatedMessages = [...currentMessages];
+                    chatHistoryService.saveConversation(
+                      post.id,
+                      post.title,
+                      post.subreddit,
+                      conversationId,
+                      updatedMessages,
+                      newStage
+                    );
+                    return updatedMessages;
+                  });
+                }
+                
+                // Streaming completed
+                setIsStreaming(false);
+              } else if (data.type === 'error') {
+                throw new Error(data.error);
+              }
+            } catch (parseError) {
+              console.error('Error parsing streaming data:', parseError);
+            }
+          }
+        }
       }
 
       // Refocus input field after receiving response
@@ -248,15 +406,67 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
       }, 100);
 
     } catch (error) {
-      console.error('Error sending message:', error);
-      // Add fallback response
-      const fallbackResponse: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: "I'm having trouble processing that right now. Can you rephrase your thoughts about this challenge?",
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, fallbackResponse]);
+      console.error('Error sending streaming message:', error);
+      
+      // Check if it's a conversation expired error
+      if (error instanceof Error && (error.message.includes('not found') || error.message.includes('expired'))) {
+        console.log('Streaming conversation expired, starting fresh');
+        // Clear conversation state and start fresh
+        setMessages([]);
+        setConversationId(null);
+        setConversationStage('');
+        setIsResumedConversation(false);
+        
+        // The messages will be cleared when we call setMessages([]) above
+        
+        // Start a new conversation
+        startConversation();
+        return;
+      }
+      
+      // For other errors, try fallback to non-streaming endpoint
+      console.log('Streaming failed, trying non-streaming fallback');
+      try {
+        const fallbackResponse = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/api/chat/message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            conversation_id: conversationId,
+            message: userMessage.content
+          }),
+        });
+
+        if (fallbackResponse.ok) {
+          const data: SendMessageResponse = await fallbackResponse.json();
+          
+          // Update the assistant message with the response
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: data.assistant_message.content }
+              : msg
+          ));
+          
+          // Update conversation stage
+          const newStage = data.conversation_stage || conversationStage;
+          if (data.conversation_stage) {
+            setConversationStage(newStage);
+          }
+          
+          console.log('Fallback to non-streaming successful');
+        } else {
+          throw new Error('Fallback also failed');
+        }
+      } catch (fallbackError) {
+        console.error('Fallback to non-streaming also failed:', fallbackError);
+        // Update with final fallback content
+        setMessages(prev => prev.map(msg => 
+          msg.id === assistantMessageId 
+            ? { ...msg, content: "I'm having trouble processing that right now. Can you rephrase your thoughts about this challenge?" }
+            : msg
+        ));
+      }
       
       // Refocus input field after fallback response
       setTimeout(() => {
@@ -264,6 +474,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
       }, 100);
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
     }
   };
 
@@ -314,6 +525,61 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
    */
   const openFilePicker = () => {
     fileInputRef.current?.click();
+  };
+
+  /**
+   * Format message content with markdown support
+   * Why this matters: Converts **bold** markdown to proper HTML formatting for better readability
+   */
+  const formatMessageContent = (content: string): React.ReactElement => {
+    if (!content) {
+      return <span>{content}</span>;
+    }
+
+    // Split content by lines to preserve line breaks
+    const lines = content.split('\n');
+    
+    return (
+      <div>
+        {lines.map((line, lineIndex) => {
+          // Process each line for markdown formatting
+          const processLine = (text: string): React.ReactNode[] => {
+            const elements: React.ReactNode[] = [];
+            
+            // Split by bold markdown (**text**)
+            const boldPattern = /(\*\*[^*]+\*\*)/g;
+            const parts = text.split(boldPattern);
+            
+            parts.forEach((part, index) => {
+              if (!part) return;
+              
+              // Check if this part is bold markdown
+              if (part.startsWith('**') && part.endsWith('**')) {
+                const boldText = part.slice(2, -2); // Remove ** from both ends
+                elements.push(
+                  <strong key={`bold-${lineIndex}-${index}`} style={{ fontWeight: '700' }}>
+                    {boldText}
+                  </strong>
+                );
+              } else {
+                elements.push(
+                  <span key={`text-${lineIndex}-${index}`}>{part}</span>
+                );
+              }
+            });
+            
+            return elements;
+          };
+
+          return (
+            <div key={lineIndex}>
+              {processLine(line)}
+              {lineIndex < lines.length - 1 && <br />}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   /**
@@ -430,18 +696,44 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
   }, [isOpen, post, currentPostId]);
 
   /**
-   * Auto-scroll to bottom only for user messages, not AI responses
-   * Why this matters: Allows users to read AI responses from the top without being forced to scroll back up.
+   * Auto-scroll to bottom for user messages and during streaming
+   * Why this matters: Keeps the conversation in view during active chat interactions.
    */
   useEffect(() => {
-    // Only scroll to bottom if the last message is from the user
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
+      
+      // Always scroll for user messages
       if (lastMessage.role === 'user') {
         scrollToBottom();
       }
+      // Also scroll during streaming to follow the AI response
+      else if (lastMessage.role === 'assistant' && isStreaming) {
+        scrollToBottom();
+      }
     }
-  }, [messages]);
+  }, [messages, isStreaming]);
+
+  /**
+   * Continuous scroll during streaming
+   * Why this matters: Ensures viewport follows the streaming text as it appears.
+   */
+  useEffect(() => {
+    let scrollInterval: NodeJS.Timeout;
+    
+    if (isStreaming) {
+      // Scroll every 100ms during streaming to follow the content
+      scrollInterval = setInterval(() => {
+        scrollToBottom();
+      }, 100);
+    }
+    
+    return () => {
+      if (scrollInterval) {
+        clearInterval(scrollInterval);
+      }
+    };
+  }, [isStreaming]);
 
   /**
    * Focus input when modal opens
@@ -559,13 +851,13 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
           {isInitializing ? (
             <div className="dig-deeper-modal-loading">
               <div className="loading-spinner"></div>
-              <span className="dig-deeper-modal-loading-text">Starting discovery session...</span>
+              <span className="dig-deeper-modal-loading-text">Analyzing the Reddit post to recommend how we can engage with it...</span>
             </div>
           ) : (
             messages.map((message) => (
               <div key={message.id} className={`dig-deeper-message ${message.role}`}>
                 <div className={`dig-deeper-message-content ${message.role}`}>
-                  <div>{message.content}</div>
+                  {formatMessageContent(message.content)}
                   <div className={`dig-deeper-message-time ${message.role}`}>
                     {new Date(message.timestamp).toLocaleTimeString([], { 
                       hour: '2-digit', 
@@ -580,9 +872,13 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
                         <button
                           onClick={() => handleCopyMessage(message.id, message.content)}
                           className="dig-deeper-feedback-btn dig-deeper-copy-btn"
-                          title="Copy message"
+                          title={showCopiedMessage === message.id ? "Copied!" : "Copy message"}
                         >
-                          <Copy style={{ width: '0.875rem', height: '0.875rem' }} />
+                          {showCopiedMessage === message.id ? (
+                            <Check style={{ width: '0.875rem', height: '0.875rem', color: '#059669' }} />
+                          ) : (
+                            <Copy style={{ width: '0.875rem', height: '0.875rem' }} />
+                          )}
                         </button>
                         <button
                           onClick={() => handleMessageFeedback(message.id, 'positive')}
@@ -600,13 +896,6 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
                         </button>
                       </div>
                       
-                      {/* Copied message */}
-                      {showCopiedMessage === message.id && (
-                        <div className="dig-deeper-copied-message">
-                          <Check style={{ width: '0.875rem', height: '0.875rem', marginRight: '0.375rem' }} />
-                          Copied!
-                        </div>
-                      )}
                       
                       {/* Thanks message */}
                       {showThanksMessage === message.id && (
@@ -621,7 +910,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
             ))
           )}
           
-          {isLoading && (
+          {isLoading && !isStreaming && (
             <div className="dig-deeper-typing">
               <div className="dig-deeper-typing-content">
                 <div className="loading-spinner loading-spinner-sm"></div>
@@ -688,7 +977,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder="Share your thoughts..."
-              disabled={isLoading}
+              disabled={isLoading || isStreaming}
               className="dig-deeper-input dig-deeper-textarea"
               rows={3}
               style={{
@@ -703,7 +992,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
             <div className="dig-deeper-action-row">
               <button
                 onClick={openFilePicker}
-                disabled={isLoading}
+                disabled={isLoading || isStreaming}
                 className="dig-deeper-attach-btn"
                 title="Attach image"
               >
@@ -713,7 +1002,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
               
               <button
                 onClick={sendMessage}
-                disabled={!inputMessage.trim() || isLoading || !conversationId}
+                disabled={!inputMessage.trim() || isLoading || isStreaming || !conversationId}
                 className="dig-deeper-send-btn-optimized"
               >
                 <Send style={{ width: '1rem', height: '1rem', marginRight: '0.5rem' }} />

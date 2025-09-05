@@ -26,6 +26,7 @@ interface PatternCategoryCardProps {
   setCurrentIndex: (index: number) => void;
   setShowPostModal: (show: boolean) => void;
   setIsRedditEngagementModalOpen: (open: boolean) => void;
+  setIsDigDeeperModalOpen: (open: boolean) => void;
   handleOpenCommentPreview: (post: AnalyzedPost) => void;
   keywords: string;
 }
@@ -42,6 +43,7 @@ const PatternCategoryCard: React.FC<PatternCategoryCardProps> = ({
   setCurrentIndex,
   setShowPostModal,
   setIsRedditEngagementModalOpen,
+  setIsDigDeeperModalOpen,
   handleOpenCommentPreview,
   keywords
 }) => {
@@ -373,6 +375,42 @@ const PatternCategoryCard: React.FC<PatternCategoryCardProps> = ({
                     >
                       <MessageSquare style={{ width: '0.75rem', height: '0.75rem' }} />
                       Engage
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Set the current post for modal viewing
+                        const postIndex = analyzedPosts.findIndex(p => p.id === post.id);
+                        if (postIndex !== -1) {
+                          setCurrentIndex(postIndex);
+                        }
+                        setIsDigDeeperModalOpen(true);
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#eff6ff',
+                        color: '#2563eb',
+                        border: '1px solid #dbeafe',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.6875rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#dbeafe';
+                        e.currentTarget.style.color = '#1d4ed8';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#eff6ff';
+                        e.currentTarget.style.color = '#2563eb';
+                      }}
+                    >
+                      <Wand2 style={{ width: '0.75rem', height: '0.75rem' }} />
+                      AI Discovery Chat
                     </button>
               </div>
             </div>
@@ -973,7 +1011,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
              }}
            >
              <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
-             Get Conversation Starter Tips
+             AI Discovery Chat
            </button>
         </div>
         <p style={{ 
@@ -983,7 +1021,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           marginTop: '0.75rem',
           lineHeight: '1.4'
         }}>
-          Get AI-powered conversation starters to engage naturally in Reddit discussions
+          Start an AI-powered discovery session to explore pain points and find strategic conversation angles
         </p>
       </div>
     );
@@ -1913,7 +1951,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                     }}
                   >
                     <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
-                    Get Conversation Starter Tips
+                    AI Discovery Chat
                   </button>
                   <p style={{ 
                     fontSize: '0.75rem', 
@@ -1922,7 +1960,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                     marginTop: '0.75rem',
                     lineHeight: '1.4'
                   }}>
-                    Get AI-powered conversation starters to engage naturally in Reddit discussions
+                    Start an AI-powered discovery session to explore pain points and find strategic conversation angles
                   </p>
                 </div>
               </div>
@@ -2573,6 +2611,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                     setCurrentIndex={setCurrentIndex}
                     setShowPostModal={setShowPostModal}
                     setIsRedditEngagementModalOpen={setIsRedditEngagementModalOpen}
+                    setIsDigDeeperModalOpen={setIsDigDeeperModalOpen}
                     handleOpenCommentPreview={handleOpenCommentPreview}
                     keywords={effectiveKeywords}
                   />

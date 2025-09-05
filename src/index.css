@@ -1188,14 +1188,14 @@ footer {
 
 /* Header Analysis Interface Section */
 .analysis-header-section {
-  background: white;
+  background: #E2E8F0;
   border-bottom: 0.0625rem solid var(--apollo-gray-200);
   padding: 1rem;
   flex: 0 0 auto;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   z-index: 10;
   position: relative;
-  margin-top: -1rem; /* Move the interface up */
+  margin-top: -2.5rem; /* Move the interface up more to position nicely at top */
 }
 
 @media (min-width: 48.0625rem) {
@@ -3958,8 +3958,9 @@ footer {
     right: 0 !important;
     bottom: 0;
     left: auto !important;
-    width: 100%;
-    max-width: 42rem;
+    width: 80vw;
+    max-width: 75rem;
+    min-width: 46.875rem;
     background-color: white;
     box-shadow: -0.25rem 0 1.5625rem rgba(0, 0, 0, 0.2);
     border-radius: 0;
@@ -4242,10 +4243,10 @@ footer {
 }
 
 .dig-deeper-message-content {
-  /* Mobile: Narrow content bubbles */
+  /* Mobile: Wider content bubbles for better space utilization */
   font-size: 0.75rem;
   line-height: 1.5;
-  max-width: 26rem;
+  max-width: 85%;
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   white-space: pre-wrap;
@@ -4253,10 +4254,10 @@ footer {
   overflow-wrap: break-word;
 }
 
-/* Tablet and up: Wider content bubbles */
+/* Tablet and up: Even wider content bubbles to match larger modal */
 @media (min-width: 48.0625rem) {
   .dig-deeper-message-content {
-    max-width: 24rem;
+    max-width: 75%;
     padding: 1rem 1.25rem;
     font-size: 0.875rem;
   }
