@@ -112,21 +112,51 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
     const minAnimationTime = 3000; // 3 seconds
     
     try {
+      // Debug logging to see what values we're sending
+      console.log('🔍 [DEBUG] DigDeeperModal received post object:', post);
+      console.log('🔍 [DEBUG] DigDeeperModal post data summary:', {
+        post_id: post.id,
+        title: post.title,
+        subreddit: post.subreddit,
+        score: post.score,
+        comments: post.comments,
+        url: post.url,
+        permalink: post.permalink,
+        author: post.author,
+        score_type: typeof post.score,
+        comments_type: typeof post.comments,
+        has_analysis: !!post.analysis,
+        analysis_keys: post.analysis ? Object.keys(post.analysis) : []
+      });
+
       const request: StartConversationRequest = {
         post_id: post.id,
         title: post.title,
         content: post.content || '',
         pain_point: post.analysis.pain_point,
         audience_insight: post.analysis.audience_insight,
-        // Include engagement metrics for better context
+
+        // Enhanced context for better AI coaching
         subreddit: post.subreddit,
         score: post.score,
         comments: post.comments,
+        post_url: post.url,
         permalink: post.permalink,
         content_opportunity: post.analysis.content_opportunity,
-        urgency_level: post.analysis.urgency_level
+        urgency_level: post.analysis.urgency_level,
+        ...(post.comment_analysis ? {
+          comment_insights: {
+            total_comments: post.comment_analysis.total_comments_analyzed,
+            keyword_mentions: post.comment_analysis.keyword_mentions,
+            key_themes: post.comment_analysis.key_themes,
+            top_comments: post.comment_analysis.top_comments?.slice(0, 3) || [] // Include top 3 comments for context
+          }
+        } : {})
       };
 
+      // Debug: Log the exact request being sent
+      console.log('🔍 [DEBUG] About to send request:', JSON.stringify(request, null, 2));
+      
       // Determine backend URL based on environment
       // Why this matters: Ensures production deployments use the correct backend URL  
       // Use centralized API configuration
@@ -220,6 +250,9 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
                     return currentMessages;
                   });
                 }
+                
+                // Force a re-render of messages to ensure markdown is properly processed
+                setMessages(prev => [...prev]);
               } else if (data.type === 'error') {
                 throw new Error(data.error);
               }
@@ -395,8 +428,11 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
                   });
                 }
                 
-                // Streaming completed
+                // Streaming completed - force re-render to apply markdown formatting
                 setIsStreaming(false);
+                
+                // Force a re-render of messages to ensure markdown is properly processed
+                setMessages(prev => [...prev]);
               } else if (data.type === 'error') {
                 throw new Error(data.error);
               }
@@ -536,11 +572,17 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
 
   /**
    * Format message content with markdown support
-   * Why this matters: Converts **bold** markdown to proper HTML formatting for better readability
+   * Why this matters: Converts **bold** and *italic* markdown to proper HTML formatting for better readability
    */
   const formatMessageContent = (content: string): React.ReactElement => {
     if (!content) {
       return <span>{content}</span>;
+    }
+
+    // Debug: Log content to see what we're processing
+    if (content.includes('*')) {
+      console.log('🔍 [DEBUG] Formatting content:', content.substring(0, 100) + '...');
+      console.log('🔍 [DEBUG] Has asterisks at positions:', content.split('').map((char, i) => char === '*' ? i : null).filter(i => i !== null));
     }
 
     // Split content by lines to preserve line breaks
@@ -553,25 +595,45 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
           const processLine = (text: string): React.ReactNode[] => {
             const elements: React.ReactNode[] = [];
             
-            // Split by bold markdown (**text**)
+            // First split by bold markdown (**text**), then handle italics within each part
             const boldPattern = /(\*\*[^*]+\*\*)/g;
-            const parts = text.split(boldPattern);
+            const boldParts = text.split(boldPattern);
             
-            parts.forEach((part, index) => {
-              if (!part) return;
+            boldParts.forEach((boldPart, boldIndex) => {
+              if (!boldPart) return;
               
               // Check if this part is bold markdown
-              if (part.startsWith('**') && part.endsWith('**')) {
-                const boldText = part.slice(2, -2); // Remove ** from both ends
+              if (boldPart.startsWith('**') && boldPart.endsWith('**')) {
+                const boldText = boldPart.slice(2, -2); // Remove ** from both ends
                 elements.push(
-                  <strong key={`bold-${lineIndex}-${index}`} style={{ fontWeight: '700' }}>
+                  <strong key={`bold-${lineIndex}-${boldIndex}`} style={{ fontWeight: '700' }}>
                     {boldText}
                   </strong>
                 );
               } else {
-                elements.push(
-                  <span key={`text-${lineIndex}-${index}`}>{part}</span>
-                );
+                // Process this part for italic markdown (*text*)
+                // Updated pattern to handle quotes and various content within asterisks
+                const italicPattern = /(\*[^*]+\*)/g;
+                const italicParts = boldPart.split(italicPattern);
+                
+                italicParts.forEach((italicPart, italicIndex) => {
+                  if (!italicPart) return;
+                  
+                  // Check if this part is italic markdown (single asterisks, not double)
+                  if (italicPart.startsWith('*') && italicPart.endsWith('*') && italicPart.length > 2 && !italicPart.startsWith('**')) {
+                    const italicText = italicPart.slice(1, -1); // Remove * from both ends
+                    elements.push(
+                      <em key={`italic-${lineIndex}-${boldIndex}-${italicIndex}`} style={{ fontStyle: 'italic' }}>
+                        {italicText}
+                      </em>
+                    );
+                  } else {
+                    // Regular text
+                    elements.push(
+                      <span key={`text-${lineIndex}-${boldIndex}-${italicIndex}`}>{italicPart}</span>
+                    );
+                  }
+                });
               }
             });
             
@@ -701,6 +763,17 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
       }
     }
   }, [isOpen, post, currentPostId]);
+
+  /**
+   * Reset state when modal closes
+   * Why this matters: Ensures clean state when modal is reopened, preventing stale data issues.
+   */
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset currentPostId when modal closes so it will reload conversation when reopened
+      setCurrentPostId(null);
+    }
+  }, [isOpen]);
 
   /**
    * Auto-scroll to bottom for user messages and during streaming
@@ -883,7 +956,7 @@ const DigDeeperModal: React.FC<DigDeeperModalProps> = ({ isOpen, onClose, post }
             </div>
           ) : (
             messages.map((message) => (
-              <div key={message.id} className={`dig-deeper-message ${message.role}`}>
+              <div key={`${message.id}-${message.content.length}`} className={`dig-deeper-message ${message.role}`}>
                 <div className={`dig-deeper-message-content ${message.role}`}>
                   {formatMessageContent(message.content)}
                   <div className={`dig-deeper-message-time ${message.role}`}>

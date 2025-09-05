@@ -686,6 +686,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       };
       setBackupAnalysisData(backupData);
       
+
       // Use StorageManager to safely store backup with quota handling
       const saved = StorageManager.saveAnalysisBackup(backupData);
       if (!saved) {
@@ -2825,7 +2826,20 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       {/* Dig Deeper Modal */}
       <DigDeeperModal
         isOpen={isDigDeeperModalOpen}
-        onClose={() => setIsDigDeeperModalOpen(false)}
+        onClose={() => {
+          // Debug logging to see what currentPost contains
+          console.log('🔍 [DEBUG] AnalysisResultPanel currentPost:', {
+            id: currentPost?.id,
+            title: currentPost?.title,
+            subreddit: currentPost?.subreddit,
+            score: currentPost?.score,
+            comments: currentPost?.comments,
+            score_type: typeof currentPost?.score,
+            comments_type: typeof currentPost?.comments,
+            has_all_fields: !!(currentPost?.subreddit && currentPost?.score !== undefined && currentPost?.comments !== undefined)
+          });
+          setIsDigDeeperModalOpen(false);
+        }}
         post={currentPost}
       />
 
