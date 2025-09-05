@@ -145,6 +145,16 @@ export interface StartConversationRequest {
       helpfulness_sentiment: 'positive' | 'negative' | 'neutral';
       excerpt: string;
     }>;
+    brand_sentiment_breakdown?: {
+      positive: number;
+      negative: number;
+      neutral: number;
+    };
+    helpfulness_sentiment_breakdown?: {
+      positive: number;
+      negative: number;
+      neutral: number;
+    };
   };
 }
 
