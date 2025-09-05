@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Play, AlertCircle, Clock } from 'lucide-react';
 import { WorkflowRequest, WorkflowResponse } from '../types';
 import { makeApiRequest } from '../utils/apiHelpers';
-import { StorageManager } from '../utils/storageManager';
+import { StorageManager } from '../utils/StorageManager';
 
 interface AnalysisInterfaceProps {
   apiUrl: string;
