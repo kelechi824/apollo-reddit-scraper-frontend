@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink, Wand2, FileText, AlertTriangle, ChevronDown, ChevronUp, Users, MessageCircle, ArrowUp, Clock, Eye, Trash2, BarChart3, MessageSquare, Search, X } from 'lucide-react';
 import { AnalyzedPost, PatternAnalysisResult, PatternAnalysisRequest, PatternCategory } from '../types';
+import { StorageManager } from '../utils/storageManager';
 import DigDeeperModal from './DigDeeperModal';
 import ContentCreationModal from './ContentCreationModal';
 import LinkedInPostModal from './LinkedInPostModal';
