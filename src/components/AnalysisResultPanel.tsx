@@ -8,6 +8,7 @@ import LinkedInPostModal from './LinkedInPostModal';
 import RedditEngagementPanel from './RedditEngagementPanel';
 import RedditEngagementModal from './RedditEngagementModal';
 import CommentPreviewModal from './CommentPreviewModal';
+import LoadingJokes from './LoadingJokes';
 import { FEATURE_FLAGS } from '../utils/featureFlags';
 
 interface AnalysisResultPanelProps {
@@ -1282,39 +1283,15 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           <Skeleton style={{ height: '2.5rem', width: '4rem' }} />
         </div>
 
-        {/* Loading Message - Entertainment during analysis */}
-        <div style={{ 
-          margin: '1rem',
-          marginBottom: '2rem',
-          padding: '1.5rem',
-          backgroundColor: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          borderRadius: '0.75rem',
-          textAlign: 'center'
-        }}>
-          <div style={{ 
-            fontSize: '2rem', 
-            marginBottom: '1rem',
-            animation: 'bounce 2s infinite'
-          }}>
-            🤖
-          </div>
-          <h3 style={{ 
-            fontSize: '1.125rem', 
-            fontWeight: '600', 
-            color: '#1f2937',
-            marginBottom: '0.5rem'
-          }}>
-            AI is analyzing Reddit discussions...
-          </h3>
-          <p style={{ 
-            fontSize: '0.875rem', 
-            color: '#6b7280',
-            margin: 0
-          }}>
-            Discovering insights about "{effectiveKeywords}" across multiple communities
-          </p>
-        </div>
+        {/* Loading Jokes - Entertainment during analysis */}
+        <LoadingJokes 
+          keywords={effectiveKeywords}
+          rotationInterval={20000}
+          style={{ 
+            margin: '1rem',
+            marginBottom: '2rem'
+          }}
+        />
 
         {/* Skeleton Pattern View */}
         <div className="patterns-view">

@@ -72,3 +72,5 @@ console.log('🔧 API Configuration:', {
   REACT_APP_API_URL: process.env.REACT_APP_API_URL,
   API_BASE_URL,
 });
+
+console.log('🎭 Jokes API URL will be:', `${API_BASE_URL}/api/jokes/random`);
