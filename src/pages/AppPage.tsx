@@ -3,8 +3,7 @@ import AnalysisInterface from '../components/AnalysisInterface';
 import AnalysisResultPanel from '../components/AnalysisResultPanel';
 import { WorkflowResponse } from '../types';
 import { API_BASE_URL, buildApiUrl } from '../config/api';
-import { StorageManager } from '../utils/storageManager';
-import { StorageDebug } from '../utils/storageDebug';
+import { StorageManager } from '../utils/StorageManager';
 import { FEATURE_FLAGS } from '../utils/featureFlags';
 
 const AppPage: React.FC = () => {
@@ -87,8 +86,8 @@ const AppPage: React.FC = () => {
           <AnalysisResultPanel
             analyzedPosts={currentResults?.analyzed_posts || []}
             workflowId={currentResults?.workflow_id || ''}
-            totalFound={currentResults?.reddit_results.total_found || 0}
-            keywords={currentResults?.reddit_results.keywords_used || ''}
+            totalFound={currentResults?.reddit_results?.total_found || 0}
+            keywords={currentResults?.reddit_results?.keywords_used || ''}
             patternAnalysis={currentResults?.pattern_analysis || null}
             onClear={handleClearResults}
             isAnalyzing={isAnalyzing}
