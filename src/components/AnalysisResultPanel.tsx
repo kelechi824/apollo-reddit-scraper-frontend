@@ -8,6 +8,7 @@ import RedditEngagementPanel from './RedditEngagementPanel';
 import RedditEngagementModal from './RedditEngagementModal';
 import CommentPreviewModal from './CommentPreviewModal';
 import { StorageManager } from '../utils/storageManager';
+import { FEATURE_FLAGS } from '../utils/featureFlags';
 
 interface AnalysisResultPanelProps {
   analyzedPosts: AnalyzedPost[];
@@ -17,6 +18,7 @@ interface AnalysisResultPanelProps {
   patternAnalysis?: PatternAnalysisResult | null;
   onClear: () => void;
   isAnalyzing?: boolean;
+  showIndividualPostsView?: boolean;
 }
 
 interface PatternCategoryCardProps {
@@ -28,6 +30,8 @@ interface PatternCategoryCardProps {
   setShowPostModal: (show: boolean) => void;
   setIsRedditEngagementModalOpen: (open: boolean) => void;
   setIsDigDeeperModalOpen: (open: boolean) => void;
+  setIsContentCreationModalOpen: (open: boolean) => void;
+  setIsLinkedInPostModalOpen: (open: boolean) => void;
   handleOpenCommentPreview: (post: AnalyzedPost) => void;
   keywords: string;
 }
@@ -45,6 +49,8 @@ const PatternCategoryCard: React.FC<PatternCategoryCardProps> = ({
   setShowPostModal,
   setIsRedditEngagementModalOpen,
   setIsDigDeeperModalOpen,
+  setIsContentCreationModalOpen,
+  setIsLinkedInPostModalOpen,
   handleOpenCommentPreview,
   keywords
 }) => {
@@ -356,26 +362,31 @@ const PatternCategoryCard: React.FC<PatternCategoryCardProps> = ({
                         alignItems: 'center',
                         gap: '0.25rem',
                         padding: '0.25rem 0.5rem',
-                        backgroundColor: '#f0fdf4',
-                        color: '#059669',
-                        border: '1px solid #bbf7d0',
+                        backgroundColor: '#D93801',
+                        color: 'white',
+                        border: '1px solid #D93801',
                         borderRadius: '0.25rem',
                         fontSize: '0.6875rem',
                         fontWeight: '600',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 0.125rem 0.1875rem -0.03125rem rgba(217, 56, 1, 0.2)'
                       }}
                       onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#dcfce7';
-                        e.currentTarget.style.color = '#047857';
+                        e.currentTarget.style.backgroundColor = '#B8300A';
+                        e.currentTarget.style.borderColor = '#B8300A';
+                        e.currentTarget.style.transform = 'translateY(-0.03125rem)';
+                        e.currentTarget.style.boxShadow = '0 0.25rem 0.375rem -0.0625rem rgba(217, 56, 1, 0.3)';
                       }}
                       onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f0fdf4';
-                        e.currentTarget.style.color = '#059669';
+                        e.currentTarget.style.backgroundColor = '#D93801';
+                        e.currentTarget.style.borderColor = '#D93801';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 0.125rem 0.1875rem -0.03125rem rgba(217, 56, 1, 0.2)';
                       }}
                     >
                       <MessageSquare style={{ width: '0.75rem', height: '0.75rem' }} />
-                      Engage
+                      Create Comments
                     </button>
                     
                     <button
@@ -392,9 +403,87 @@ const PatternCategoryCard: React.FC<PatternCategoryCardProps> = ({
                         alignItems: 'center',
                         gap: '0.25rem',
                         padding: '0.25rem 0.5rem',
-                        backgroundColor: '#eff6ff',
-                        color: '#2563eb',
-                        border: '1px solid #dbeafe',
+                        backgroundColor: '#EBF212',
+                        color: '#000',
+                        border: '1px solid #EBF212',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.6875rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 0.125rem 0.1875rem -0.03125rem rgba(235, 242, 18, 0.2)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#d4d41a';
+                        e.currentTarget.style.borderColor = '#d4d41a';
+                        e.currentTarget.style.transform = 'translateY(-0.03125rem)';
+                        e.currentTarget.style.boxShadow = '0 0.25rem 0.375rem -0.0625rem rgba(235, 242, 18, 0.3)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#EBF212';
+                        e.currentTarget.style.borderColor = '#EBF212';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 0.125rem 0.1875rem -0.03125rem rgba(235, 242, 18, 0.2)';
+                      }}
+                    >
+                      <Wand2 style={{ width: '0.75rem', height: '0.75rem' }} />
+                      AI Discovery Chat
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Set the current post for modal viewing
+                        const postIndex = analyzedPosts.findIndex(p => p.id === post.id);
+                        if (postIndex !== -1) {
+                          setCurrentIndex(postIndex);
+                        }
+                        setIsContentCreationModalOpen(true);
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        padding: '0.25rem 0.5rem',
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #4f46e5 70%, #8b5cf6 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.6875rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 0.125rem 0.1875rem -0.03125rem rgba(59, 130, 246, 0.2)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-0.03125rem)';
+                        e.currentTarget.style.boxShadow = '0 0.25rem 0.375rem -0.0625rem rgba(59, 130, 246, 0.3)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 0.125rem 0.1875rem -0.03125rem rgba(59, 130, 246, 0.2)';
+                      }}
+                    >
+                      <Wand2 style={{ width: '0.75rem', height: '0.75rem' }} />
+                      Create SEO/AEO Articles
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Set the current post for modal viewing
+                        const postIndex = analyzedPosts.findIndex(p => p.id === post.id);
+                        if (postIndex !== -1) {
+                          setCurrentIndex(postIndex);
+                        }
+                        setIsLinkedInPostModalOpen(true);
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#0077b5',
+                        color: 'white',
+                        border: '1px solid #0077b5',
                         borderRadius: '0.25rem',
                         fontSize: '0.6875rem',
                         fontWeight: '600',
@@ -402,16 +491,24 @@ const PatternCategoryCard: React.FC<PatternCategoryCardProps> = ({
                         transition: 'all 0.2s ease'
                       }}
                       onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#dbeafe';
-                        e.currentTarget.style.color = '#1d4ed8';
+                        e.currentTarget.style.backgroundColor = '#005582';
+                        e.currentTarget.style.borderColor = '#005582';
                       }}
                       onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#eff6ff';
-                        e.currentTarget.style.color = '#2563eb';
+                        e.currentTarget.style.backgroundColor = '#0077b5';
+                        e.currentTarget.style.borderColor = '#0077b5';
                       }}
                     >
-                      <Wand2 style={{ width: '0.75rem', height: '0.75rem' }} />
-                      AI Discovery Chat
+                      <svg 
+                        width="12" 
+                        height="12" 
+                        viewBox="0 0 24 24" 
+                        fill="currentColor"
+                        style={{ width: '0.75rem', height: '0.75rem' }}
+                      >
+                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                      </svg>
+                      Create LinkedIn Post
                     </button>
               </div>
             </div>
@@ -442,7 +539,8 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   keywords,
   patternAnalysis: propPatternAnalysis,
   onClear,
-  isAnalyzing = false
+  isAnalyzing = false,
+  showIndividualPostsView = true
 }) => {
   // Backup persistence state - preserves data during page refreshes
   const [backupAnalysisData, setBackupAnalysisData] = useState<{
@@ -504,6 +602,18 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
     const savedViewMode = localStorage.getItem('apollo-analysis-view-mode');
     return (savedViewMode === 'individual' || savedViewMode === 'patterns') ? savedViewMode : 'patterns';
   });
+
+  /**
+   * Handle feature flag changes for showIndividualPostsView
+   * Why this matters: When "View Individual Posts" button is hidden, we need to automatically 
+   * switch to patterns view to prevent users from being stuck in individual view mode
+   */
+  useEffect(() => {
+    if (!showIndividualPostsView && viewMode === 'individual') {
+      setViewMode('patterns');
+      localStorage.setItem('apollo-analysis-view-mode', 'patterns');
+    }
+  }, [showIndividualPostsView, viewMode]);
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<'original' | 'pain' | 'audience' | 'content' | 'creator'>('original');
@@ -1171,6 +1281,40 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
           <Skeleton style={{ height: '2.5rem', width: '4rem' }} />
         </div>
 
+        {/* Loading Message - Entertainment during analysis */}
+        <div style={{ 
+          margin: '1rem',
+          marginBottom: '2rem',
+          padding: '1.5rem',
+          backgroundColor: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          borderRadius: '0.75rem',
+          textAlign: 'center'
+        }}>
+          <div style={{ 
+            fontSize: '2rem', 
+            marginBottom: '1rem',
+            animation: 'bounce 2s infinite'
+          }}>
+            🤖
+          </div>
+          <h3 style={{ 
+            fontSize: '1.125rem', 
+            fontWeight: '600', 
+            color: '#1f2937',
+            marginBottom: '0.5rem'
+          }}>
+            AI is analyzing Reddit discussions...
+          </h3>
+          <p style={{ 
+            fontSize: '0.875rem', 
+            color: '#6b7280',
+            margin: 0
+          }}>
+            Discovering insights about "{effectiveKeywords}" across multiple communities
+          </p>
+        </div>
+
         {/* Skeleton Pattern View */}
         <div className="patterns-view">
           {/* Skeleton Summary */}
@@ -1328,6 +1472,21 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
               }
               50% {
                 opacity: 0.5;
+              }
+            }
+            
+            @keyframes bounce {
+              0%, 20%, 53%, 80%, 100% {
+                transform: translate3d(0,0,0);
+              }
+              40%, 43% {
+                transform: translate3d(0,-15px,0);
+              }
+              70% {
+                transform: translate3d(0,-7px,0);
+              }
+              90% {
+                transform: translate3d(0,-2px,0);
               }
             }
           `}
@@ -1536,36 +1695,38 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
             Overview
           </button>
           
-          <button
-            onClick={switchToIndividualView}
-            className={`view-toggle-btn ${viewMode === 'individual' ? 'active' : ''}`}
-            style={{
-              padding: '0.5rem 1rem',
-              border: '2px solid #e5e7eb',
-              borderRadius: '0.5rem',
-              backgroundColor: viewMode === 'individual' ? '#EBF212' : 'white',
-              color: viewMode === 'individual' ? '#000' : '#374151',
-              fontWeight: '600',
-              fontSize: '0.875rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              whiteSpace: 'nowrap'
-            }}
-            onMouseOver={(e) => {
-              if (viewMode !== 'individual') {
-                e.currentTarget.style.borderColor = '#EBF212';
-                e.currentTarget.style.backgroundColor = '#f8fce8';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (viewMode !== 'individual') {
-                e.currentTarget.style.borderColor = '#e5e7eb';
-                e.currentTarget.style.backgroundColor = 'white';
-              }
-            }}
-          >
-            View Individual Posts
-          </button>
+          {showIndividualPostsView && (
+            <button
+              onClick={switchToIndividualView}
+              className={`view-toggle-btn ${viewMode === 'individual' ? 'active' : ''}`}
+              style={{
+                padding: '0.5rem 1rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                backgroundColor: viewMode === 'individual' ? '#EBF212' : 'white',
+                color: viewMode === 'individual' ? '#000' : '#374151',
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseOver={(e) => {
+                if (viewMode !== 'individual') {
+                  e.currentTarget.style.borderColor = '#EBF212';
+                  e.currentTarget.style.backgroundColor = '#f8fce8';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (viewMode !== 'individual') {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.backgroundColor = 'white';
+                }
+              }}
+            >
+              View Individual Posts
+            </button>
+          )}
         </div>
         
         <button 
@@ -1978,72 +2139,15 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                 </div>
                 
                 <div style={{ marginTop: '1.5rem', borderTop: '0.0625rem solid #e5e7eb', paddingTop: '1.5rem' }}>
-                  <div className="content-buttons-container" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                    <button
-                      onClick={() => setIsContentCreationModalOpen(true)}
-                      className="apollo-btn-gradient"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        minWidth: '12.5rem',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Wand2 style={{width: '1.125rem', height: '1.125rem', marginRight: '0.5rem'}} />
-                      Create Content With AI
-                    </button>
-                    
-                    <button
-                      onClick={() => setIsLinkedInPostModalOpen(true)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '1rem 2rem',
-                        backgroundColor: '#0077b5',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.75rem',
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 0.25rem 0.375rem -0.0625rem rgba(0, 119, 181, 0.2)',
-                        minWidth: window.innerWidth > 768 ? '15rem' : '16rem',
-                        gap: '0.5rem'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#005582';
-                        e.currentTarget.style.transform = 'translateY(-0.0625)';
-                        e.currentTarget.style.boxShadow = '0 0.25rem 0.5rem rgba(0, 119, 181, 0.3)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#0077b5';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 0.125rem 0.25rem rgba(0, 119, 181, 0.2)';
-                      }}
-                    >
-                      <svg 
-                        width="18" 
-                        height="18" 
-                        viewBox="0 0 24 24" 
-                        fill="currentColor"
-                        style={{marginRight: '0.5rem'}}
-                      >
-                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                      </svg>
-                      Create LinkedIn Post
-                    </button>
-                  </div>
-                  
                   <p style={{ 
-                    fontSize: '0.75rem', 
+                    fontSize: '0.875rem', 
                     color: '#6b7280', 
                     textAlign: 'left', 
-                    lineHeight: '1.4',
-                    margin: 0
+                    lineHeight: '1.6',
+                    margin: 0,
+                    fontStyle: 'italic'
                   }}>
-                    Generate AEO-optimized content or viral LinkedIn posts using Reddit insights and Apollo brand kit
+                    💡 <strong>Tip:</strong> Use the content creation buttons in the Overview tab to generate SEO/AEO articles and LinkedIn posts based on specific post insights.
                   </p>
                 </div>
               </div>
@@ -2551,6 +2655,8 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                     setShowPostModal={setShowPostModal}
                     setIsRedditEngagementModalOpen={setIsRedditEngagementModalOpen}
                     setIsDigDeeperModalOpen={setIsDigDeeperModalOpen}
+                    setIsContentCreationModalOpen={setIsContentCreationModalOpen}
+                    setIsLinkedInPostModalOpen={setIsLinkedInPostModalOpen}
                     handleOpenCommentPreview={handleOpenCommentPreview}
                     keywords={effectiveKeywords}
                   />

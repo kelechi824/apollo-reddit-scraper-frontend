@@ -10,9 +10,10 @@ interface AnalysisInterfaceProps {
   onClearResults?: () => void;
   onAnalysisStart?: () => void;
   onAnalysisError?: () => void;
+  showAllSubreddits?: boolean;
 }
 
-const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysisComplete, onClearResults, onAnalysisStart, onAnalysisError }) => {
+const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysisComplete, onClearResults, onAnalysisStart, onAnalysisError, showAllSubreddits = true }) => {
   const [keywords, setKeywords] = useState<string>('');
   const [isKeywordSelected, setIsKeywordSelected] = useState<boolean>(false);
   const [selectedSubreddit, setSelectedSubreddit] = useState<string>('all');
@@ -25,6 +26,17 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
   const analysisTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const availableSubreddits = ['sales', 'techsales', 'salestechniques', 'prospecting', 'startups', 'entrepreneur', 'marketing', 'smallbusiness', 'business', 'b2bmarketing', 'b2b_sales', 'b2bsaas', 'coldemail', 'emailmarketing', 'salesdevelopment', 'saas', 'leadgeneration', 'coldcalling', 'leadgen', 'marketingautomation', 'crm'];
+
+  /**
+   * Handle feature flag changes for showAllSubreddits
+   * Why this matters: When "All Subreddits" option is hidden, we need to automatically 
+   * select a specific subreddit to prevent invalid state
+   */
+  useEffect(() => {
+    if (!showAllSubreddits && selectedSubreddit === 'all') {
+      setSelectedSubreddit(availableSubreddits[0]); // Default to first subreddit
+    }
+  }, [showAllSubreddits, selectedSubreddit, availableSubreddits]);
 
 
   
@@ -381,7 +393,9 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
             className="apollo-input-horizontal-dropdown"
             disabled={isAnalyzing}
           >
-            <option value="all">All Subreddits ({availableSubreddits.length})</option>
+            {showAllSubreddits && (
+              <option value="all">All Subreddits ({availableSubreddits.length})</option>
+            )}
             {availableSubreddits.map((subreddit) => (
               <option key={subreddit} value={subreddit}>
                 r/{subreddit}

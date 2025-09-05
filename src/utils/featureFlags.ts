@@ -9,6 +9,8 @@ export interface FeatureFlags {
   showGongFullConversationTab: boolean;
   showPreviewArticle: boolean;
   showConcurrentExecution: boolean; // Controls visibility of "Run 5 Rows Concurrently" feature
+  showAllSubreddits: boolean; // Controls visibility of "All Subreddits" option in dropdown
+  showIndividualPostsView: boolean; // Controls visibility of "View Individual Posts" button
 }
 
 export const FEATURE_FLAGS: FeatureFlags = {
@@ -21,4 +23,6 @@ export const FEATURE_FLAGS: FeatureFlags = {
   showGongFullConversationTab: false, // Hide until transcript data is available
   showPreviewArticle: false, // Hide Preview Article button functionality
   showConcurrentExecution: false, // Hide concurrent execution feature for now
+  showAllSubreddits: false, // Set to false to hide "All Subreddits" option
+  showIndividualPostsView: false, // Set to false to hide "View Individual Posts" button
 }; 
