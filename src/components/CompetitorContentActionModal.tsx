@@ -1212,6 +1212,40 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     cleaned = cleaned.replace(/\{\s*"metaSeoTitle"\s*:\s*"[^"]*"\s*,[\s\S]*?\}/g, '');
     cleaned = cleaned.replace(/\{\s*"content"\s*:\s*"[\s\S]*?"metaSeoTitle"[\s\S]*?\}/g, '');
     
+    // Remove literal JSON structure that appears as text content
+    cleaned = cleaned.replace(/^\s*\{\s*$/gm, '');
+    cleaned = cleaned.replace(/^\s*"content":\s*"?\s*$/gm, '');
+    cleaned = cleaned.replace(/^\s*\}\s*$/gm, '');
+    cleaned = cleaned.replace(/^[\s\n]*\{[\s\n]*"content":\s*"[\s\n]*/i, '');
+    cleaned = cleaned.replace(/[\s\n]*"\s*\}[\s\n]*$/i, '');
+    
+    // Handle the specific pattern: { "content": " at the start
+    cleaned = cleaned.replace(/^\s*\{\s*\n?\s*"content":\s*"\s*\n?\s*/i, '');
+    // Handle trailing patterns
+    cleaned = cleaned.replace(/\s*"\s*,?\s*"metaSeoTitle"[\s\S]*$/i, '');
+    cleaned = cleaned.replace(/\s*"\s*\}\s*$/i, '');
+    
+    // Clean up literal escape sequences that appear as text
+    cleaned = cleaned.replace(/^\s*\\n\\n\s*/, '');
+    cleaned = cleaned.replace(/\s*\\n\\n\s*$/, '');
+    cleaned = cleaned.replace(/\\n\\n/g, '\n\n');
+    cleaned = cleaned.replace(/\\n/g, '\n');
+    cleaned = cleaned.replace(/\\t/g, '\t');
+    cleaned = cleaned.replace(/\\"/g, '"');
+    
+    // Reduce excessive bold formatting - keep only strategic emphasis
+    // Remove bold from entire sentences (more than 8 words)
+    cleaned = cleaned.replace(/<strong>([^<]{60,}?)<\/strong>/g, '$1');
+    // Remove bold from percentage/number + text combinations that are too long
+    cleaned = cleaned.replace(/<strong>(\d+%?\s+[^<]{20,}?)<\/strong>/g, '<strong>$1</strong>'.replace(/<strong>(\d+%?\s+\w+\s+\w+)\s+([^<]+)<\/strong>/, '<strong>$1</strong> $2'));
+    // Keep bold only for short key terms (under 4 words)
+    cleaned = cleaned.replace(/<strong>([^<]*?\s+[^<]*?\s+[^<]*?\s+[^<]*?\s+[^<]+?)<\/strong>/g, (match, content) => {
+      const words = content.trim().split(/\s+/);
+      if (words.length <= 3) return match; // Keep short phrases
+      if (/^\d+%/.test(content.trim())) return match; // Keep percentages
+      return content; // Remove bold from longer phrases
+    });
+    
     // Remove common AI introductory phrases
     cleaned = cleaned.replace(/^.*?Here's the.*?content.*?:?\s*/i, '');
     cleaned = cleaned.replace(/^.*?Here's an.*?optimized.*?:?\s*/i, '');
@@ -1678,7 +1712,11 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
           .replace(/\\"/g, '"')
           .replace(/\\n/g, '\n')
           .replace(/\\t/g, '\t')
-          .replace(/\\\\/g, '\\');
+          .replace(/\\\\/g, '\\')
+          // Clean up literal \n\n that appears as text
+          .replace(/^\s*\\n\\n\s*/, '')
+          .replace(/\s*\\n\\n\s*$/, '')
+          .trim();
       }
       const titleMatch = responseText.match(/"metaSeoTitle"\s*:\s*"([^\"]*?)"/);
       if (titleMatch) metaSeoTitle = titleMatch[1];
@@ -1810,8 +1848,22 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
             descLength: hasDescription ? parsed.metaDescription.length : 0
           });
           
+          // Clean up the parsed content to remove literal escape sequences
+          let cleanedContent = hasContent ? parsed.content : responseText;
+          if (hasContent) {
+            // Remove literal \n\n sequences that appear as text
+            cleanedContent = cleanedContent
+              .replace(/^\s*\\n\\n\s*/, '')
+              .replace(/\s*\\n\\n\s*$/, '')
+              .replace(/\\n\\n/g, '\n\n')
+              .replace(/\\n/g, '\n')
+              .replace(/\\t/g, '\t')
+              .replace(/\\"/g, '"')
+              .trim();
+          }
+          
           return {
-            content: hasContent ? cleanAIContent(parsed.content) : cleanAIContent(responseText),
+            content: cleanAIContent(cleanedContent),
             metaSeoTitle: hasTitle ? parsed.metaSeoTitle : generateFallbackTitle(row.keyword), // Use fallback if no AI title
             metaDescription: hasDescription ? parsed.metaDescription : generateFallbackDescription(row.keyword) // Use fallback if no AI description
           };

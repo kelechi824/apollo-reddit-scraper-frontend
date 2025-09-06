@@ -556,31 +556,57 @@ const BlogCreatorPage: React.FC = () => {
         };
         
         try {
-          localStorage.setItem('apollo_blog_agents_progress', JSON.stringify(progressData));
+          // Smart storage management: limit data size before saving
+          const optimizedData = optimizeStorageData(progressData);
+          
+          // Proactive storage check - if we're approaching the limit, clean up first
+          const storageInfo = getStorageInfo();
+          if (storageInfo.percentage > 80) {
+            console.warn(`⚠️ localStorage usage at ${storageInfo.percentage.toFixed(1)}%, cleaning up old data`);
+            clearOldApolloData();
+          }
+          
+          localStorage.setItem('apollo_blog_agents_progress', JSON.stringify(optimizedData));
           setAutoSaveStatus('saved');
         } catch (storageError: any) {
-          // Handle localStorage quota exceeded
+          // Handle localStorage quota exceeded with progressive cleanup
           if (storageError.name === 'QuotaExceededError') {
-            console.warn('LocalStorage quota exceeded, clearing old data and retrying...');
-            // Clear old auto-save data and try again with minimal data
-            localStorage.removeItem('apollo_blog_agents_progress');
+            console.warn('LocalStorage quota exceeded, implementing progressive cleanup...');
+            
+            // Step 1: Clear other Apollo localStorage items first
+            clearOldApolloData();
+            
+            // Step 2: Try with minimal essential data only
             const minimalData = {
               keywords: keywords.map(keyword => ({
                 id: keyword.id,
                 keyword: keyword.keyword,
                 status: keyword.status,
                 progress: keyword.progress,
-                output: keyword.status === 'completed' ? keyword.output : '', // Only save completed content
+                // Only save output summary for completed items, not full content
+                output: keyword.status === 'completed' && keyword.output 
+                  ? keyword.output.substring(0, 500) + '...[truncated]' 
+                  : '',
                 createdAt: keyword.createdAt.toISOString(),
-                metadata: keyword.metadata,
+                metadata: keyword.metadata ? {
+                  title: keyword.metadata.title,
+                  description: keyword.metadata.description
+                } : undefined,
                 monthlyVolume: keyword.monthlyVolume,
                 avgDifficulty: keyword.avgDifficulty
               })),
               selectedRows: Array.from(selectedRows),
               timestamp: new Date().toISOString()
             };
-            localStorage.setItem('apollo_blog_agents_progress', JSON.stringify(minimalData));
-            setAutoSaveStatus('saved');
+            
+            try {
+              localStorage.setItem('apollo_blog_agents_progress', JSON.stringify(minimalData));
+              setAutoSaveStatus('saved');
+              console.log('✅ Saved minimal progress data after cleanup');
+            } catch (finalError) {
+              console.error('❌ Failed to save even minimal data, auto-save will retry later');
+              setAutoSaveStatus('');
+            }
           } else {
             throw storageError;
           }
@@ -616,6 +642,67 @@ const BlogCreatorPage: React.FC = () => {
   const resetSorting = () => {
     setSortField(null);
     setSortDirection('desc');
+  };
+
+  /**
+   * Optimize storage data to reduce size and prevent quota issues
+   * Why this matters: Prevents localStorage quota exceeded errors by intelligently
+   * reducing data size while preserving essential information.
+   */
+  const optimizeStorageData = (data: any): any => {
+    return {
+      ...data,
+      keywords: data.keywords.map((keyword: any) => ({
+        ...keyword,
+        // Limit output content size to prevent quota issues
+        output: keyword.output && keyword.output.length > 2000 
+          ? keyword.output.substring(0, 2000) + '...[content truncated for storage]'
+          : keyword.output,
+        // Keep only essential metadata
+        metadata: keyword.metadata ? {
+          title: keyword.metadata.title,
+          description: keyword.metadata.description
+        } : undefined
+      }))
+    };
+  };
+
+  /**
+   * Clear old Apollo localStorage data to free up space
+   * Why this matters: Removes old cached data from other Apollo features
+   * to make room for current blog creation progress.
+   */
+  const clearOldApolloData = (): void => {
+    const apolloKeys = Object.keys(localStorage).filter(key => 
+      key.startsWith('apollo_') && key !== 'apollo_blog_agents_progress'
+    );
+    
+    apolloKeys.forEach(key => {
+      localStorage.removeItem(key);
+    });
+    
+    console.log(`🧹 Cleared ${apolloKeys.length} old Apollo localStorage items`);
+  };
+
+  /**
+   * Get current localStorage usage information
+   * Why this matters: Provides visibility into storage usage for debugging
+   * and proactive storage management.
+   */
+  const getStorageInfo = (): { used: number; available: number; percentage: number } => {
+    let used = 0;
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        used += localStorage[key].length + key.length;
+      }
+    }
+    
+    // Typical localStorage limit is 5-10MB, we'll use 5MB as conservative estimate
+    const limit = 5 * 1024 * 1024; // 5MB in bytes
+    const available = limit - used;
+    const percentage = (used / limit) * 100;
+    
+    return { used, available, percentage };
   };
 
   /**
