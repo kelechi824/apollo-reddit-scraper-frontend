@@ -210,6 +210,8 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
       console.log(`📊 Current selectedTimeframe state: ${selectedTimeframe}`);
 
       // Step 1: Start the workflow (returns immediately with workflow ID)
+      // Why this matters: All environments (dev and prod) use the same /api path structure
+      // Vercel's rewrite rule handles routing to the Express app, but the app still expects /api routes
       const startResult = await makeApiRequest<{workflow_id: string; status: string}>(
         `${apiUrl.replace(/\/$/, '')}/api/workflow/run-analysis`,
         {
@@ -230,6 +232,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
         while (true) {
           await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between polls
           
+          // Why this matters: Consistent /api path structure for all environments
           const statusResult = await makeApiRequest<{
             workflow_id: string;
             status: 'pending' | 'running' | 'completed' | 'failed';
