@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MessageSquare, RefreshCw, Edit3, Copy, ExternalLink, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { CommentResponse, CommentGenerationResponse, AnalyzedPost } from '../types';
+import { CommentResponse, CommentGenerationResponse, CommentVariationsResponse, AnalyzedPost } from '../types';
 import { makeApiRequest } from '../utils/apiHelpers';
 import { API_BASE_URL } from '../config/api';
 
@@ -34,12 +34,18 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
   setGeneratedComments
 }) => {
   // Get the generated response from persistent state
-  const generatedResponse = generatedComments[comment.id] || null;
+  const generatedData = generatedComments[comment.id] || null;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
+  const [currentVariationIndex, setCurrentVariationIndex] = useState(0);
+
+  // Handle both old single response format and new variations format
+  const isVariationsFormat = generatedData && Array.isArray(generatedData.variations);
+  const variations = isVariationsFormat ? generatedData.variations : (generatedData ? [generatedData] : []);
+  const currentVariation = variations[currentVariationIndex] || null;
 
   /**
    * Generate a new comment response
@@ -73,8 +79,8 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
         brand_kit: brandKit
       };
 
-      const result = await makeApiRequest<CommentGenerationResponse>(
-        `${API_BASE_URL.replace(/\/$/, '')}/api/reddit-engagement/generate-comment`,
+      const result = await makeApiRequest<CommentVariationsResponse>(
+        `${API_BASE_URL.replace(/\/$/, '')}/api/reddit-engagement/generate-comment-variations`,
         {
           method: 'POST',
           body: JSON.stringify(requestData),
@@ -82,21 +88,25 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
       );
 
       if (!result.success) {
-        throw new Error(result.error || result.message || 'Failed to generate comment response');
+        throw new Error(result.error || result.message || 'Failed to generate comment variations');
       }
 
-      if (!result.data?.response) {
-        throw new Error('No response was generated. Please try again.');
+      if (!result.data?.variations || result.data.variations.length === 0) {
+        throw new Error('No variations were generated. Please try again.');
       }
 
-      console.log('✅ Generated comment response:', result.data);
+      console.log('✅ Generated comment variations:', result.data);
       
-      // Update persistent state
+      // Update persistent state with variations
       setGeneratedComments({
         ...generatedComments,
-        [comment.id]: result.data.response
+        [comment.id]: {
+          variations: result.data.variations,
+          currentVariation: 0
+        }
       });
-      setEditedContent(result.data.response.content);
+      setCurrentVariationIndex(0);
+      setEditedContent(result.data.variations[0].content);
 
     } catch (err) {
       console.error('❌ Comment response generation failed:', err);
@@ -113,7 +123,7 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
    */
   const handleEdit = () => {
     setIsEditing(true);
-    setEditedContent(generatedResponse?.content || '');
+    setEditedContent(currentVariation?.content || '');
   };
 
   /**
@@ -121,17 +131,34 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
    * Why this matters: Persists user edits and updates the response content.
    */
   const handleSaveEdit = () => {
-    if (generatedResponse) {
-      const updatedResponse = {
-        ...generatedResponse,
-        content: editedContent
-      };
-      
-      // Update persistent state
-      setGeneratedComments({
-        ...generatedComments,
-        [comment.id]: updatedResponse
-      });
+    if (currentVariation && generatedData) {
+      if (isVariationsFormat) {
+        // Update the current variation in the variations array
+        const updatedVariations = [...variations];
+        updatedVariations[currentVariationIndex] = {
+          ...currentVariation,
+          content: editedContent
+        };
+        
+        setGeneratedComments({
+          ...generatedComments,
+          [comment.id]: {
+            ...generatedData,
+            variations: updatedVariations
+          }
+        });
+      } else {
+        // Legacy single response format
+        const updatedResponse = {
+          ...currentVariation,
+          content: editedContent
+        };
+        
+        setGeneratedComments({
+          ...generatedComments,
+          [comment.id]: updatedResponse
+        });
+      }
     }
     setIsEditing(false);
   };
@@ -141,7 +168,7 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
    * Why this matters: Allows users to discard changes and revert to original content.
    */
   const handleCancelEdit = () => {
-    setEditedContent(generatedResponse?.content || '');
+    setEditedContent(currentVariation?.content || '');
     setIsEditing(false);
   };
 
@@ -150,10 +177,10 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
    * Why this matters: Enables quick copying of generated responses for use on Reddit.
    */
   const handleCopy = async () => {
-    if (!generatedResponse) return;
+    if (!currentVariation) return;
 
     try {
-      await navigator.clipboard.writeText(generatedResponse.content);
+      await navigator.clipboard.writeText(currentVariation.content);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
@@ -167,11 +194,11 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
    * the Reddit post in a new tab for immediate engagement.
    */
   const handleCopyAndOpenReddit = async () => {
-    if (!generatedResponse) return;
+    if (!currentVariation) return;
 
     try {
       // Copy to clipboard first
-      await navigator.clipboard.writeText(generatedResponse.content);
+      await navigator.clipboard.writeText(currentVariation.content);
       
       // Open Reddit post in new tab
       const redditUrl = post.permalink.startsWith('http') 
@@ -187,13 +214,41 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
     }
   };
 
+  /**
+   * Navigate to previous variation
+   * Why this matters: Allows users to cycle through different response options.
+   */
+  const handlePreviousVariation = () => {
+    if (variations.length > 1) {
+      const newIndex = currentVariationIndex > 0 ? currentVariationIndex - 1 : variations.length - 1;
+      setCurrentVariationIndex(newIndex);
+      if (isEditing) {
+        setEditedContent(variations[newIndex].content);
+      }
+    }
+  };
+
+  /**
+   * Navigate to next variation
+   * Why this matters: Allows users to cycle through different response options.
+   */
+  const handleNextVariation = () => {
+    if (variations.length > 1) {
+      const newIndex = currentVariationIndex < variations.length - 1 ? currentVariationIndex + 1 : 0;
+      setCurrentVariationIndex(newIndex);
+      if (isEditing) {
+        setEditedContent(variations[newIndex].content);
+      }
+    }
+  };
+
   return (
     <div style={{
       border: '1px solid #e5e7eb',
       borderRadius: '0.75rem',
       padding: '1rem',
       marginTop: '0.75rem',
-      backgroundColor: generatedResponse ? '#E2E8F0' : '#f8fafc'
+      backgroundColor: currentVariation ? '#E2E8F0' : '#f8fafc'
     }}>
       {/* Header */}
       <div style={{
@@ -205,7 +260,7 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
       }}>
 
         {/* Generate Button */}
-        {!generatedResponse && (
+        {!currentVariation && (
           <button
             onClick={generateCommentResponse}
             disabled={isLoading}
@@ -239,7 +294,7 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
             ) : (
               <MessageSquare style={{ width: '0.875rem', height: '0.875rem' }} />
             )}
-            {isLoading ? 'Generating...' : 'Generate comment'}
+            {isLoading ? 'Generating...' : 'Generate a reply'}
           </button>
         )}
       </div>
@@ -263,8 +318,105 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
         </div>
       )}
 
+      {/* Variation Navigation */}
+      {currentVariation && variations.length > 1 && !isEditing && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '1rem',
+          marginBottom: '0.75rem',
+          padding: '0.75rem',
+          backgroundColor: '#f8fafc',
+          borderRadius: '0.5rem',
+          border: '1px solid #e5e7eb'
+        }}>
+          <span style={{
+            fontSize: '0.75rem',
+            fontWeight: '600',
+            color: '#6b7280',
+            textTransform: 'uppercase',
+            letterSpacing: '0.025em'
+          }}>
+            Response Options:
+          </span>
+          
+          <button
+            onClick={handlePreviousVariation}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '2rem',
+              height: '2rem',
+              borderRadius: '0.375rem',
+              border: '1px solid #d1d5db',
+              backgroundColor: 'white',
+              color: '#374151',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+              e.currentTarget.style.borderColor = '#9ca3af';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.borderColor = '#d1d5db';
+            }}
+          >
+            ←
+          </button>
+          
+          <span style={{
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            color: '#374151',
+            minWidth: '4rem',
+            textAlign: 'center',
+            padding: '0.25rem 0.5rem',
+            backgroundColor: 'white',
+            borderRadius: '0.25rem',
+            border: '1px solid #e5e7eb'
+          }}>
+            {currentVariationIndex + 1} of {variations.length}
+          </span>
+          
+          <button
+            onClick={handleNextVariation}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '2rem',
+              height: '2rem',
+              borderRadius: '0.375rem',
+              border: '1px solid #d1d5db',
+              backgroundColor: 'white',
+              color: '#374151',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+              e.currentTarget.style.borderColor = '#9ca3af';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.borderColor = '#d1d5db';
+            }}
+          >
+            →
+          </button>
+        </div>
+      )}
+
       {/* Loading State */}
-      {isLoading && !generatedResponse && (
+      {isLoading && !currentVariation && (
         <div style={{
           textAlign: 'center',
           padding: '1.5rem',
@@ -277,13 +429,13 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
             animation: 'spin 1s linear infinite'
           }} />
           <p style={{ fontSize: '0.8125rem', margin: 0 }}>
-            Generating a relevant response to this comment...
+            Generating a relevant reply to this comment...
           </p>
         </div>
       )}
 
       {/* Generated Response */}
-      {generatedResponse && (
+      {currentVariation && (
         <div>
           {/* Response Content */}
           <div style={{
@@ -300,7 +452,7 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
                   onChange={(e) => setEditedContent(e.target.value)}
                   style={{
                     width: '100%',
-                    minHeight: '6rem',
+                    minHeight: '10rem',
                     padding: '0.75rem',
                     border: '1px solid #d1d5db',
                     borderRadius: '0.375rem',
@@ -355,7 +507,7 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
                 color: '#374151',
                 whiteSpace: 'pre-wrap'
               }}>
-                {generatedResponse.content}
+                {currentVariation.content}
               </div>
             )}
           </div>
@@ -515,7 +667,7 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
               color: '#374151',
               lineHeight: '1.4'
             }}>
-              {generatedResponse.engagement_strategy}
+              {currentVariation.engagement_strategy}
             </div>
           </div>
         </div>

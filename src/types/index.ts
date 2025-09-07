@@ -363,6 +363,12 @@ export interface CommentResponse {
   value_provided: string;
 }
 
+export interface CommentVariationsResponse {
+  success: boolean;
+  variations: CommentResponse[];
+  currentVariation: number;
+}
+
 export interface CommentGenerationResponse {
   success: boolean;
   response: CommentResponse;
