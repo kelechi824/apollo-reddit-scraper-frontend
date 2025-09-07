@@ -914,8 +914,9 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   };
 
   /**
-   * Highlight keywords in text content
-   * Why this matters: Makes it easy for users to quickly identify where their search keywords appear in the post content
+   * Highlight keywords and their variations in text content
+   * Why this matters: Makes it easy for users to quickly identify where their search keywords 
+   * and variations (plurals, "ing" forms, etc.) appear in the post content
    */
   const highlightKeywords = (text: string): React.ReactElement => {
     if (!effectiveKeywords || !text) {
@@ -929,11 +930,20 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
       return <div style={{ whiteSpace: 'pre-wrap' }}>{text.replace(/\\n/g, '\n')}</div>;
     }
 
+    // Generate all keyword variations for highlighting
+    const allKeywordVariations = new Set<string>();
+    keywordList.forEach(keyword => {
+      allKeywordVariations.add(keyword);
+      // Add variations for each keyword
+      const variations = generateKeywordVariations(keyword);
+      variations.forEach(variation => allKeywordVariations.add(variation));
+    });
+
     // First, replace escaped newlines with actual newlines
     const processedText = text.replace(/\\n/g, '\n');
 
-    // Create a regex pattern to match any of the keywords as whole words only (case-insensitive)
-    const pattern = new RegExp(`\\b(${keywordList.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
+    // Create a regex pattern to match any of the keywords or variations as whole words only (case-insensitive)
+    const pattern = new RegExp(`\\b(${Array.from(allKeywordVariations).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
     
     // Split text by the pattern and create highlighted spans
     const parts = processedText.split(pattern);
@@ -941,11 +951,9 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
     return (
       <div style={{ whiteSpace: 'pre-wrap' }}>
         {parts.map((part, index) => {
-          const isKeyword = keywordList.some(keyword => 
-            part.toLowerCase() === keyword.toLowerCase()
-          );
+          const isKeywordOrVariation = allKeywordVariations.has(part.toLowerCase());
           
-          return isKeyword ? (
+          return isKeywordOrVariation ? (
             <span 
               key={index} 
               className="keyword-highlight"
@@ -958,6 +966,93 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
         })}
       </div>
     );
+  };
+
+  /**
+   * Generate keyword variations for enhanced highlighting
+   * Why this matters: Creates common variations of keywords (plurals, "ing" forms, etc.)
+   * to highlight more relevant mentions in post content
+   */
+  const generateKeywordVariations = (term: string): string[] => {
+    const variations: string[] = [];
+    const lowerTerm = term.toLowerCase();
+    
+    // Basic plurals and verb forms
+    variations.push(
+      lowerTerm + 's',           // prospects
+      lowerTerm + 'ing',         // prospecting
+      lowerTerm + 'ed',          // prospected
+      lowerTerm + 'or',          // prospector (agent noun)
+      lowerTerm + 'ors',         // prospectors
+      lowerTerm + 'er',          // prospecter (alternative agent noun)
+      lowerTerm + 'ers'          // prospecters
+    );
+    
+    // Handle words ending in 'y' -> 'ies' (e.g., company -> companies)
+    if (lowerTerm.endsWith('y') && lowerTerm.length > 2) {
+      const stem = lowerTerm.slice(0, -1);
+      variations.push(stem + 'ies');
+    }
+    
+    // Handle words ending in 'e' for 'ing' form (e.g., sale -> selling, but also sales)
+    if (lowerTerm.endsWith('e') && lowerTerm.length > 2) {
+      const stem = lowerTerm.slice(0, -1);
+      variations.push(stem + 'ing');
+    }
+    
+    // Handle consonant doubling for 'ing' (e.g., plan -> planning)
+    if (lowerTerm.length >= 3) {
+      const lastChar = lowerTerm[lowerTerm.length - 1];
+      const secondLastChar = lowerTerm[lowerTerm.length - 2];
+      const thirdLastChar = lowerTerm[lowerTerm.length - 3];
+      
+      // Simple heuristic: if word ends with consonant-vowel-consonant pattern
+      if (isConsonantChar(lastChar) && isVowelChar(secondLastChar) && isConsonantChar(thirdLastChar)) {
+        variations.push(lowerTerm + lastChar + 'ing'); // plan -> planning
+        variations.push(lowerTerm + lastChar + 'ed');  // plan -> planned
+      }
+    }
+    
+    // Handle irregular plurals for common business terms
+    const irregularPlurals: Record<string, string[]> = {
+      'person': ['people'],
+      'child': ['children'],
+      'man': ['men'],
+      'woman': ['women'],
+      'foot': ['feet'],
+      'tooth': ['teeth'],
+      'analysis': ['analyses'],
+      'datum': ['data'],
+      'medium': ['media'],
+      'criterion': ['criteria']
+    };
+    
+    if (irregularPlurals[lowerTerm]) {
+      variations.push(...irregularPlurals[lowerTerm]);
+    }
+    
+    // Also check if the term itself might be a plural of an irregular form
+    for (const [singular, plurals] of Object.entries(irregularPlurals)) {
+      if (plurals.includes(lowerTerm)) {
+        variations.push(singular);
+      }
+    }
+    
+    return variations.filter(v => v !== lowerTerm); // Don't include the original term
+  };
+
+  /**
+   * Helper function to check if a character is a vowel
+   */
+  const isVowelChar = (char: string): boolean => {
+    return 'aeiou'.includes(char.toLowerCase());
+  };
+
+  /**
+   * Helper function to check if a character is a consonant
+   */
+  const isConsonantChar = (char: string): boolean => {
+    return /[bcdfghjklmnpqrstvwxyz]/i.test(char);
   };
 
   /**

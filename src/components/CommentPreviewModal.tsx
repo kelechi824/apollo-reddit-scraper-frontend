@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, MessageCircle, ArrowUp, Clock, User, ExternalLink } from 'lucide-react';
+import { X, MessageCircle, ArrowUp, Clock, User, ExternalLink, Search } from 'lucide-react';
 import { AnalyzedPost } from '../types';
 import CommentGenerationCard from './CommentGenerationCard';
 
@@ -27,6 +27,7 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
 }) => {
   const [selectedSentiment, setSelectedSentiment] = useState<'all' | 'positive' | 'negative' | 'neutral'>('all');
   const [brandKit, setBrandKit] = useState<any>(null);
+  const [showPostModal, setShowPostModal] = useState(false);
 
   /**
    * Handle ESC key to close modal
@@ -135,9 +136,9 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
   };
 
   /**
-   * Highlight keywords and make links clickable in comment text
-   * Why this matters: Makes it easy to spot keywords and allows users to click on links
-   * within comments to navigate to external resources.
+   * Highlight keywords, render markdown formatting, and make links clickable in comment text
+   * Why this matters: Makes it easy to spot keywords, properly renders bold/italic text,
+   * and allows users to click on links within comments to navigate to external resources.
    */
   const highlightKeywords = (text: string): React.ReactElement => {
     if (!text) {
@@ -147,27 +148,46 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
     // First decode HTML entities
     const decodedText = decodeHtmlEntities(text);
 
-    // Then process the text to handle both links and keywords
-    const processText = (inputText: string): React.ReactNode[] => {
+    // Process markdown formatting (bold, italic) before handling links and keywords
+    const processMarkdown = (inputText: string): React.ReactNode[] => {
       const elements: React.ReactNode[] = [];
       
-      // Regex patterns for different types of links
-      const urlPattern = /(https?:\/\/[^\s\)]+)/gi;
-      const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
-      const markdownLinkPattern = /\[([^\]]+)\]\(([^)]+)\)/gi;
+      // Combined pattern for bold (**text**), italic (*text*), and links
+      const markdownPattern = /(\*\*[^*]+\*\*|\*[^*]+\*|https?:\/\/[^\s\)]+|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|\[[^\]]+\]\([^)]+\))/gi;
       
-      // Split by all link patterns
-      const linkPattern = /(https?:\/\/[^\s\)]+|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|\[[^\]]+\]\([^)]+\))/gi;
-      
-      const parts = inputText.split(linkPattern);
+      const parts = inputText.split(markdownPattern);
       
       parts.forEach((part, index) => {
         if (!part) return;
         
+        // Check for bold text **text**
+        const boldMatch = part.match(/^\*\*([^*]+)\*\*$/);
+        if (boldMatch) {
+          const boldText = boldMatch[1];
+          elements.push(
+            <strong key={`bold-${index}`} style={{ fontWeight: '700' }}>
+              {processTextForKeywords(boldText)}
+            </strong>
+          );
+          return;
+        }
+        
+        // Check for italic text *text* (but not bold)
+        const italicMatch = part.match(/^\*([^*]+)\*$/);
+        if (italicMatch) {
+          const italicText = italicMatch[1];
+          elements.push(
+            <em key={`italic-${index}`} style={{ fontStyle: 'italic' }}>
+              {processTextForKeywords(italicText)}
+            </em>
+          );
+          return;
+        }
+        
         // Check if this part is a markdown link
-        const markdownMatch = part.match(/\[([^\]]+)\]\(([^)]+)\)/);
-        if (markdownMatch) {
-          const [, linkText, url] = markdownMatch;
+        const markdownLinkMatch = part.match(/\[([^\]]+)\]\(([^)]+)\)/);
+        if (markdownLinkMatch) {
+          const [, linkText, url] = markdownLinkMatch;
           elements.push(
             <a
               key={`link-${index}`}
@@ -193,6 +213,7 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
         }
         
         // Check if this part is a URL
+        const urlPattern = /(https?:\/\/[^\s\)]+)/gi;
         if (urlPattern.test(part)) {
           elements.push(
             <a
@@ -219,6 +240,7 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
         }
         
         // Check if this part is an email
+        const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
         if (emailPattern.test(part)) {
           elements.push(
             <a
@@ -242,51 +264,155 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
           return;
         }
         
-        // Regular text - check for keywords if they exist
-        if (keywords) {
-          const keywordList = keywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
-          
-          if (keywordList.length > 0) {
-            const keywordPattern = new RegExp(`\\b(${keywordList.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
-            const keywordParts = part.split(keywordPattern);
-            
-            keywordParts.forEach((keywordPart, keywordIndex) => {
-              if (!keywordPart) return;
-              
-              const isKeyword = keywordList.some(keyword => 
-                keywordPart.toLowerCase() === keyword.toLowerCase()
-              );
-              
-              if (isKeyword) {
-                elements.push(
-                  <span 
-                    key={`keyword-${index}-${keywordIndex}`}
-                    style={{
-                      backgroundColor: '#dcfce7',
-                      color: '#166534',
-                      padding: '2px 4px',
-                      borderRadius: '3px',
-                      fontWeight: '600'
-                    }}
-                  >
-                    {keywordPart}
-                  </span>
-                );
-              } else {
-                elements.push(
-                  <span key={`text-${index}-${keywordIndex}`}>{keywordPart}</span>
-                );
-              }
-            });
-          } else {
-            elements.push(<span key={`text-${index}`}>{part}</span>);
-          }
-        } else {
-          elements.push(<span key={`text-${index}`}>{part}</span>);
-        }
+        // Regular text - process for keywords
+        elements.push(...processTextForKeywords(part, index));
       });
       
       return elements;
+    };
+
+    // Helper function to process text for keyword highlighting with variations
+    const processTextForKeywords = (text: string, baseIndex: number = 0): React.ReactNode[] => {
+      if (!keywords) {
+        return [<span key={`text-${baseIndex}`}>{text}</span>];
+      }
+      
+      const keywordList = keywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
+      
+      if (keywordList.length === 0) {
+        return [<span key={`text-${baseIndex}`}>{text}</span>];
+      }
+      
+      // Generate all keyword variations for highlighting
+      const allKeywordVariations = new Set<string>();
+      keywordList.forEach(keyword => {
+        allKeywordVariations.add(keyword);
+        // Add variations for each keyword
+        const variations = generateKeywordVariations(keyword);
+        variations.forEach(variation => allKeywordVariations.add(variation));
+      });
+      
+      const keywordPattern = new RegExp(`\\b(${Array.from(allKeywordVariations).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
+      const keywordParts = text.split(keywordPattern);
+      
+      return keywordParts.map((keywordPart, keywordIndex) => {
+        if (!keywordPart) return null;
+        
+        const isKeywordOrVariation = allKeywordVariations.has(keywordPart.toLowerCase());
+        
+        if (isKeywordOrVariation) {
+          return (
+            <span 
+              key={`keyword-${baseIndex}-${keywordIndex}`}
+              style={{
+                backgroundColor: '#dcfce7',
+                color: '#166534',
+                padding: '2px 4px',
+                borderRadius: '3px',
+                fontWeight: '600'
+              }}
+            >
+              {keywordPart}
+            </span>
+          );
+        } else {
+          return (
+            <span key={`text-${baseIndex}-${keywordIndex}`}>{keywordPart}</span>
+          );
+        }
+      }).filter(Boolean);
+    };
+
+    /**
+     * Generate keyword variations for enhanced highlighting
+     * Why this matters: Creates common variations of keywords (plurals, "ing" forms, etc.)
+     * to highlight more relevant mentions in comments
+     */
+    const generateKeywordVariations = (term: string): string[] => {
+      const variations: string[] = [];
+      const lowerTerm = term.toLowerCase();
+      
+      // Basic plurals and verb forms
+      variations.push(
+        lowerTerm + 's',           // prospects
+        lowerTerm + 'ing',         // prospecting
+        lowerTerm + 'ed',          // prospected
+        lowerTerm + 'or',          // prospector (agent noun)
+        lowerTerm + 'ors',         // prospectors
+        lowerTerm + 'er',          // prospecter (alternative agent noun)
+        lowerTerm + 'ers'          // prospecters
+      );
+      
+      // Handle words ending in 'y' -> 'ies' (e.g., company -> companies)
+      if (lowerTerm.endsWith('y') && lowerTerm.length > 2) {
+        const stem = lowerTerm.slice(0, -1);
+        variations.push(stem + 'ies');
+      }
+      
+      // Handle words ending in 'e' for 'ing' form (e.g., sale -> selling, but also sales)
+      if (lowerTerm.endsWith('e') && lowerTerm.length > 2) {
+        const stem = lowerTerm.slice(0, -1);
+        variations.push(stem + 'ing');
+      }
+      
+      // Handle consonant doubling for 'ing' (e.g., plan -> planning)
+      if (lowerTerm.length >= 3) {
+        const lastChar = lowerTerm[lowerTerm.length - 1];
+        const secondLastChar = lowerTerm[lowerTerm.length - 2];
+        const thirdLastChar = lowerTerm[lowerTerm.length - 3];
+        
+        // Simple heuristic: if word ends with consonant-vowel-consonant pattern
+        if (isConsonant(lastChar) && isVowel(secondLastChar) && isConsonant(thirdLastChar)) {
+          variations.push(lowerTerm + lastChar + 'ing'); // plan -> planning
+          variations.push(lowerTerm + lastChar + 'ed');  // plan -> planned
+        }
+      }
+      
+      // Handle irregular plurals for common business terms
+      const irregularPlurals: Record<string, string[]> = {
+        'person': ['people'],
+        'child': ['children'],
+        'man': ['men'],
+        'woman': ['women'],
+        'foot': ['feet'],
+        'tooth': ['teeth'],
+        'analysis': ['analyses'],
+        'datum': ['data'],
+        'medium': ['media'],
+        'criterion': ['criteria']
+      };
+      
+      if (irregularPlurals[lowerTerm]) {
+        variations.push(...irregularPlurals[lowerTerm]);
+      }
+      
+      // Also check if the term itself might be a plural of an irregular form
+      for (const [singular, plurals] of Object.entries(irregularPlurals)) {
+        if (plurals.includes(lowerTerm)) {
+          variations.push(singular);
+        }
+      }
+      
+      return variations.filter(v => v !== lowerTerm); // Don't include the original term
+    };
+
+    /**
+     * Helper function to check if a character is a vowel
+     */
+    const isVowel = (char: string): boolean => {
+      return 'aeiou'.includes(char.toLowerCase());
+    };
+
+    /**
+     * Helper function to check if a character is a consonant
+     */
+    const isConsonant = (char: string): boolean => {
+      return /[bcdfghjklmnpqrstvwxyz]/i.test(char);
+    };
+
+    // Then process the text to handle both links and keywords
+    const processText = (inputText: string): React.ReactNode[] => {
+      return processMarkdown(inputText);
     };
 
     return <span>{processText(decodedText)}</span>;
@@ -300,6 +426,109 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
     if (e.target === e.currentTarget) {
       onClose();
     }
+  };
+
+  /**
+   * Handle post modal functions
+   * Why this matters: Allows users to view the full post content in a modal
+   */
+  const handleOpenPostModal = () => {
+    setShowPostModal(true);
+  };
+
+  const handleClosePostModal = () => {
+    setShowPostModal(false);
+  };
+
+  const handlePostModalBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      handleClosePostModal();
+    }
+  };
+
+  /**
+   * Format Unix timestamp to relative time (Reddit-style)
+   * Why this matters: Matches the existing time formatting in the app for consistency
+   */
+  const formatPostRelativeTime = (created_utc: number): string => {
+    const now = new Date();
+    const postDate = new Date(created_utc * 1000);
+    const diffMs = now.getTime() - postDate.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    
+    const minute = 60;
+    const hour = minute * 60;
+    const day = hour * 24;
+    const month = day * 30;
+    
+    if (diffSeconds < minute) {
+      return 'just now';
+    } else if (diffSeconds < hour) {
+      const minutes = Math.floor(diffSeconds / minute);
+      return `${minutes} min. ago`;
+    } else if (diffSeconds < day) {
+      const hours = Math.floor(diffSeconds / hour);
+      return `${hours} hr. ago`;
+    } else if (diffSeconds < month) {
+      const days = Math.floor(diffSeconds / day);
+      return `${days} day${days === 1 ? '' : 's'} ago`;
+    } else {
+      const months = Math.floor(diffSeconds / month);
+      return `${months} mo. ago`;
+    }
+  };
+
+  /**
+   * Highlight keywords in post content for the post modal
+   * Why this matters: Makes it easy for users to quickly identify where their search keywords appear
+   */
+  const highlightPostKeywords = (text: string): React.ReactElement => {
+    if (!keywords || !text) {
+      return <div style={{ whiteSpace: 'pre-wrap' }}>{text.replace(/\\n/g, '\n')}</div>;
+    }
+
+    // Split keywords by comma and clean them up
+    const keywordList = keywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
+    
+    if (keywordList.length === 0) {
+      return <div style={{ whiteSpace: 'pre-wrap' }}>{text.replace(/\\n/g, '\n')}</div>;
+    }
+
+    // First, replace escaped newlines with actual newlines
+    const processedText = text.replace(/\\n/g, '\n');
+
+    // Create a regex pattern to match any of the keywords as whole words only (case-insensitive)
+    const pattern = new RegExp(`\\b(${keywordList.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
+    
+    // Split text by the pattern and create highlighted spans
+    const parts = processedText.split(pattern);
+    
+    return (
+      <div style={{ whiteSpace: 'pre-wrap' }}>
+        {parts.map((part, index) => {
+          const isKeyword = keywordList.some(keyword => 
+            part.toLowerCase() === keyword.toLowerCase()
+          );
+          
+          return isKeyword ? (
+            <span 
+              key={index} 
+              style={{
+                backgroundColor: '#dcfce7',
+                color: '#166534',
+                padding: '2px 4px',
+                borderRadius: '3px',
+                fontWeight: '600'
+              }}
+            >
+              {part}
+            </span>
+          ) : (
+            <span key={index}>{part}</span>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -373,14 +602,48 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
               border: '1px solid #e2e8f0'
             }}>
               <div style={{ 
-                fontSize: '0.75rem', 
-                fontWeight: '600', 
-                color: '#6b7280',
-                marginBottom: '0.25rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.025em'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '0.25rem'
               }}>
-                From Post:
+                <div style={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: '600', 
+                  color: '#6b7280',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.025em'
+                }}>
+                  From Post:
+                </div>
+                <button
+                  onClick={handleOpenPostModal}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.25rem 0.5rem',
+                    backgroundColor: '#eff6ff',
+                    color: '#2563eb',
+                    border: '1px solid #dbeafe',
+                    borderRadius: '0.25rem',
+                    fontSize: '0.6875rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#dbeafe';
+                    e.currentTarget.style.color = '#1d4ed8';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#eff6ff';
+                    e.currentTarget.style.color = '#2563eb';
+                  }}
+                >
+                  <Search style={{ width: '0.75rem', height: '0.75rem' }} />
+                  See Full Post
+                </button>
               </div>
               <div style={{ 
                 fontSize: '0.9375rem', 
@@ -632,6 +895,214 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
           </a>
         </div>
       </div>
+
+      {/* Post View Modal */}
+      {showPostModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 1001,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+          onClick={handlePostModalBackdropClick}
+        >
+          {/* Post Modal */}
+          <div 
+            style={{
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '0.75rem',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              padding: '0',
+              maxWidth: '800px',
+              maxHeight: '90vh',
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              padding: '1.5rem 1.5rem 0 1.5rem',
+              borderBottom: '1px solid #f3f4f6',
+              paddingBottom: '1rem',
+              marginBottom: '0'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div>
+                  <h3 style={{ 
+                    fontSize: '1rem', 
+                    fontWeight: '600', 
+                    color: '#1f2937',
+                    margin: 0
+                  }}>
+                    Full Post
+                  </h3>
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#6b7280',
+                    margin: 0
+                  }}>
+                    • r/{post.subreddit} • {formatPostRelativeTime(post.created_utc)}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Close Button */}
+              <button
+                onClick={handleClosePostModal}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '2rem',
+                  height: '2rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  backgroundColor: '#f3f4f6',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb';
+                  e.currentTarget.style.color = '#374151';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  e.currentTarget.style.color = '#6b7280';
+                }}
+              >
+                <X style={{ width: '1rem', height: '1rem' }} />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div style={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              padding: '1.5rem',
+              paddingTop: '1rem'
+            }}>
+              {/* Post Header */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: '700', 
+                  color: '#1f2937',
+                  marginBottom: '1rem',
+                  lineHeight: '1.4'
+                }}>
+                  {post.title}
+                </h4>
+                
+                {/* Post Stats */}
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '1rem',
+                  marginBottom: '1rem',
+                  flexWrap: 'wrap'
+                }}>
+                  <span style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.25rem 0.5rem',
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.75rem',
+                    color: '#6b7280'
+                  }}>
+                    <ArrowUp style={{ width: '0.875rem', height: '0.875rem' }} />
+                    {post.score} upvotes
+                  </span>
+                  <span style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.25rem 0.5rem',
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.75rem',
+                    color: '#6b7280'
+                  }}>
+                    <MessageCircle style={{ width: '0.875rem', height: '0.875rem' }} />
+                    {post.comments} comments
+                  </span>
+                  <a
+                    href={post.permalink.startsWith('http') ? post.permalink : `https://reddit.com${post.permalink}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      padding: '0.25rem 0.5rem',
+                      backgroundColor: '#D93801',
+                      color: 'white',
+                      textDecoration: 'none',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#B8300A';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#D93801';
+                    }}
+                  >
+                    <ExternalLink style={{ width: '0.875rem', height: '0.875rem' }} />
+                    View on Reddit
+                  </a>
+                </div>
+              </div>
+
+              {/* Post Content */}
+              {post.content && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h5 style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.75rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.025em'
+                  }}>
+                    Post Content
+                  </h5>
+                  <div style={{ 
+                    fontSize: '0.95rem', 
+                    lineHeight: '1.7', 
+                    color: '#374151',
+                    backgroundColor: '#f9fafb',
+                    padding: '1.25rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #f3f4f6',
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                    {highlightPostKeywords(post.content)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Responsive Styles */}
       <style>
