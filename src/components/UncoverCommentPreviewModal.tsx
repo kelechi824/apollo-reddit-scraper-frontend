@@ -126,6 +126,35 @@ const UncoverCommentPreviewModal: React.FC<UncoverCommentPreviewModalProps> = ({
         limit: 50
       });
       console.log('📊 Full post object:', post);
+      
+      // Additional debugging for Uncover posts
+      console.log('🔍 Debug - post.id type:', typeof post.id, 'value:', post.id);
+      console.log('🔍 Debug - post.subreddit type:', typeof post.subreddit, 'value:', post.subreddit);
+      console.log('🔍 Debug - post.permalink type:', typeof post.permalink, 'value:', post.permalink);
+      console.log('🔍 Debug - post.permalink starts with http?', post.permalink?.startsWith('http'));
+      console.log('🔍 Debug - post.permalink starts with /r/?', post.permalink?.startsWith('/r/'));
+
+      // Validate required fields before making API call
+      if (!post.id || !post.subreddit || !post.permalink) {
+        const missingFields = [];
+        if (!post.id) missingFields.push('id');
+        if (!post.subreddit) missingFields.push('subreddit');
+        if (!post.permalink) missingFields.push('permalink');
+        
+        const errorMsg = `Missing required fields for Reddit API: ${missingFields.join(', ')}`;
+        console.error('❌ Validation failed:', errorMsg);
+        setCommentsError(errorMsg);
+        return;
+      }
+
+      // Fix permalink format - extract relative path from full URL if needed
+      let normalizedPermalink = post.permalink;
+      if (post.permalink.startsWith('https://')) {
+        // Extract the path part from full URL: https://reddit.com/r/sub/comments/id/title/ -> /r/sub/comments/id/title/
+        const url = new URL(post.permalink);
+        normalizedPermalink = url.pathname;
+        console.log('🔧 Converted full URL to relative path:', normalizedPermalink);
+      }
 
       const result = await makeApiRequest<{ comments: RedditComment[]; message?: string }>(
         `${API_BASE_URL.replace(/\/$/, '')}/api/reddit/fetch-comments`,
@@ -134,7 +163,7 @@ const UncoverCommentPreviewModal: React.FC<UncoverCommentPreviewModalProps> = ({
           body: JSON.stringify({
             post_id: post.id,
             subreddit: post.subreddit,
-            permalink: post.permalink,
+            permalink: normalizedPermalink,
             limit: 50 // Fetch up to 50 comments
           }),
         }
