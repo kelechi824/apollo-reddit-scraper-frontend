@@ -119,6 +119,13 @@ const UncoverCommentPreviewModal: React.FC<UncoverCommentPreviewModalProps> = ({
 
     try {
       console.log('🔍 Fetching Reddit comments for post:', post.id);
+      console.log('📊 Post data being sent:', {
+        post_id: post.id,
+        subreddit: post.subreddit,
+        permalink: post.permalink,
+        limit: 50
+      });
+      console.log('📊 Full post object:', post);
 
       const result = await makeApiRequest<{ comments: RedditComment[] }>(
         `${API_BASE_URL.replace(/\/$/, '')}/api/reddit/fetch-comments`,
@@ -138,7 +145,13 @@ const UncoverCommentPreviewModal: React.FC<UncoverCommentPreviewModalProps> = ({
       }
 
       console.log('✅ Fetched Reddit comments:', result.data);
-      setComments(result.data?.comments || []);
+      const comments = result.data?.comments || [];
+      setComments(comments);
+      
+      // Show informative message if no comments were found
+      if (comments.length === 0 && result.data?.message) {
+        setCommentsError(result.data.message);
+      }
 
     } catch (err) {
       console.error('❌ Failed to fetch Reddit comments:', err);
