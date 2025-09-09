@@ -230,6 +230,9 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
 
       // Step 2: Poll for completion
       const pollForCompletion = async (): Promise<WorkflowResponse> => {
+        // Wait 1 second before first poll to prevent race condition with workflow storage
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         while (true) {
           await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between polls
           
