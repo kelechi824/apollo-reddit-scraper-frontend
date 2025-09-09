@@ -19,7 +19,7 @@ interface RedditComment {
   author: string;
   score: number;
   created_utc: number;
-  permalink: string;
+  permalink?: string;
   replies?: RedditComment[];
 }
 
@@ -156,6 +156,59 @@ const UncoverCommentPreviewModal: React.FC<UncoverCommentPreviewModalProps> = ({
         console.log('🔧 Converted full URL to relative path:', normalizedPermalink);
       }
 
+      // Try client-side fetching first (bypasses server IP blocking)
+      console.log('🌐 Attempting client-side Reddit fetch...');
+      
+      try {
+        const redditUrl = `https://www.reddit.com${normalizedPermalink}.json?limit=50&sort=top`;
+        console.log('🔗 Fetching from:', redditUrl);
+        
+        const response = await fetch(redditUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://www.reddit.com/',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ Client-side fetch successful:', data);
+          
+          // Parse Reddit's JSON structure
+          if (data && Array.isArray(data) && data.length > 1) {
+            const commentsData = data[1]?.data?.children || [];
+            const comments = commentsData
+              .filter((child: any) => child.kind === 't1' && child.data?.body)
+              .map((child: any) => ({
+                id: child.data.id,
+                author: child.data.author,
+                content: child.data.body, // Map Reddit's 'body' field to our 'content' field
+                score: child.data.score,
+                created_utc: child.data.created_utc,
+                replies: child.data.replies?.data?.children || []
+              }))
+              .slice(0, 50);
+
+            console.log(`🎯 Parsed ${comments.length} comments from client-side fetch`);
+            setComments(comments);
+            setCommentsError(null);
+            return;
+          }
+        }
+        
+        console.log('⚠️ Client-side fetch failed, falling back to server...');
+      } catch (clientError) {
+        console.log('⚠️ Client-side fetch error:', clientError, 'falling back to server...');
+      }
+
+      // Fallback to server-side fetching
+      console.log('🔄 Falling back to server-side fetch...');
       const result = await makeApiRequest<{ comments: RedditComment[]; message?: string }>(
         `${API_BASE_URL.replace(/\/$/, '')}/api/reddit/fetch-comments`,
         {
