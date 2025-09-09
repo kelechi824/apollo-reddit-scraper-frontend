@@ -582,6 +582,7 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
         </div>
+
       </div>
 
       {/* Mobile Action Buttons */}
