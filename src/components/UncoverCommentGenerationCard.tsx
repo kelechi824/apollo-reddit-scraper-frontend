@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
 import { MessageSquare, RefreshCw, Edit3, Copy, ExternalLink, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { CommentResponse, CommentGenerationResponse, CommentVariationsResponse, AnalyzedPost } from '../types';
+import { CommentVariationsResponse, AnalyzedPost } from '../types';
 import { makeApiRequest } from '../utils/apiHelpers';
 import { API_BASE_URL } from '../config/api';
 
-interface CommentGenerationCardProps {
-  comment: {
-    id: string;
-    content: string;
-    author: string;
-    score: number;
-    created_utc: number;
-    brand_sentiment: 'positive' | 'negative' | 'neutral';
-    helpfulness_sentiment: 'positive' | 'negative' | 'neutral';
-    keyword_matches?: string[];
-  };
+interface RedditComment {
+  id: string;
+  content: string;
+  author: string;
+  score: number;
+  created_utc: number;
+  permalink?: string;
+}
+
+interface UncoverCommentGenerationCardProps {
+  comment: RedditComment;
   post: AnalyzedPost;
   brandKit?: any;
   generatedComments: Record<string, any>;
@@ -22,11 +22,11 @@ interface CommentGenerationCardProps {
 }
 
 /**
- * CommentGenerationCard Component
+ * UncoverCommentGenerationCard Component
  * Why this matters: Provides a complete interface for generating, editing, and managing
- * Reddit responses to individual comments with proper state management and user feedback.
+ * Reddit responses to individual raw Reddit comments with proper state management and user feedback.
  */
-const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
+const UncoverCommentGenerationCard: React.FC<UncoverCommentGenerationCardProps> = ({
   comment,
   post,
   brandKit,
@@ -42,15 +42,207 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
   const [copySuccess, setCopySuccess] = useState(false);
   const [currentVariationIndex, setCurrentVariationIndex] = useState(0);
 
+  /**
+   * Format text content with proper markdown-like formatting
+   * Why this matters: Converts markdown formatting to proper HTML for better readability
+   */
+  const formatTextContent = (text: string): React.ReactElement => {
+    if (!text) return <div>No content available</div>;
+
+    // First, handle basic escaping and newlines
+    let formattedText = text.replace(/\\n/g, '\n');
+    
+    // Handle HTML entities
+    formattedText = formattedText.replace(/&gt;/g, '>');
+    formattedText = formattedText.replace(/&lt;/g, '<');
+    formattedText = formattedText.replace(/&amp;/g, '&');
+    
+    // Handle escaped characters
+    formattedText = formattedText.replace(/\\-/g, '-');
+    
+    // Split into lines for processing
+    const lines = formattedText.split('\n');
+    const processedElements: React.ReactNode[] = [];
+    let currentBulletList: string[] = [];
+    
+    const flushBulletList = () => {
+      if (currentBulletList.length > 0) {
+        processedElements.push(
+          <ul key={`bullet-${processedElements.length}`} style={{
+            margin: '0.75rem 0',
+            paddingLeft: '1.5rem',
+            listStyleType: 'disc'
+          }}>
+            {currentBulletList.map((item, index) => (
+              <li key={index} style={{
+                marginBottom: '0.25rem',
+                lineHeight: '1.6'
+              }}>
+                {formatInlineContent(item)}
+              </li>
+            ))}
+          </ul>
+        );
+        currentBulletList = [];
+      }
+    };
+    
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      // Handle bullet points
+      if (trimmedLine.startsWith('* ')) {
+        currentBulletList.push(trimmedLine.substring(2).trim());
+        return;
+      }
+      
+      // If we have accumulated bullet points and this line is not a bullet, flush them
+      if (currentBulletList.length > 0) {
+        flushBulletList();
+      }
+      
+      // Handle empty lines
+      if (trimmedLine === '') {
+        processedElements.push(<br key={`br-${index}`} />);
+        return;
+      }
+      
+      // Handle regular paragraphs
+      processedElements.push(
+        <p key={`p-${index}`} style={{
+          margin: '0.75rem 0',
+          lineHeight: '1.6'
+        }}>
+          {formatInlineContent(trimmedLine)}
+        </p>
+      );
+    });
+    
+    // Flush any remaining bullet points
+    flushBulletList();
+    
+    return <div>{processedElements}</div>;
+  };
+
+  /**
+   * Format inline content (bold, links, etc.)
+   * Why this matters: Handles inline formatting like bold text and clickable links
+   */
+  const formatInlineContent = (text: string): React.ReactNode => {
+    // Handle bold text **text**
+    const boldRegex = /\*\*(.*?)\*\*/g;
+    const linkRegex = /\[([^\]]+)\]\(([^\)]+)\)/g;
+    
+    let lastIndex = 0;
+    const elements: React.ReactNode[] = [];
+    let elementKey = 0;
+    
+    // First pass: handle bold text
+    let processedText = text;
+    let match;
+    
+    // Reset regex
+    boldRegex.lastIndex = 0;
+    linkRegex.lastIndex = 0;
+    
+    // Create a combined approach to handle both bold and links
+    const parts = [];
+    let currentIndex = 0;
+    
+    // Find all matches for both bold and links
+    const allMatches = [];
+    
+    // Find bold matches
+    while ((match = boldRegex.exec(text)) !== null) {
+      allMatches.push({
+        type: 'bold',
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[1],
+        fullMatch: match[0]
+      });
+    }
+    
+    // Find link matches
+    boldRegex.lastIndex = 0;
+    while ((match = linkRegex.exec(text)) !== null) {
+      allMatches.push({
+        type: 'link',
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[1],
+        url: match[2],
+        fullMatch: match[0]
+      });
+    }
+    
+    // Sort matches by start position
+    allMatches.sort((a, b) => a.start - b.start);
+    
+    // Process matches in order
+    allMatches.forEach((match) => {
+      // Add text before this match
+      if (match.start > currentIndex) {
+        const beforeText = text.substring(currentIndex, match.start);
+        if (beforeText) {
+          elements.push(<span key={`text-${elementKey++}`}>{beforeText}</span>);
+        }
+      }
+      
+      // Add the formatted match
+      if (match.type === 'bold') {
+        elements.push(
+          <strong key={`bold-${elementKey++}`} style={{ fontWeight: '700' }}>
+            {match.content}
+          </strong>
+        );
+      } else if (match.type === 'link') {
+        elements.push(
+          <a 
+            key={`link-${elementKey++}`}
+            href={match.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#2563eb',
+              textDecoration: 'underline',
+              fontWeight: '500'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#1d4ed8';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#2563eb';
+            }}
+          >
+            {match.content}
+          </a>
+        );
+      }
+      
+      currentIndex = match.end;
+    });
+    
+    // Add remaining text
+    if (currentIndex < text.length) {
+      const remainingText = text.substring(currentIndex);
+      if (remainingText) {
+        elements.push(<span key={`text-${elementKey++}`}>{remainingText}</span>);
+      }
+    }
+    
+    return elements.length > 0 ? <>{elements}</> : text;
+  };
+
   // Handle both old single response format and new variations format
   const isVariationsFormat = generatedData && Array.isArray(generatedData.variations);
   const variations = isVariationsFormat ? generatedData.variations : (generatedData ? [generatedData] : []);
   const currentVariation = variations[currentVariationIndex] || null;
 
   /**
-   * Generate a new comment response
+   * Generate a new comment response for raw Reddit comments
    * Why this matters: Creates targeted responses using the specific comment context
-   * rather than generic post-level responses.
+   * without relying on pre-analyzed sentiment data.
    */
   const generateCommentResponse = async () => {
     setIsLoading(true);
@@ -63,17 +255,18 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
         comment_context: {
           content: comment.content,
           author: comment.author,
-          brand_sentiment: comment.brand_sentiment,
-          helpfulness_sentiment: comment.helpfulness_sentiment,
-          keyword_matches: comment.keyword_matches || [],
+          // Default sentiment values since we don't have analysis
+          brand_sentiment: 'neutral' as const,
+          helpfulness_sentiment: 'neutral' as const,
+          keyword_matches: [], // No keyword matches for raw comments
           score: comment.score,
           created_utc: comment.created_utc
         },
         post_context: {
           title: post.title,
           subreddit: post.subreddit,
-          pain_point: post.analysis.pain_point,
-          audience_summary: post.analysis.audience_insight,
+          pain_point: post.analysis?.pain_point || 'General discussion',
+          audience_summary: post.analysis?.audience_insight || 'Reddit community members',
           content: post.content || ''
         },
         brand_kit: brandKit
@@ -504,10 +697,9 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
               <div style={{
                 fontSize: '0.875rem',
                 lineHeight: '1.6',
-                color: '#374151',
-                whiteSpace: 'pre-wrap'
+                color: '#374151'
               }}>
-                {currentVariation.content}
+                {formatTextContent(currentVariation.content)}
               </div>
             )}
           </div>
@@ -686,4 +878,4 @@ const CommentGenerationCard: React.FC<CommentGenerationCardProps> = ({
   );
 };
 
-export default CommentGenerationCard;
+export default UncoverCommentGenerationCard;

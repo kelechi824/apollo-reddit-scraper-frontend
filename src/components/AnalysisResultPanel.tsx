@@ -657,7 +657,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
   };
   
   // Pattern sorting state
-  const [patternSortBy, setPatternSortBy] = useState<'engagement' | 'recency' | 'relevance'>('engagement');
+  const [patternSortBy, setPatternSortBy] = useState<'engagement' | 'recency' | 'relevance'>('recency');
   
   // Pattern display state for expandable key patterns
   const [showAllPatterns, setShowAllPatterns] = useState(false);
@@ -2307,27 +2307,6 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
 
           {patternAnalysis && !isAnalyzingPatterns && (
             <div className="identified-patterns-container">
-              {/* Single Post Notice */}
-              {effectiveAnalyzedPosts.length === 1 && (
-                <div style={{
-                  margin: '1rem',
-                  padding: '1rem',
-                  backgroundColor: '#fef3c7',
-                  border: '1px solid #f59e0b',
-                  borderRadius: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem'
-                }}>
-                  <span style={{ fontSize: '1.25rem' }}>💡</span>
-                  <div>
-                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#92400e', fontWeight: '500' }}>
-                      <strong>Single Post Analysis:</strong> Pattern analysis works best with multiple posts. 
-                      Consider switching to "View Individual Posts" for detailed analysis of this post.
-                    </p>
-                  </div>
-                </div>
-              )}
               {/* Compact Discussion Overview */}
               <div className="patterns-summary" style={{
                 padding: '0',
@@ -2671,7 +2650,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                   </span>
                   
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {(['engagement', 'recency'] as const).map((sortOption) => (
+                    {(['recency', 'engagement'] as const).map((sortOption) => (
                       <button
                         key={sortOption}
                         onClick={() => setPatternSortBy(sortOption)}
@@ -2700,7 +2679,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                           }
                         }}
                       >
-                        {sortOption === 'engagement' ? 'Engagement' : 'Recent'}
+                        {sortOption === 'recency' ? 'Recent' : 'Engagement'}
                       </button>
                     ))}
                   </div>
@@ -2710,7 +2689,7 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
                     color: '#6b7280',
                     fontStyle: 'italic'
                   }}>
-                    {patternSortBy === 'engagement' ? 'Highest upvotes + comments first' : 'Newest posts first'}
+                    {patternSortBy === 'recency' ? 'Newest posts first' : 'Highest upvotes + comments first'}
                   </span>
                 </div>
               </div>

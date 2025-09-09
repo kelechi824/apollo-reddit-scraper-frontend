@@ -80,6 +80,14 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
                   Subreddit Analyzer
                 </NavLink>
                 <NavLink 
+                  to="/uncover" 
+                  className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
+                  onClick={onItemClick}
+                >
+                  <Target className="nav-icon" />
+                  Uncover Themes
+                </NavLink>
+                <NavLink 
                   to="/reddit-analysis-history" 
                   className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
                   onClick={onItemClick}

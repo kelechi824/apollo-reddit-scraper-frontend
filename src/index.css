@@ -1373,6 +1373,17 @@ footer {
   box-shadow: 0 0 0 3px rgba(235, 242, 18, 0.1);
 }
 
+/* Wider category dropdown */
+.category-dropdown-wide {
+  width: 14rem !important; /* Increased width for category dropdown (224px) */
+}
+
+@media (max-width: 48rem) {
+  .category-dropdown-wide {
+    width: 11rem !important; /* Increased mobile width for category dropdown (176px) */
+  }
+}
+
 @media (max-width: 48rem) {
   .apollo-input-horizontal {
     width: 200px; /* Slightly smaller on mobile but still wider than before */

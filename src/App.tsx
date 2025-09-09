@@ -20,6 +20,7 @@ import CompetitorConquestingPage from './pages/CompetitorConquestingPage';
 import SitemapPage from './pages/SitemapPage';
 import SitemapPageEnhanced from './pages/SitemapPageEnhanced';
 import SitemapDetailPage from './pages/SitemapDetailPage';
+import UncoverPage from './pages/UncoverPage';
 import { FEATURE_FLAGS, FeatureFlags } from './utils/featureFlags';
 
 const AppLayout: React.FC = () => {
@@ -84,6 +85,7 @@ const AppLayout: React.FC = () => {
         <div className="page-content">
           <Routes>
             <Route path="/app" element={<AppPage />} />
+            <Route path="/uncover" element={<UncoverPage />} />
             {FEATURE_FLAGS.showCRO && <Route path="/cro" element={<CROPage />} />}
             {FEATURE_FLAGS.showLandingPageAnalyzer && <Route path="/landing-page-analyzer" element={<LandingPageAnalyzer />} />}
             <Route path="/gong-analysis" element={<GongAnalysisPage />} />
