@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import './App.css';
 import Navigation from './components/Navigation';
+import UpdateNotificationSystem from './components/UpdateNotificationSystem';
 import LandingPage from './pages/LandingPage';
 import AppPage from './pages/AppPage';
 import CROPage from './pages/CROPage';
@@ -104,6 +105,13 @@ const AppLayout: React.FC = () => {
           </Routes>
         </div>
       </div>
+
+      {/* Update Notification System - appears on all pages */}
+      <UpdateNotificationSystem 
+        enabled={true}
+        checkInterval={5 * 60 * 1000} // 5 minutes
+        maxCommitsToShow={5}
+      />
     </div>
   );
 };
