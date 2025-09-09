@@ -127,7 +127,7 @@ const UncoverCommentPreviewModal: React.FC<UncoverCommentPreviewModalProps> = ({
       });
       console.log('📊 Full post object:', post);
 
-      const result = await makeApiRequest<{ comments: RedditComment[] }>(
+      const result = await makeApiRequest<{ comments: RedditComment[]; message?: string }>(
         `${API_BASE_URL.replace(/\/$/, '')}/api/reddit/fetch-comments`,
         {
           method: 'POST',
