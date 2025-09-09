@@ -804,4 +804,42 @@ export interface CTAGenerationResult {
     confidence_score: number;
     cro_principles_applied: string[];
   };
+}
+
+// Uncover Feature Types
+export type UncoverCategory = 'solution_request' | 'advice_request' | 'pain_anger' | 'ideas';
+
+export interface UncoverCommunity {
+  id: string;
+  name: string;
+  description: string;
+  subreddits: string[];
+}
+
+export interface UncoverRequest {
+  community: string;
+  category: UncoverCategory;
+  limit?: number;
+  timeframe?: 'recent' | 'older' | 'hour' | 'day' | 'week' | 'month' | 'year';
+}
+
+export interface UncoverResponse {
+  success: boolean;
+  posts: AnalyzedPost[];
+  total_found: number;
+  category_used: UncoverCategory;
+  community_used: string;
+  subreddits_searched: string[];
+  search_patterns_used: string[];
+  workflow_id: string;
+  completed_at: string;
+}
+
+export interface UncoverWorkflowRequest extends UncoverRequest {
+  // Additional fields for workflow processing
+}
+
+export interface UncoverWorkflowResponse extends UncoverResponse {
+  // Additional fields for workflow response
+  pattern_analysis?: PatternAnalysisResult;
 } 

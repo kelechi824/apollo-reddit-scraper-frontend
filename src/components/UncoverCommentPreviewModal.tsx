@@ -1,30 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { X, MessageCircle, ArrowUp, Clock, User, ExternalLink, Search } from 'lucide-react';
+import { X, MessageCircle, ArrowUp, Clock, User, ExternalLink, Search, Loader2 } from 'lucide-react';
 import { AnalyzedPost } from '../types';
-import CommentGenerationCard from './CommentGenerationCard';
+import UncoverCommentGenerationCard from './UncoverCommentGenerationCard';
+import { makeApiRequest } from '../utils/apiHelpers';
+import { API_BASE_URL } from '../config/api';
 
-interface CommentPreviewModalProps {
+interface UncoverCommentPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   post: AnalyzedPost;
-  keywords: string;
   generatedComments: Record<string, any>;
   setGeneratedComments: (comments: Record<string, any>) => void;
 }
 
+interface RedditComment {
+  id: string;
+  content: string;
+  author: string;
+  score: number;
+  created_utc: number;
+  permalink: string;
+  replies?: RedditComment[];
+}
+
 /**
- * CommentPreviewModal Component
- * Why this matters: Shows actual comments where keywords are mentioned, not just counts.
- * Allows users to see the full context of discussions about their keywords.
+ * UncoverCommentPreviewModal Component
+ * Why this matters: Shows actual Reddit comments for Uncover posts by fetching them directly from Reddit.
+ * Allows users to see the full context of discussions and generate responses.
  */
-const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
+const UncoverCommentPreviewModal: React.FC<UncoverCommentPreviewModalProps> = ({
   isOpen,
   onClose,
   post,
-  keywords,
   generatedComments,
   setGeneratedComments
 }) => {
+  const [comments, setComments] = useState<RedditComment[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
   const [selectedSentiment, setSelectedSentiment] = useState<'all' | 'positive' | 'negative' | 'neutral'>('all');
   const [brandKit, setBrandKit] = useState<any>(null);
   const [showPostModal, setShowPostModal] = useState(false);
@@ -86,26 +99,59 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
     };
   }, []);
 
+  /**
+   * Fetch Reddit comments when modal opens
+   * Why this matters: Loads actual Reddit comments for the post so users can see and respond to them.
+   */
+  useEffect(() => {
+    if (isOpen && post) {
+      fetchRedditComments();
+    }
+  }, [isOpen, post]);
+
+  /**
+   * Fetch comments from Reddit API
+   * Why this matters: Gets the actual comments from Reddit since Uncover doesn't analyze comments.
+   */
+  const fetchRedditComments = async () => {
+    setIsLoadingComments(true);
+    setCommentsError(null);
+
+    try {
+      console.log('🔍 Fetching Reddit comments for post:', post.id);
+
+      const result = await makeApiRequest<{ comments: RedditComment[] }>(
+        `${API_BASE_URL.replace(/\/$/, '')}/api/reddit/fetch-comments`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            post_id: post.id,
+            subreddit: post.subreddit,
+            permalink: post.permalink,
+            limit: 50 // Fetch up to 50 comments
+          }),
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || result.message || 'Failed to fetch comments');
+      }
+
+      console.log('✅ Fetched Reddit comments:', result.data);
+      setComments(result.data?.comments || []);
+
+    } catch (err) {
+      console.error('❌ Failed to fetch Reddit comments:', err);
+      setCommentsError(err instanceof Error ? err.message : 'Failed to fetch comments');
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+
   if (!isOpen) return null;
 
-  const comments = post.comment_analysis?.top_comments || [];
-  
-  // Filter comments based on keywords (if provided) and sentiment
-  let filteredComments = comments;
-  
-  // If keywords are provided, filter by keyword matches
-  if (keywords && keywords.trim()) {
-    filteredComments = comments.filter(comment => 
-      comment.keyword_matches && comment.keyword_matches.length > 0
-    );
-  }
-  
-  // Then filter by sentiment
-  if (selectedSentiment !== 'all') {
-    filteredComments = filteredComments.filter(comment => 
-      comment.brand_sentiment === selectedSentiment
-    );
-  }
+  // Filter comments by sentiment (for now, we'll treat all as neutral since we don't have sentiment analysis)
+  const filteredComments = comments;
 
   /**
    * Format Unix timestamp to relative time (Reddit-style)
@@ -137,299 +183,6 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
       const months = Math.floor(diffSeconds / month);
       return `${months} mo. ago`;
     }
-  };
-
-  /**
-   * Decode HTML entities in text
-   * Why this matters: Converts HTML entities like &gt; to their actual characters like >
-   */
-  const decodeHtmlEntities = (text: string): string => {
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = text;
-    return textarea.value;
-  };
-
-  /**
-   * Highlight keywords, render markdown formatting, and make links clickable in comment text
-   * Why this matters: Makes it easy to spot keywords, properly renders bold/italic text,
-   * and allows users to click on links within comments to navigate to external resources.
-   */
-  const highlightKeywords = (text: string): React.ReactElement => {
-    if (!text) {
-      return <span>{text}</span>;
-    }
-
-    // First decode HTML entities
-    const decodedText = decodeHtmlEntities(text);
-
-    // Process markdown formatting (bold, italic) before handling links and keywords
-    const processMarkdown = (inputText: string): React.ReactNode[] => {
-      const elements: React.ReactNode[] = [];
-      
-      // Combined pattern for bold (**text**), italic (*text*), and links
-      const markdownPattern = /(\*\*[^*]+\*\*|\*[^*]+\*|https?:\/\/[^\s\)]+|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|\[[^\]]+\]\([^)]+\))/gi;
-      
-      const parts = inputText.split(markdownPattern);
-      
-      parts.forEach((part, index) => {
-        if (!part) return;
-        
-        // Check for bold text **text**
-        const boldMatch = part.match(/^\*\*([^*]+)\*\*$/);
-        if (boldMatch) {
-          const boldText = boldMatch[1];
-          elements.push(
-            <strong key={`bold-${index}`} style={{ fontWeight: '700' }}>
-              {processTextForKeywords(boldText)}
-            </strong>
-          );
-          return;
-        }
-        
-        // Check for italic text *text* (but not bold)
-        const italicMatch = part.match(/^\*([^*]+)\*$/);
-        if (italicMatch) {
-          const italicText = italicMatch[1];
-          elements.push(
-            <em key={`italic-${index}`} style={{ fontStyle: 'italic' }}>
-              {processTextForKeywords(italicText)}
-            </em>
-          );
-          return;
-        }
-        
-        // Check if this part is a markdown link
-        const markdownLinkMatch = part.match(/\[([^\]]+)\]\(([^)]+)\)/);
-        if (markdownLinkMatch) {
-          const [, linkText, url] = markdownLinkMatch;
-          elements.push(
-            <a
-              key={`link-${index}`}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: '#2563eb',
-                textDecoration: 'underline',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#1d4ed8';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#2563eb';
-              }}
-            >
-              {linkText}
-            </a>
-          );
-          return;
-        }
-        
-        // Check if this part is a URL
-        const urlPattern = /(https?:\/\/[^\s\)]+)/gi;
-        if (urlPattern.test(part)) {
-          elements.push(
-            <a
-              key={`url-${index}`}
-              href={part}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: '#2563eb',
-                textDecoration: 'underline',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#1d4ed8';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#2563eb';
-              }}
-            >
-              {part}
-            </a>
-          );
-          return;
-        }
-        
-        // Check if this part is an email
-        const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
-        if (emailPattern.test(part)) {
-          elements.push(
-            <a
-              key={`email-${index}`}
-              href={`mailto:${part}`}
-              style={{
-                color: '#2563eb',
-                textDecoration: 'underline',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#1d4ed8';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#2563eb';
-              }}
-            >
-              {part}
-            </a>
-          );
-          return;
-        }
-        
-        // Regular text - process for keywords
-        elements.push(...processTextForKeywords(part, index));
-      });
-      
-      return elements;
-    };
-
-    // Helper function to process text for keyword highlighting with variations
-    const processTextForKeywords = (text: string, baseIndex: number = 0): React.ReactNode[] => {
-      if (!keywords) {
-        return [<span key={`text-${baseIndex}`}>{text}</span>];
-      }
-      
-      const keywordList = keywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
-      
-      if (keywordList.length === 0) {
-        return [<span key={`text-${baseIndex}`}>{text}</span>];
-      }
-      
-      // Generate all keyword variations for highlighting
-      const allKeywordVariations = new Set<string>();
-      keywordList.forEach(keyword => {
-        allKeywordVariations.add(keyword);
-        // Add variations for each keyword
-        const variations = generateKeywordVariations(keyword);
-        variations.forEach(variation => allKeywordVariations.add(variation));
-      });
-      
-      const keywordPattern = new RegExp(`\\b(${Array.from(allKeywordVariations).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
-      const keywordParts = text.split(keywordPattern);
-      
-      return keywordParts.map((keywordPart, keywordIndex) => {
-        if (!keywordPart) return null;
-        
-        const isKeywordOrVariation = allKeywordVariations.has(keywordPart.toLowerCase());
-        
-        if (isKeywordOrVariation) {
-          return (
-            <span 
-              key={`keyword-${baseIndex}-${keywordIndex}`}
-              style={{
-                backgroundColor: '#dcfce7',
-                color: '#166534',
-                padding: '2px 4px',
-                borderRadius: '3px',
-                fontWeight: '600'
-              }}
-            >
-              {keywordPart}
-            </span>
-          );
-        } else {
-          return (
-            <span key={`text-${baseIndex}-${keywordIndex}`}>{keywordPart}</span>
-          );
-        }
-      }).filter(Boolean);
-    };
-
-    /**
-     * Generate keyword variations for enhanced highlighting
-     * Why this matters: Creates common variations of keywords (plurals, "ing" forms, etc.)
-     * to highlight more relevant mentions in comments
-     */
-    const generateKeywordVariations = (term: string): string[] => {
-      const variations: string[] = [];
-      const lowerTerm = term.toLowerCase();
-      
-      // Basic plurals and verb forms
-      variations.push(
-        lowerTerm + 's',           // prospects
-        lowerTerm + 'ing',         // prospecting
-        lowerTerm + 'ed',          // prospected
-        lowerTerm + 'or',          // prospector (agent noun)
-        lowerTerm + 'ors',         // prospectors
-        lowerTerm + 'er',          // prospecter (alternative agent noun)
-        lowerTerm + 'ers'          // prospecters
-      );
-      
-      // Handle words ending in 'y' -> 'ies' (e.g., company -> companies)
-      if (lowerTerm.endsWith('y') && lowerTerm.length > 2) {
-        const stem = lowerTerm.slice(0, -1);
-        variations.push(stem + 'ies');
-      }
-      
-      // Handle words ending in 'e' for 'ing' form (e.g., sale -> selling, but also sales)
-      if (lowerTerm.endsWith('e') && lowerTerm.length > 2) {
-        const stem = lowerTerm.slice(0, -1);
-        variations.push(stem + 'ing');
-      }
-      
-      // Handle consonant doubling for 'ing' (e.g., plan -> planning)
-      if (lowerTerm.length >= 3) {
-        const lastChar = lowerTerm[lowerTerm.length - 1];
-        const secondLastChar = lowerTerm[lowerTerm.length - 2];
-        const thirdLastChar = lowerTerm[lowerTerm.length - 3];
-        
-        // Simple heuristic: if word ends with consonant-vowel-consonant pattern
-        if (isConsonant(lastChar) && isVowel(secondLastChar) && isConsonant(thirdLastChar)) {
-          variations.push(lowerTerm + lastChar + 'ing'); // plan -> planning
-          variations.push(lowerTerm + lastChar + 'ed');  // plan -> planned
-        }
-      }
-      
-      // Handle irregular plurals for common business terms
-      const irregularPlurals: Record<string, string[]> = {
-        'person': ['people'],
-        'child': ['children'],
-        'man': ['men'],
-        'woman': ['women'],
-        'foot': ['feet'],
-        'tooth': ['teeth'],
-        'analysis': ['analyses'],
-        'datum': ['data'],
-        'medium': ['media'],
-        'criterion': ['criteria']
-      };
-      
-      if (irregularPlurals[lowerTerm]) {
-        variations.push(...irregularPlurals[lowerTerm]);
-      }
-      
-      // Also check if the term itself might be a plural of an irregular form
-      for (const [singular, plurals] of Object.entries(irregularPlurals)) {
-        if (plurals.includes(lowerTerm)) {
-          variations.push(singular);
-        }
-      }
-      
-      return variations.filter(v => v !== lowerTerm); // Don't include the original term
-    };
-
-    /**
-     * Helper function to check if a character is a vowel
-     */
-    const isVowel = (char: string): boolean => {
-      return 'aeiou'.includes(char.toLowerCase());
-    };
-
-    /**
-     * Helper function to check if a character is a consonant
-     */
-    const isConsonant = (char: string): boolean => {
-      return /[bcdfghjklmnpqrstvwxyz]/i.test(char);
-    };
-
-    // Then process the text to handle both links and keywords
-    const processText = (inputText: string): React.ReactNode[] => {
-      return processMarkdown(inputText);
-    };
-
-    return <span>{processText(decodedText)}</span>;
   };
 
   /**
@@ -493,56 +246,202 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
   };
 
   /**
-   * Highlight keywords in post content for the post modal
-   * Why this matters: Makes it easy for users to quickly identify where their search keywords appear
+   * Format text content with proper markdown-like formatting
+   * Why this matters: Converts markdown formatting to proper HTML for better readability
+   */
+  const formatTextContent = (text: string): React.ReactElement => {
+    if (!text) return <div>No content available</div>;
+
+    // First, handle basic escaping and newlines
+    let formattedText = text.replace(/\\n/g, '\n');
+    
+    // Handle HTML entities
+    formattedText = formattedText.replace(/&gt;/g, '>');
+    formattedText = formattedText.replace(/&lt;/g, '<');
+    formattedText = formattedText.replace(/&amp;/g, '&');
+    
+    // Handle escaped characters
+    formattedText = formattedText.replace(/\\-/g, '-');
+    
+    // Split into lines for processing
+    const lines = formattedText.split('\n');
+    const processedElements: React.ReactNode[] = [];
+    let currentBulletList: string[] = [];
+    
+    const flushBulletList = () => {
+      if (currentBulletList.length > 0) {
+        processedElements.push(
+          <ul key={`bullet-${processedElements.length}`} style={{
+            margin: '0.75rem 0',
+            paddingLeft: '1.5rem',
+            listStyleType: 'disc'
+          }}>
+            {currentBulletList.map((item, index) => (
+              <li key={index} style={{
+                marginBottom: '0.25rem',
+                lineHeight: '1.6'
+              }}>
+                {formatInlineContent(item)}
+              </li>
+            ))}
+          </ul>
+        );
+        currentBulletList = [];
+      }
+    };
+    
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      // Handle bullet points
+      if (trimmedLine.startsWith('* ')) {
+        currentBulletList.push(trimmedLine.substring(2).trim());
+        return;
+      }
+      
+      // If we have accumulated bullet points and this line is not a bullet, flush them
+      if (currentBulletList.length > 0) {
+        flushBulletList();
+      }
+      
+      // Handle empty lines
+      if (trimmedLine === '') {
+        processedElements.push(<br key={`br-${index}`} />);
+        return;
+      }
+      
+      // Handle regular paragraphs
+      processedElements.push(
+        <p key={`p-${index}`} style={{
+          margin: '0.75rem 0',
+          lineHeight: '1.6'
+        }}>
+          {formatInlineContent(trimmedLine)}
+        </p>
+      );
+    });
+    
+    // Flush any remaining bullet points
+    flushBulletList();
+    
+    return <div>{processedElements}</div>;
+  };
+
+  /**
+   * Format inline content (bold, links, etc.)
+   * Why this matters: Handles inline formatting like bold text and clickable links
+   */
+  const formatInlineContent = (text: string): React.ReactNode => {
+    // Handle bold text **text**
+    const boldRegex = /\*\*(.*?)\*\*/g;
+    const linkRegex = /\[([^\]]+)\]\(([^\)]+)\)/g;
+    
+    let lastIndex = 0;
+    const elements: React.ReactNode[] = [];
+    let elementKey = 0;
+    
+    // First pass: handle bold text
+    let processedText = text;
+    let match;
+    
+    // Reset regex
+    boldRegex.lastIndex = 0;
+    linkRegex.lastIndex = 0;
+    
+    // Create a combined approach to handle both bold and links
+    const parts = [];
+    let currentIndex = 0;
+    
+    // Find all matches for both bold and links
+    const allMatches = [];
+    
+    // Find bold matches
+    while ((match = boldRegex.exec(text)) !== null) {
+      allMatches.push({
+        type: 'bold',
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[1],
+        fullMatch: match[0]
+      });
+    }
+    
+    // Find link matches
+    boldRegex.lastIndex = 0;
+    while ((match = linkRegex.exec(text)) !== null) {
+      allMatches.push({
+        type: 'link',
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[1],
+        url: match[2],
+        fullMatch: match[0]
+      });
+    }
+    
+    // Sort matches by start position
+    allMatches.sort((a, b) => a.start - b.start);
+    
+    // Process matches in order
+    allMatches.forEach((match) => {
+      // Add text before this match
+      if (match.start > currentIndex) {
+        const beforeText = text.substring(currentIndex, match.start);
+        if (beforeText) {
+          elements.push(<span key={`text-${elementKey++}`}>{beforeText}</span>);
+        }
+      }
+      
+      // Add the formatted match
+      if (match.type === 'bold') {
+        elements.push(
+          <strong key={`bold-${elementKey++}`} style={{ fontWeight: '700' }}>
+            {match.content}
+          </strong>
+        );
+      } else if (match.type === 'link') {
+        elements.push(
+          <a 
+            key={`link-${elementKey++}`}
+            href={match.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#2563eb',
+              textDecoration: 'underline',
+              fontWeight: '500'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#1d4ed8';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#2563eb';
+            }}
+          >
+            {match.content}
+          </a>
+        );
+      }
+      
+      currentIndex = match.end;
+    });
+    
+    // Add remaining text
+    if (currentIndex < text.length) {
+      const remainingText = text.substring(currentIndex);
+      if (remainingText) {
+        elements.push(<span key={`text-${elementKey++}`}>{remainingText}</span>);
+      }
+    }
+    
+    return elements.length > 0 ? <>{elements}</> : text;
+  };
+
+  /**
+   * Legacy function for backward compatibility
    */
   const highlightPostKeywords = (text: string): React.ReactElement => {
-    if (!keywords || !text) {
-      return <div style={{ whiteSpace: 'pre-wrap' }}>{text.replace(/\\n/g, '\n')}</div>;
-    }
-
-    // Split keywords by comma and clean them up
-    const keywordList = keywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
-    
-    if (keywordList.length === 0) {
-      return <div style={{ whiteSpace: 'pre-wrap' }}>{text.replace(/\\n/g, '\n')}</div>;
-    }
-
-    // First, replace escaped newlines with actual newlines
-    const processedText = text.replace(/\\n/g, '\n');
-
-    // Create a regex pattern to match any of the keywords as whole words only (case-insensitive)
-    const pattern = new RegExp(`\\b(${keywordList.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
-    
-    // Split text by the pattern and create highlighted spans
-    const parts = processedText.split(pattern);
-    
-    return (
-      <div style={{ whiteSpace: 'pre-wrap' }}>
-        {parts.map((part, index) => {
-          const isKeyword = keywordList.some(keyword => 
-            part.toLowerCase() === keyword.toLowerCase()
-          );
-          
-          return isKeyword ? (
-            <span 
-              key={index} 
-              style={{
-                backgroundColor: '#dcfce7',
-                color: '#166534',
-                padding: '2px 4px',
-                borderRadius: '3px',
-                fontWeight: '600'
-              }}
-            >
-              {part}
-            </span>
-          ) : (
-            <span key={index}>{part}</span>
-          );
-        })}
-      </div>
-    );
+    return formatTextContent(text);
   };
 
   return (
@@ -604,7 +503,7 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
               color: '#1f2937',
               margin: '0 0 0.5rem 0'
             }}>
-              💬 {keywords ? `Comments Mentioning "${keywords}"` : 'All Comments'}
+              💬 All Comments
             </h3>
             
             {/* Post Title Context */}
@@ -672,13 +571,7 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
               <span>r/{post.subreddit}</span>
               <span>•</span>
-              <span>{comments.length} comments found</span>
-              {keywords && keywords.trim() && (
-                <>
-                  <span>•</span>
-                  <span>{post.comment_analysis?.keyword_mentions || 0} keyword mentions</span>
-                </>
-              )}
+              <span>{isLoadingComments ? 'Loading...' : `${comments.length} comments found`}</span>
             </div>
           </div>
           
@@ -711,50 +604,6 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
           </button>
         </div>
 
-        {/* Sentiment Filter */}
-        <div style={{
-          padding: '1rem 1.5rem 1rem 1.5rem',
-          borderBottom: '1px solid #f3f4f6'
-        }}>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginRight: '0.5rem' }}>
-              Filter by sentiment:
-            </span>
-            {(['all', 'positive', 'negative', 'neutral'] as const).map((sentiment) => (
-              <button
-                key={sentiment}
-                onClick={() => setSelectedSentiment(sentiment)}
-                style={{
-                  padding: '0.375rem 0.75rem',
-                  fontSize: '0.75rem',
-                  fontWeight: '500',
-                  borderRadius: '0.375rem',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: selectedSentiment === sentiment ? '#EBF212' : 'white',
-                  color: selectedSentiment === sentiment ? '#000' : '#6b7280',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textTransform: 'capitalize'
-                }}
-                onMouseOver={(e) => {
-                  if (selectedSentiment !== sentiment) {
-                    e.currentTarget.style.backgroundColor = '#f3f4f6';
-                    e.currentTarget.style.borderColor = '#9ca3af';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (selectedSentiment !== sentiment) {
-                    e.currentTarget.style.backgroundColor = 'white';
-                    e.currentTarget.style.borderColor = '#d1d5db';
-                  }
-                }}
-              >
-                {sentiment} {sentiment !== 'all' && `(${comments.filter(c => c.brand_sentiment === sentiment).length})`}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Scrollable Comments List */}
         <div style={{ 
           flex: 1, 
@@ -762,7 +611,51 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
           padding: '1.5rem',
           paddingTop: '1rem'
         }}>
-          {filteredComments.length === 0 ? (
+          {isLoadingComments ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '3rem 1rem',
+              color: '#6b7280'
+            }}>
+              <Loader2 style={{ width: '3rem', height: '3rem', margin: '0 auto 1rem', animation: 'spin 1s linear infinite' }} />
+              <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
+                Loading comments...
+              </h4>
+              <p style={{ fontSize: '0.875rem' }}>
+                Fetching comments from Reddit
+              </p>
+            </div>
+          ) : commentsError ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '3rem 1rem',
+              color: '#6b7280'
+            }}>
+              <MessageCircle style={{ width: '3rem', height: '3rem', margin: '0 auto 1rem', opacity: 0.5 }} />
+              <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
+                Failed to load comments
+              </h4>
+              <p style={{ fontSize: '0.875rem' }}>
+                {commentsError}
+              </p>
+              <button
+                onClick={fetchRedditComments}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Try Again
+              </button>
+            </div>
+          ) : filteredComments.length === 0 ? (
             <div style={{
               textAlign: 'center',
               padding: '3rem 1rem',
@@ -773,13 +666,7 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
                 No comments found
               </h4>
               <p style={{ fontSize: '0.875rem' }}>
-                {selectedSentiment === 'all' 
-                  ? (keywords && keywords.trim() 
-                      ? 'No comments with keyword mentions were found for this post.'
-                      : 'Comment analysis is not available for Uncover results. Comments are only analyzed in the Subreddit Analyzer workflow.'
-                    )
-                  : `No ${selectedSentiment} comments found. Try a different sentiment filter.`
-                }
+                This post doesn't have any comments yet.
               </p>
             </div>
           ) : (
@@ -822,23 +709,6 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
                         </span>
                       </div>
                     </div>
-                    
-                    {/* Sentiment Badge */}
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <span style={{
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '0.25rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '500',
-                        backgroundColor: comment.brand_sentiment === 'positive' ? '#dcfce7' : 
-                                       comment.brand_sentiment === 'negative' ? '#fef2f2' : '#f3f4f6',
-                        color: comment.brand_sentiment === 'positive' ? '#166534' : 
-                               comment.brand_sentiment === 'negative' ? '#dc2626' : '#374151'
-                      }}>
-                        Brand: {comment.brand_sentiment === 'positive' ? '😊 Positive' : 
-                               comment.brand_sentiment === 'negative' ? '😞 Negative' : '😐 Neutral'}
-                      </span>
-                    </div>
                   </div>
                   
                   {/* Comment Content */}
@@ -847,45 +717,26 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
                     lineHeight: '1.6',
                     color: '#374151',
                     whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word'
+                    wordBreak: 'break-word',
+                    marginBottom: '0.75rem'
                   }}>
-                    {highlightKeywords(comment.content)}
+                    {comment.content}
                   </div>
                   
                   {/* Comment Generation Card */}
-                  {(keywords && keywords.trim()) ? (
-                    // Show only for comments with keyword matches when keywords are provided
-                    comment.keyword_matches && comment.keyword_matches.length > 0 && (
-                      <div style={{
-                        marginTop: '0.75rem',
-                        paddingTop: '0.75rem',
-                        borderTop: '1px solid #e5e7eb'
-                      }}>
-                        <CommentGenerationCard
-                          comment={comment}
-                          post={post}
-                          brandKit={brandKit}
-                          generatedComments={generatedComments}
-                          setGeneratedComments={setGeneratedComments}
-                        />
-                      </div>
-                    )
-                  ) : (
-                    // Show for all comments when no keywords are provided
-                    <div style={{
-                      marginTop: '0.75rem',
-                      paddingTop: '0.75rem',
-                      borderTop: '1px solid #e5e7eb'
-                    }}>
-                      <CommentGenerationCard
-                        comment={comment}
-                        post={post}
-                        brandKit={brandKit}
-                        generatedComments={generatedComments}
-                        setGeneratedComments={setGeneratedComments}
-                      />
-                    </div>
-                  )}
+                  <div style={{
+                    marginTop: '0.75rem',
+                    paddingTop: '0.75rem',
+                    borderTop: '1px solid #e5e7eb'
+                  }}>
+                    <UncoverCommentGenerationCard
+                      comment={comment}
+                      post={post}
+                      brandKit={brandKit}
+                      generatedComments={generatedComments}
+                      setGeneratedComments={setGeneratedComments}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -902,7 +753,7 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
           justifyContent: 'space-between'
         }}>
           <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-            Showing {filteredComments.length} of {comments.length} comments
+            Showing {filteredComments.length} comments
           </div>
           
           <a
@@ -1131,10 +982,9 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
                     backgroundColor: '#f9fafb',
                     padding: '1.25rem',
                     borderRadius: '0.5rem',
-                    border: '1px solid #f3f4f6',
-                    whiteSpace: 'pre-wrap'
+                    border: '1px solid #f3f4f6'
                   }}>
-                    {highlightPostKeywords(post.content)}
+                    {formatTextContent(post.content)}
                   </div>
                 </div>
               )}
@@ -1193,4 +1043,4 @@ const CommentPreviewModal: React.FC<CommentPreviewModalProps> = ({
   );
 };
 
-export default CommentPreviewModal;
+export default UncoverCommentPreviewModal;

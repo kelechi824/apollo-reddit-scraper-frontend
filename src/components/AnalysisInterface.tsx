@@ -65,13 +65,14 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
       
       // Dynamic step timing based on number of posts being analyzed
       // Reflects actual time with parallel processing optimization (80% faster than before)
+      // Added 10s to each step + 20s extra to second-to-last step for better UX
       const getStepTimings = (postCount: number) => {
         if (postCount === 3) {
-          return [3000, 5000, 6000, 4000]; // 18s total for 3 posts (15-25s range)
+          return [13000, 15000, 36000, 14000]; // 78s total for 3 posts (added 10s each + 20s to step 3)
         } else if (postCount === 5) {
-          return [4000, 8000, 10000, 6000]; // 28s total for 5 posts (25-35s range)
+          return [14000, 18000, 40000, 16000]; // 88s total for 5 posts (added 10s each + 20s to step 3)
         } else {
-          return [5000, 10000, 12000, 8000]; // 35s total for 10 posts (30-45s range)
+          return [15000, 20000, 42000, 18000]; // 95s total for 10 posts (added 10s each + 20s to step 3)
         }
       };
       
@@ -467,8 +468,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
                 </>
               ) : (
                 <>
-                  <Play style={{width: '1rem', height: '1rem'}} />
-                  {hasCompletedAnalysis ? 'Run Again' : 'Run Analysis'}
+                  {hasCompletedAnalysis ? 'Deploy Again' : 'Deploy AI Agent'}
                 </>
               )}
             </button>
@@ -476,7 +476,7 @@ const AnalysisInterface: React.FC<AnalysisInterfaceProps> = ({ apiUrl, onAnalysi
             {/* Estimated Time Display - to the right of button */}
             <div className="time-estimate-right-of-button">
               <p>
-                Est. time: 60 seconds
+                Est. time: 3-5 mins
               </p>
             </div>
           </div>
