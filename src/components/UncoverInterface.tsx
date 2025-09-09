@@ -259,15 +259,22 @@ const UncoverInterface: React.FC<UncoverInterfaceProps> = ({
       console.log(`📊 Current selectedTimeframe state: ${selectedTimeframe}`);
 
       // Step 1: Start the workflow (returns immediately with workflow ID)
+      const startUrl = `${apiUrl.replace(/\/$/, '')}/api/uncover/run-analysis`;
+      console.log(`🚀 Starting uncover workflow at: ${startUrl}`);
+      console.log(`📊 API URL being used: ${apiUrl}`);
+      
       const startResult = await makeApiRequest<{workflow_id: string; status: string}>(
-        `${apiUrl.replace(/\/$/, '')}/api/uncover/run-analysis`,
+        startUrl,
         {
           method: 'POST',
           body: JSON.stringify(request),
         }
       );
 
+      console.log(`📊 Start result:`, startResult);
+
       if (!startResult.success) {
+        console.error(`❌ Failed to start workflow:`, startResult);
         throw new Error(startResult.error || startResult.message || 'Failed to start uncover analysis');
       }
 
@@ -279,16 +286,22 @@ const UncoverInterface: React.FC<UncoverInterfaceProps> = ({
         while (true) {
           await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between polls
           
+          const statusUrl = `${apiUrl.replace(/\/$/, '')}/api/uncover/status/${workflowId}`;
+          console.log(`🔍 Polling uncover status at: ${statusUrl}`);
+          
           const statusResult = await makeApiRequest<{
             workflow_id: string;
             status: 'pending' | 'running' | 'completed' | 'failed';
             progress: number;
             result?: UncoverWorkflowResponse;
             error?: string;
-          }>(`${apiUrl.replace(/\/$/, '')}/api/uncover/status/${workflowId}`);
+          }>(statusUrl);
+
+          console.log(`📊 Status result:`, statusResult);
 
           if (!statusResult.success) {
-            throw new Error('Failed to check uncover workflow status');
+            console.error(`❌ Status check failed:`, statusResult);
+            throw new Error(`Failed to check uncover workflow status: ${statusResult.error || statusResult.message || 'Unknown error'}`);
           }
 
           const status = statusResult.data!;
