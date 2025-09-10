@@ -3,14 +3,15 @@ import UncoverInterface from '../components/UncoverInterface';
 import UncoverResultPanel from '../components/UncoverResultPanel';
 import { UncoverWorkflowResponse } from '../types';
 import { FEATURE_FLAGS } from '../utils/featureFlags';
+import { API_BASE_URL } from '../config/api';
 
 const UncoverPage: React.FC = () => {
   const [uncoverResults, setUncoverResults] = useState<UncoverWorkflowResponse | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [hasResults, setHasResults] = useState(false);
 
-  // API URL configuration
-  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3003';
+  // API URL configuration - use centralized config that handles production/development automatically
+  const apiUrl = API_BASE_URL;
 
   /**
    * Handle successful uncover analysis completion
