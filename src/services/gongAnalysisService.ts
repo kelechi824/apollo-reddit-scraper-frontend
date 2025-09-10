@@ -8,6 +8,7 @@ import {
   SendGongMessageRequest,
   SendGongMessageResponse
 } from '../types';
+import { API_BASE_URL } from '../config/api';
 
 /**
  * Service for handling Gong call analysis API operations
@@ -17,7 +18,7 @@ class GongAnalysisService {
   private baseUrl: string;
 
   constructor(apiUrl?: string) {
-    this.baseUrl = (apiUrl || process.env.REACT_APP_API_URL || 'http://localhost:3003').replace(/\/$/, '');
+    this.baseUrl = (apiUrl || API_BASE_URL).replace(/\/$/, '');
   }
 
   /**

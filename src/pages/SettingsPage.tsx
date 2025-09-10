@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, RotateCcw, AlertTriangle } from 'lucide-react';
+import { API_BASE_URL } from '../config/api';
 
 interface SettingsState {
   theme: 'light' | 'dark';
@@ -15,7 +16,7 @@ const SettingsPage: React.FC = () => {
     theme: 'light',
     autoSave: true,
     defaultLimit: 5,
-    apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3003',
+    apiUrl: API_BASE_URL,
     notifications: true,
     autoRefresh: false
   });
@@ -51,7 +52,7 @@ const SettingsPage: React.FC = () => {
       theme: 'light',
       autoSave: true,
       defaultLimit: 5,
-      apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3003',
+      apiUrl: API_BASE_URL,
       notifications: true,
       autoRefresh: false
     };
