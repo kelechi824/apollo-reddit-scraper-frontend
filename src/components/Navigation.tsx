@@ -182,6 +182,15 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
           </NavLink>
           
           <NavLink 
+            to="/email-newsletter" 
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onItemClick}
+          >
+            <MessageCircle className="nav-icon" />
+            Email Newsletter Agent
+          </NavLink>
+          
+          <NavLink 
             to="/playbooks-creator" 
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             onClick={onItemClick}
