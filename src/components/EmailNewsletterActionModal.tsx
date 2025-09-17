@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Wand2, ExternalLink, Copy, Check, RefreshCw, FileText, Table, BarChart3, ChevronLeft, ChevronRight, Mail } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, Wand2, ExternalLink, Copy, Check, RefreshCw, FileText, Table, ChevronLeft, ChevronRight, Mail, Bold, Italic, Underline, List, ListOrdered, Undo, Redo } from 'lucide-react';
 import googleDocsService from '../services/googleDocsService';
-import { API_ENDPOINTS, buildApiUrl } from '../config/api';
+import { API_ENDPOINTS } from '../config/api';
 
 // Interface for NewsletterRow
 interface NewsletterRow {
@@ -54,21 +54,8 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
   newsletterRow,
   onContentUpdate
 }) => {
-  // Debug: Log the newsletterRow data when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      console.log('🔍 EmailNewsletterActionModal - newsletterRow data:', {
-        id: newsletterRow.id,
-        jobTitle: newsletterRow.jobTitle,
-        status: newsletterRow.status,
-        mcpData: newsletterRow.mcpData,
-        newslettersLength: newsletterRow.newsletters.length
-      });
-    }
-  }, [isOpen, newsletterRow]);
-
-  // State management
-  const [editableNewsletters, setEditableNewsletters] = useState<string[]>(newsletterRow.newsletters);
+  // State management - simplified to avoid circular dependencies
+  const [editableNewsletters, setEditableNewsletters] = useState<string[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isOpeningSheets, setIsOpeningSheets] = useState<boolean>(false);
   const [isRegeneratingIndex, setIsRegeneratingIndex] = useState<number | null>(null);
@@ -81,39 +68,51 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
   const [editingSubject, setEditingSubject] = useState<string>('');
   const [editingBody, setEditingBody] = useState<string>('');
 
-  // References
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  /**
-   * Handle escape key press
-   */
+  // Initialize when modal opens or current newsletter changes
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+    if (isOpen && newsletterRow.newsletters.length > 0) {
+      const parsed = parseEmailContent(newsletterRow.newsletters[currentNewsletterIndex] || '');
+      setEditingSubject(parsed.subject);
+      setEditingBody(parsed.body);
     }
+  }, [isOpen, currentNewsletterIndex, newsletterRow.newsletters]);
 
+  // Handle modal open/close
+  useEffect(() => {
+    if (isOpen) {
+      setEditableNewsletters(newsletterRow.newsletters);
+      setCurrentNewsletterIndex(0);
+      setHasUnsavedChanges(false);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
     return () => {
-      document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
+
+  // References
+  const modalRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const undoStack = useRef<string[]>([]);
+  const redoStack = useRef<string[]>([]);
+  const [canUndo, setCanUndo] = useState<boolean>(false);
+  const [canRedo, setCanRedo] = useState<boolean>(false);
 
   /**
-   * Sync editing states when newsletter index changes
+   * Update newsletter content from separate subject and body parts
    */
-  useEffect(() => {
-    const currentNewsletter = editableNewsletters[currentNewsletterIndex] || '';
-    const parsed = parseEmailContent(currentNewsletter);
-    setEditingSubject(parsed.subject);
-    setEditingBody(parsed.body);
-  }, [currentNewsletterIndex, editableNewsletters]);
+  const updateNewsletterFromParts = useCallback((subject: string, body: string) => {
+    const reconstructedNewsletter = `Subject Line:\n\n${subject}\n\nEmail Body:\n\n${body}`;
+
+    setEditableNewsletters(prev => {
+      const newNewsletters = [...prev];
+      newNewsletters[currentNewsletterIndex] = reconstructedNewsletter;
+      return newNewsletters;
+    });
+    setHasUnsavedChanges(true);
+  }, [currentNewsletterIndex]);
 
   /**
    * Navigation functions
@@ -129,36 +128,96 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
   /**
    * Handle subject line change
    */
-  const handleSubjectChange = (newSubject: string) => {
+  const handleSubjectChange = useCallback((newSubject: string) => {
     setEditingSubject(newSubject);
     updateNewsletterFromParts(newSubject, editingBody);
-  };
+  }, [editingBody, updateNewsletterFromParts]);
 
   /**
    * Handle email body change
    */
-  const handleBodyChange = (newBody: string) => {
-    setEditingBody(newBody);
-    updateNewsletterFromParts(editingSubject, newBody);
-  };
+  const handleEditorChange = useCallback((content: string) => {
+    // Add current content to undo stack before changing
+    undoStack.current.push(editingBody);
+    if (undoStack.current.length > 50) { // Limit stack size
+      undoStack.current.shift();
+    }
+    redoStack.current = []; // Clear redo stack when new changes are made
+    setCanUndo(true);
+    setCanRedo(false);
+
+    setEditingBody(content);
+    updateNewsletterFromParts(editingSubject, content);
+  }, [editingSubject, editingBody, updateNewsletterFromParts]);
 
   /**
-   * Update newsletter content from separate subject and body parts
+   * Undo last change
    */
-  const updateNewsletterFromParts = (subject: string, body: string) => {
-    const reconstructedNewsletter = `Subject Line:
+  const handleUndo = useCallback(() => {
+    if (undoStack.current.length > 0) {
+      const previousContent = undoStack.current.pop()!;
+      redoStack.current.push(editingBody);
+      setEditingBody(previousContent);
+      updateNewsletterFromParts(editingSubject, previousContent);
+      setCanUndo(undoStack.current.length > 0);
+      setCanRedo(true);
+    }
+  }, [editingBody, editingSubject, updateNewsletterFromParts]);
 
-${subject}
+  /**
+   * Redo last undone change
+   */
+  const handleRedo = useCallback(() => {
+    if (redoStack.current.length > 0) {
+      const nextContent = redoStack.current.pop()!;
+      undoStack.current.push(editingBody);
+      setEditingBody(nextContent);
+      updateNewsletterFromParts(editingSubject, nextContent);
+      setCanRedo(redoStack.current.length > 0);
+      setCanUndo(true);
+    }
+  }, [editingBody, editingSubject, updateNewsletterFromParts]);
 
-Email Body:
+  /**
+   * Handle keyboard shortcuts for undo/redo
+   */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when modal is open and focus is on textarea
+      if (!isOpen) return;
 
-${body}`;
+      // Handle undo/redo shortcuts
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        if (e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          handleUndo();
+          return;
+        }
+        if (e.key.toLowerCase() === 'y') {
+          e.preventDefault();
+          handleRedo();
+          return;
+        }
+      }
 
-    const newNewsletters = [...editableNewsletters];
-    newNewsletters[currentNewsletterIndex] = reconstructedNewsletter;
-    setEditableNewsletters(newNewsletters);
-    setHasUnsavedChanges(true);
-  };
+      // Handle Ctrl+Shift+Z as redo (alternative)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, handleUndo, handleRedo]);
+
+  // Custom formatting functions removed - Quill handles formatting natively
 
   /**
    * Save changes
@@ -327,6 +386,42 @@ ${body}`;
   };
 
   /**
+   * Format email content by converting markdown-style formatting to HTML
+   */
+  const formatEmailContent = (content: string): string => {
+    let formattedContent = content
+      // Convert **bold** to <strong>
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Convert *italic* to <em>
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // Convert __underline__ to <u>
+      .replace(/__(.*?)__/g, '<u>$1</u>')
+      // Convert bullet points (• or -) to proper list items
+      .replace(/^[•\-]\s+(.*)$/gm, '<li>$1</li>')
+      // Convert numbered lists (1. 2. etc.) to <ol>
+      .replace(/^(\d+)\.\s+(.*)$/gm, '<li>$2</li>');
+
+    // Wrap consecutive list items in <ul> (using a more compatible approach)
+    formattedContent = formattedContent.replace(/(<li>[\s\S]*?<\/li>)(\s*<li>[\s\S]*?<\/li>)*/g, '<ul>$&</ul>');
+
+    // Convert line breaks to <br> tags, but preserve paragraph structure
+    return formattedContent
+      .split('\n\n')
+      .map(paragraph => {
+        if (paragraph.trim()) {
+          // If paragraph contains HTML tags, don't wrap in <p>
+          if (paragraph.includes('<')) {
+            return paragraph.replace(/\n/g, '<br>');
+          }
+          return `<p>${paragraph.replace(/\n/g, '<br>')}</p>`;
+        }
+        return '';
+      })
+      .filter(p => p)
+      .join('');
+  };
+
+  /**
    * Parse email content to extract subject and body
    */
   const parseEmailContent = (content: string) => {
@@ -404,6 +499,20 @@ ${body}`;
             to {
               transform: rotate(360deg);
             }
+          }
+
+          /* TinyMCE Editor Styling */
+          .tox-tinymce {
+            border: 1px solid #e5e7eb !important;
+            border-radius: 0.5rem !important;
+          }
+
+          .tox-editor-header {
+            border-bottom: 1px solid #e5e7eb !important;
+          }
+
+          .tox-edit-area {
+            border: none !important;
           }
         `}
       </style>
@@ -680,7 +789,7 @@ ${body}`;
               </div>
 
               {/* Email Preview Content */}
-              <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <div style={{
                   backgroundColor: 'white',
                   borderRadius: '0.75rem',
@@ -689,13 +798,15 @@ ${body}`;
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   flex: 1,
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
+                  minHeight: 0
                 }}>
                   {/* Subject Line Section */}
                   <div style={{
                     padding: '1.5rem',
                     borderBottom: '1px solid #e5e7eb',
-                    backgroundColor: '#E5E7EB'
+                    backgroundColor: '#E5E7EB',
+                    flexShrink: 0
                   }}>
                     <div style={{
                       display: 'flex',
@@ -742,13 +853,14 @@ ${body}`;
                   </div>
 
                   {/* Email Body Section */}
-                  <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       padding: '1rem 1.5rem 0.5rem',
-                      backgroundColor: '#f8fafc'
+                      backgroundColor: '#f8fafc',
+                      flexShrink: 0
                     }}>
                       <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600' }}>
                         EMAIL BODY
@@ -789,11 +901,14 @@ ${body}`;
                       fontSize: '0.875rem',
                       lineHeight: '1.6',
                       color: '#374151',
-                      whiteSpace: 'pre-wrap',
                       backgroundColor: 'white',
-                      overflowY: 'auto'
+                      overflowY: 'auto',
+                      minHeight: 0,
+                      fontFamily: 'inherit'
                     }}>
-                      {parseEmailContent(editableNewsletters[currentNewsletterIndex] || '').body}
+                      <div dangerouslySetInnerHTML={{
+                        __html: formatEmailContent(editingBody) || '<p>Enter email body content...</p>'
+                      }} />
                     </div>
                   </div>
                 </div>
@@ -931,36 +1046,247 @@ ${body}`;
                   />
                 </div>
 
-                {/* Email Body Editor */}
+                {/* Email Body Editor with ReactQuill */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Email Body
-                  </label>
-                  <textarea
-                    value={editingBody}
-                    onChange={(e) => handleBodyChange(e.target.value)}
-                    style={{
-                      width: '100%',
-                      flex: 1,
-                      minHeight: '300px',
-                      padding: '1rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label style={{
+                      display: 'block',
                       fontSize: '0.875rem',
-                      lineHeight: '1.6',
-                      resize: 'none',
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      backgroundColor: 'white'
-                    }}
-                    placeholder="Enter email body content..."
-                  />
+                      fontWeight: '600',
+                      color: '#374151'
+                    }}>
+                      Email Body
+                    </label>
+
+                    {/* Custom Undo/Redo Buttons */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      padding: '0.25rem',
+                      backgroundColor: '#f9fafb',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.375rem'
+                    }}>
+                      <button
+                        onClick={handleUndo}
+                        disabled={!canUndo}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '1.75rem',
+                          height: '1.75rem',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderRadius: '0.25rem',
+                          cursor: canUndo ? 'pointer' : 'not-allowed',
+                          color: canUndo ? '#6b7280' : '#d1d5db',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => canUndo && (e.currentTarget.style.backgroundColor = '#e5e7eb')}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        title="Undo (Ctrl+Z)"
+                      >
+                        <Undo style={{ width: '1rem', height: '1rem' }} />
+                      </button>
+
+                      <button
+                        onClick={handleRedo}
+                        disabled={!canRedo}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '1.75rem',
+                          height: '1.75rem',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderRadius: '0.25rem',
+                          cursor: canRedo ? 'pointer' : 'not-allowed',
+                          color: canRedo ? '#6b7280' : '#d1d5db',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => canRedo && (e.currentTarget.style.backgroundColor = '#e5e7eb')}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        title="Redo (Ctrl+Y)"
+                      >
+                        <Redo style={{ width: '1rem', height: '1rem' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Simple Textarea Editor with Formatting Toolbar */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                    {/* Formatting Toolbar */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem',
+                      backgroundColor: '#f9fafb',
+                      border: '1px solid #e5e7eb',
+                      borderBottom: 'none',
+                      borderRadius: '0.5rem 0.5rem 0 0'
+                    }}>
+                      <button
+                        onClick={() => {
+                          const selection = textareaRef.current?.selectionStart || 0;
+                          const endSelection = textareaRef.current?.selectionEnd || 0;
+                          const selectedText = editingBody.substring(selection, endSelection);
+                          if (selectedText) {
+                            const newContent = editingBody.substring(0, selection) + `**${selectedText}**` + editingBody.substring(endSelection);
+                            handleEditorChange(newContent);
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '2rem',
+                          height: '2rem',
+                          backgroundColor: 'white',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                          color: '#374151'
+                        }}
+                        title="Bold"
+                      >
+                        <Bold style={{ width: '1rem', height: '1rem' }} />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const selection = textareaRef.current?.selectionStart || 0;
+                          const endSelection = textareaRef.current?.selectionEnd || 0;
+                          const selectedText = editingBody.substring(selection, endSelection);
+                          if (selectedText) {
+                            const newContent = editingBody.substring(0, selection) + `*${selectedText}*` + editingBody.substring(endSelection);
+                            handleEditorChange(newContent);
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '2rem',
+                          height: '2rem',
+                          backgroundColor: 'white',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                          color: '#374151'
+                        }}
+                        title="Italic"
+                      >
+                        <Italic style={{ width: '1rem', height: '1rem' }} />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const selection = textareaRef.current?.selectionStart || 0;
+                          const endSelection = textareaRef.current?.selectionEnd || 0;
+                          const selectedText = editingBody.substring(selection, endSelection);
+                          if (selectedText) {
+                            const newContent = editingBody.substring(0, selection) + `__${selectedText}__` + editingBody.substring(endSelection);
+                            handleEditorChange(newContent);
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '2rem',
+                          height: '2rem',
+                          backgroundColor: 'white',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                          color: '#374151'
+                        }}
+                        title="Underline"
+                      >
+                        <Underline style={{ width: '1rem', height: '1rem' }} />
+                      </button>
+
+                      <div style={{ width: '1px', height: '1.5rem', backgroundColor: '#d1d5db' }} />
+
+                      <button
+                        onClick={() => {
+                          const selection = textareaRef.current?.selectionStart || 0;
+                          const currentLine = editingBody.substring(0, selection).split('\n').pop() || '';
+                          if (!currentLine.startsWith('• ')) {
+                            const newContent = editingBody.substring(0, selection - currentLine.length) + `• ${currentLine}` + editingBody.substring(selection);
+                            handleEditorChange(newContent);
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '2rem',
+                          height: '2rem',
+                          backgroundColor: 'white',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                          color: '#374151'
+                        }}
+                        title="Bullet List"
+                      >
+                        <List style={{ width: '1rem', height: '1rem' }} />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const selection = textareaRef.current?.selectionStart || 0;
+                          const currentLine = editingBody.substring(0, selection).split('\n').pop() || '';
+                          if (!/^\d+\. /.test(currentLine)) {
+                            const newContent = editingBody.substring(0, selection - currentLine.length) + `1. ${currentLine}` + editingBody.substring(selection);
+                            handleEditorChange(newContent);
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '2rem',
+                          height: '2rem',
+                          backgroundColor: 'white',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                          color: '#374151'
+                        }}
+                        title="Numbered List"
+                      >
+                        <ListOrdered style={{ width: '1rem', height: '1rem' }} />
+                      </button>
+                    </div>
+
+                    {/* Textarea */}
+                    <textarea
+                      ref={textareaRef}
+                      value={editingBody}
+                      onChange={(e) => handleEditorChange(e.target.value)}
+                      style={{
+                        flex: 1,
+                        minHeight: '300px',
+                        padding: '1rem',
+                        border: '1px solid #e5e7eb',
+                        borderTop: 'none',
+                        borderRadius: '0 0 0.5rem 0.5rem',
+                        fontSize: '0.875rem',
+                        lineHeight: '1.6',
+                        fontFamily: 'inherit',
+                        resize: 'none',
+                        outline: 'none',
+                        backgroundColor: 'white'
+                      }}
+                      placeholder="Enter email body content..."
+                    />
+                  </div>
                 </div>
               </div>
             </div>

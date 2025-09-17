@@ -77,6 +77,7 @@ interface EmailPerformanceData {
 // Newsletter row interface for table management
 interface NewsletterRow {
   id: string;
+  targetAudience: string;
   jobTitle: string;
   status: 'pending' | 'running' | 'completed' | 'error';
   progress: string;
@@ -88,12 +89,14 @@ interface NewsletterRow {
 
 const EmailNewsletterPage: React.FC = () => {
   // State management
+  const [selectedTargetAudience, setSelectedTargetAudience] = useState<string>('');
   const [selectedJobTitle, setSelectedJobTitle] = useState<string>('');
   const [newsletterRows, setNewsletterRows] = useState<NewsletterRow[]>(() => loadNewslettersFromStorage());
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [showTargetDropdown, setShowTargetDropdown] = useState<boolean>(false);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   
   // Modal state
@@ -106,7 +109,16 @@ const EmailNewsletterPage: React.FC = () => {
   
   // References
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const targetDropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Target audience options for lifecycle marketing
+  const targetAudiences = [
+    'Sales Leaders',
+    'SDRs (Sales Development Representatives)',
+    'BDRs (Business Development Representatives)',
+    'AEs (Account Executives)'
+  ];
 
   // Comprehensive job titles list (500+ titles for B2B prospecting)
   const jobTitles = [
@@ -239,16 +251,17 @@ const EmailNewsletterPage: React.FC = () => {
   };
 
   /**
-   * Generate newsletters for selected job title
+   * Generate newsletters for selected job title and target audience
    */
   const handleGenerateNewsletters = async () => {
-    if (!selectedJobTitle.trim()) return;
+    if (!selectedTargetAudience.trim() || !selectedJobTitle.trim()) return;
 
     setIsGenerating(true);
 
     // Create new newsletter row
     const newRow: NewsletterRow = {
       id: `newsletter-${Date.now()}`,
+      targetAudience: selectedTargetAudience.trim(),
       jobTitle: selectedJobTitle.trim(),
       status: 'running',
       progress: 'Initializing newsletter generation...',
@@ -266,6 +279,7 @@ const EmailNewsletterPage: React.FC = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          targetAudience: selectedTargetAudience.trim(),
           jobTitle: selectedJobTitle.trim(),
           options: {
             count: 5,
@@ -296,6 +310,7 @@ const EmailNewsletterPage: React.FC = () => {
       // Clear selection for next generation
       setSearchTerm('');
       setSelectedJobTitle('');
+      setSelectedTargetAudience('');
 
     } catch (error) {
       console.error('Newsletter generation error:', error);
@@ -401,6 +416,9 @@ const EmailNewsletterPage: React.FC = () => {
         setShowDropdown(false);
         setFocusedIndex(-1);
       }
+      if (targetDropdownRef.current && !targetDropdownRef.current.contains(event.target as Node)) {
+        setShowTargetDropdown(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -430,33 +448,107 @@ const EmailNewsletterPage: React.FC = () => {
       <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', padding: '2rem' }}>
         {/* Header Section */}
         <div style={{ marginBottom: '1.5rem' }}>
-          <h1 style={{ 
-            fontSize: '2rem', 
-            fontWeight: '600', 
+          <h1 style={{
+            fontSize: '2rem',
+            fontWeight: '600',
             color: '#111827',
             marginBottom: '0.5rem'
           }}>
-            Email Newsletter Agent
+            Newsletter Agent
           </h1>
-          <p style={{ 
+          <p style={{
             fontSize: '0.875rem',
             color: '#6b7280'
           }}>
-            Generate targeted email newsletters using Apollo's email performance data for any job title
+            Create targeted email sequences for sales teams using Apollo's proprietary email engagement data
           </p>
         </div>
 
         {/* Controls Section */}
-        <div style={{ 
-          display: 'flex',
-          gap: '1rem', 
-          alignItems: 'center',
+        <div style={{
           marginBottom: '1.5rem',
-          flexWrap: 'wrap'
+          padding: '1.5rem',
+          background: '#f9fafb',
+          borderRadius: '0.75rem',
+          border: '1px solid #e5e7eb'
         }}>
-          <div style={{ position: 'relative' }} ref={dropdownRef}>
-            <label style={{ fontSize: '0.875rem', color: '#374151' }}>
-              Job Title
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '1rem',
+            marginBottom: '1rem'
+          }}>
+            {/* Target Audience Dropdown */}
+            <div style={{ position: 'relative' }} ref={targetDropdownRef}>
+              <label style={{ display: 'block', fontSize: '0.875rem', color: '#374151', marginBottom: '0.25rem', fontWeight: '500' }}>
+                Target Audience
+              </label>
+              <button
+                onClick={() => setShowTargetDropdown(!showTargetDropdown)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  background: 'white',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  color: selectedTargetAudience ? '#111827' : '#6b7280',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>{selectedTargetAudience || 'Select target audience...'}</span>
+                <span style={{ transform: showTargetDropdown ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
+              </button>
+
+              {showTargetDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: '0',
+                  right: '0',
+                  marginTop: '0.25rem',
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  zIndex: 50
+                }}>
+                  {targetAudiences.map((audience) => (
+                    <button
+                      key={audience}
+                      onClick={() => {
+                        setSelectedTargetAudience(audience);
+                        setShowTargetDropdown(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '0.5rem 0.75rem',
+                        border: 'none',
+                        background: selectedTargetAudience === audience ? '#f3f4f6' : 'transparent',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        color: '#374151'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = selectedTargetAudience === audience ? '#f3f4f6' : 'transparent'}
+                    >
+                      {audience}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Job Title Dropdown */}
+            <div style={{ position: 'relative' }} ref={dropdownRef}>
+              <label style={{ display: 'block', fontSize: '0.875rem', color: '#374151', marginBottom: '0.25rem', fontWeight: '500' }}>
+                Looking to reach
+              </label>
               <input
                 ref={searchInputRef}
                 type="text"
@@ -464,125 +556,139 @@ const EmailNewsletterPage: React.FC = () => {
                 onChange={handleSearchChange}
                 onFocus={() => setShowDropdown(true)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search for job title (e.g., Marketing Manager)"
+                placeholder="Search for job title (e.g., Chief Executive Officer)"
                 style={{
-                  marginLeft: '0.5rem',
+                  width: '100%',
                   padding: '0.5rem 0.75rem',
                   border: '1px solid #e5e7eb',
                   borderRadius: '0.5rem',
                   background: 'white',
-                  width: '300px'
+                  fontSize: '0.875rem'
                 }}
               />
-            </label>
-            
-            {showDropdown && filteredJobTitles.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: '0',
-                right: '0',
-                marginLeft: '4.5rem',
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '0.5rem',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                zIndex: 50,
-                maxHeight: '300px',
-                overflowY: 'auto'
-              }}>
-                {filteredJobTitles.slice(0, 10).map((title, index) => (
-                  <button
-                    key={title}
-                    onClick={() => handleJobTitleSelect(title)}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
+
+              {showDropdown && filteredJobTitles.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: '0',
+                  right: '0',
+                  marginTop: '0.25rem',
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  zIndex: 50,
+                  maxHeight: '300px',
+                  overflowY: 'auto'
+                }}>
+                  {filteredJobTitles.slice(0, 10).map((title, index) => (
+                    <button
+                      key={title}
+                      onClick={() => handleJobTitleSelect(title)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '0.5rem 0.75rem',
+                        border: 'none',
+                        background: index === focusedIndex ? '#f3f4f6' : 'transparent',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem'
+                      }}
+                      onMouseEnter={() => setFocusedIndex(index)}
+                    >
+                      {title}
+                    </button>
+                  ))}
+                  {filteredJobTitles.length > 10 && (
+                    <div style={{
                       padding: '0.5rem 0.75rem',
-                      border: 'none',
-                      background: index === focusedIndex ? '#f3f4f6' : 'transparent',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem'
-                    }}
-                    onMouseEnter={() => setFocusedIndex(index)}
-                  >
-                    {title}
-                  </button>
-                ))}
-                {filteredJobTitles.length > 10 && (
-                  <div style={{
-                    padding: '0.5rem 0.75rem',
-                    fontSize: '0.75rem',
-                    color: '#6b7280',
-                    borderTop: '1px solid #f3f4f6'
-                  }}>
-                    {filteredJobTitles.length - 10} more results...
-                  </div>
-                )}
-              </div>
-            )}
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      borderTop: '1px solid #f3f4f6'
+                    }}>
+                      {filteredJobTitles.length - 10} more results...
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          <button
-            onClick={handleGenerateNewsletters}
-            disabled={!selectedJobTitle.trim() || isGenerating}
-            style={{
-              padding: '0.5rem 1rem',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-              background: (!selectedJobTitle.trim() || isGenerating) ? '#e5e7eb' : '#3AB981',
-              color: (!selectedJobTitle.trim() || isGenerating) ? '#6b7280' : 'white',
-              cursor: (!selectedJobTitle.trim() || isGenerating) ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            {isGenerating ? <RefreshCw style={{ width: '1rem', height: '1rem', animation: 'pulse 1s infinite' }} /> : <FileText style={{ width: '1rem', height: '1rem' }} />}
-            {isGenerating ? 'Generating...' : 'Generate 5 Newsletters'}
-          </button>
+          {/* Generate Button and Status */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            flexWrap: 'wrap'
+          }}>
+            <button
+              onClick={handleGenerateNewsletters}
+              disabled={!selectedTargetAudience.trim() || !selectedJobTitle.trim() || isGenerating}
+              style={{
+                padding: '0.625rem 1.25rem',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                background: (!selectedTargetAudience.trim() || !selectedJobTitle.trim() || isGenerating) ? '#e5e7eb' : '#3AB981',
+                color: (!selectedTargetAudience.trim() || !selectedJobTitle.trim() || isGenerating) ? '#6b7280' : 'white',
+                cursor: (!selectedTargetAudience.trim() || !selectedJobTitle.trim() || isGenerating) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: '500'
+              }}
+            >
+              {isGenerating ? <RefreshCw style={{ width: '1rem', height: '1rem', animation: 'pulse 1s infinite' }} /> : <FileText style={{ width: '1rem', height: '1rem' }} />}
+              {isGenerating ? 'Generating...' : 'Generate Newsletter Sequence'}
+            </button>
 
-          {isGenerating && (
-            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-              Generating newsletters...
-            </span>
-          )}
-          {!isGenerating && newsletterRows.length > 0 && (
-            <span style={{ fontSize: '0.875rem', color: '#3AB981' }}>
-              {newsletterRows.length.toLocaleString()} newsletter set{newsletterRows.length !== 1 ? 's' : ''}
-            </span>
-          )}
+            {isGenerating && (
+              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                Creating personalized email sequence...
+              </span>
+            )}
+            {!isGenerating && newsletterRows.length > 0 && (
+              <span style={{ fontSize: '0.875rem', color: '#3AB981' }}>
+                {newsletterRows.length.toLocaleString()} sequence{newsletterRows.length !== 1 ? 's' : ''} generated
+              </span>
+            )}
+          </div>
+        </div>
 
-          {/* Bulk controls */}
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <button 
+        {/* Bulk controls */}
+        {newsletterRows.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
+            <button
               onClick={selectedRows.size > 0 ? clearSelection : selectAllRows}
-              style={{ 
-                padding: '0.4rem 0.75rem', 
-                border: '1px solid #e5e7eb', 
-                borderRadius: '0.5rem', 
-                background: '#fff', 
-                cursor: 'pointer' 
+              style={{
+                padding: '0.4rem 0.75rem',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                background: '#fff',
+                cursor: 'pointer',
+                fontSize: '0.875rem'
               }}
             >
               {selectedRows.size > 0 ? `Unselect (${selectedRows.size})` : 'Select All'}
             </button>
             {selectedRows.size > 0 && (
-              <button 
-                onClick={deleteSelectedRows} 
-                style={{ 
-                  padding: '0.4rem 0.75rem', 
-                  border: '1px solid #e5e7eb', 
-                  borderRadius: '0.5rem', 
-                  background: '#fff', 
-                  cursor: 'pointer' 
+              <button
+                onClick={deleteSelectedRows}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  background: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
                 }}
               >
                 Delete Selected ({selectedRows.size})
               </button>
             )}
           </div>
-        </div>
+        )}
 
         {/* Table Container */}
         {newsletterRows.length > 0 ? (
@@ -591,12 +697,13 @@ const EmailNewsletterPage: React.FC = () => {
               <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
                 <colgroup>
                   <col style={{ width: '32px' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '10%' }} />
                   <col style={{ width: '20%' }} />
                   <col style={{ width: '10%' }} />
-                  <col style={{ width: '25%' }} />
                   <col style={{ width: '10%' }} />
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '12%' }} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -608,10 +715,11 @@ const EmailNewsletterPage: React.FC = () => {
                         style={{ cursor: 'pointer', marginTop: '4px' }}
                       />
                     </th>
+                    <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>TARGET AUDIENCE</th>
                     <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>JOB TITLE</th>
                     <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>STATUS</th>
                     <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>PROGRESS</th>
-                    <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>NEWSLETTERS</th>
+                    <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>EMAILS</th>
                     <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>CREATED</th>
                     <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>ACTIONS</th>
                   </tr>
@@ -620,12 +728,17 @@ const EmailNewsletterPage: React.FC = () => {
                   {newsletterRows.map((row) => (
                     <tr key={row.id}>
                       <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedRows.has(row.id)} 
-                          onChange={() => toggleRowSelection(row.id)} 
-                          style={{ marginTop: '8px' }} 
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.has(row.id)}
+                          onChange={() => toggleRowSelection(row.id)}
+                          style={{ marginTop: '8px' }}
                         />
+                      </td>
+                      <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
+                        <div style={clippedStyle} title={row.targetAudience}>
+                          {row.targetAudience?.includes('(') ? row.targetAudience.split('(')[0].trim() : row.targetAudience}
+                        </div>
                       </td>
                       <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
                         <div style={clippedStyle} title={row.jobTitle}>{row.jobTitle}</div>
@@ -639,7 +752,7 @@ const EmailNewsletterPage: React.FC = () => {
                           borderRadius: '0.25rem',
                           fontSize: '0.75rem',
                           fontWeight: '500',
-                          ...(row.status === 'completed' ? { background: '#d1fae5', color: '#065f46' } : 
+                          ...(row.status === 'completed' ? { background: '#d1fae5', color: '#065f46' } :
                              row.status === 'error' ? { background: '#fee2e2', color: '#dc2626' } :
                              row.status === 'running' ? { background: '#dbeafe', color: '#1d4ed8' } :
                              { background: '#f3f4f6', color: '#374151' })
@@ -660,7 +773,7 @@ const EmailNewsletterPage: React.FC = () => {
                         )}
                       </td>
                       <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6', color: '#374151' }}>
-                        {row.newsletters.length > 0 ? `${row.newsletters.length} newsletters` : '—'}
+                        {row.newsletters.length > 0 ? `${row.newsletters.length} emails` : '—'}
                       </td>
                       <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6', color: '#374151' }}>
                         {row.createdAt.toLocaleDateString()}
@@ -673,8 +786,8 @@ const EmailNewsletterPage: React.FC = () => {
                               padding: '0.3125rem 0.625rem',
                               borderRadius: '0.5rem',
                               border: '1px solid #e5e7eb',
-                              background: '#ffffff',
-                              color: '#111827',
+                              background: '#EBF212',
+                              color: '#000000',
                               cursor: 'pointer',
                               fontSize: '0.75rem',
                               display: 'flex',
@@ -694,14 +807,15 @@ const EmailNewsletterPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '3rem', 
-            color: '#6b7280' 
+          <div style={{
+            textAlign: 'center',
+            padding: '3rem',
+            color: '#6b7280'
           }}>
             <FileText style={{ width: '3rem', height: '3rem', margin: '0 auto 1rem', opacity: 0.5 }} />
-            <h3 style={{ marginBottom: '0.5rem', color: '#374151' }}>No newsletters generated yet</h3>
-            <p>Select a job title and generate your first set of Apollo-powered email newsletters</p>
+            <h3 style={{ marginBottom: '0.5rem', color: '#374151' }}>No email sequences generated yet</h3>
+            <p style={{ marginBottom: '0.5rem' }}>Select your target audience and the job title you want to reach</p>
+            <p style={{ fontSize: '0.875rem' }}>Generate personalized email sequences powered by Apollo's engagement data</p>
           </div>
         )}
 
