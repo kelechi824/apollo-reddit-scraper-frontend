@@ -64,6 +64,15 @@ export const API_ENDPOINTS = {
   sitemapScrapeChunk: buildApiUrl('/api/sitemap-chunked/scrape-chunk'),
   sitemapSession: (sessionId: string) => buildApiUrl(`/api/sitemap-chunked/session/${sessionId}`),
   
+  // Email Newsletter endpoints
+  emailNewsletter: {
+    generate: buildApiUrl('/api/email-newsletter/generate'),
+    regenerate: buildApiUrl('/api/email-newsletter/regenerate'),
+    jobTitles: buildApiUrl('/api/email-newsletter/job-titles'),
+    ctaOptions: buildApiUrl('/api/email-newsletter/cta-options'),
+    validate: buildApiUrl('/api/email-newsletter/validate')
+  },
+  
   // Add other endpoints as needed
 };
 

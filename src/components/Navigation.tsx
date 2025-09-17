@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target, MessageCircle, Workflow, Swords, Database, Map, Package, Brain } from 'lucide-react';
+import { Clock, Settings, BarChart3, BookOpen, FileText, PenTool, TrendingUp, Headphones, Monitor, ChevronRight, Users, Target, MessageCircle, Workflow, Swords, Database, Map, Package, Brain, Mail } from 'lucide-react';
 import { FEATURE_FLAGS, FeatureFlags } from '../utils/featureFlags';
 
 interface NavigationProps {
@@ -172,8 +172,17 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             </NavLink>
           )}
           
-          <NavLink 
-            to="/cta-creator" 
+          <NavLink
+            to="/email-newsletter"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onItemClick}
+          >
+            <Mail className="nav-icon" />
+            Newsletter Agent
+          </NavLink>
+
+          <NavLink
+            to="/cta-creator"
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             onClick={onItemClick}
           >

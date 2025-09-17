@@ -2381,6 +2381,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     return () => { if (document.head.contains(style)) document.head.removeChild(style); };
   }, []);
 
+  // Don't render if modal is not open
   if (!isOpen) return null;
 
   return (

@@ -239,7 +239,8 @@ const CompetitorConquestingPage: React.FC = () => {
 
   /**
    * loadSavedProgress
-   * Why this matters: Restores table state after refresh/navigation so work isn’t lost.
+   * Why this matters: Restores table state after refresh/navigation so work isn't lost.
+   * Now handles both full and lightweight saved formats.
    */
   React.useEffect(() => {
     try {
@@ -249,12 +250,24 @@ const CompetitorConquestingPage: React.FC = () => {
         return;
       }
       const parsed = JSON.parse(saved);
+      
       if (parsed.selectedCompetitor) setSelectedCompetitor(parsed.selectedCompetitor);
-      if (Array.isArray(parsed.rows)) setRows(parsed.rows);
       if (Array.isArray(parsed.selectedRows)) setSelectedRows(new Set(parsed.selectedRows));
       if (parsed.sortField) setSortField(parsed.sortField);
       if (parsed.sortDirection) setSortDirection(parsed.sortDirection);
       if (Array.isArray(parsed.sequentialRemaining)) setSequentialRemaining(parsed.sequentialRemaining);
+      
+      // Handle rows - could be full rows or lightweight rows or missing (minimal format)
+      if (Array.isArray(parsed.rows)) {
+        // Restore lightweight rows, but don't overwrite if we have more complete data
+        if (rows.length === 0) {
+          setRows(parsed.rows);
+          console.log(`🔄 [CompetitorConquesting] Restored ${parsed.rows.length} rows from saved progress`);
+        }
+      } else if (parsed.rowCount) {
+        // Minimal format - just log the info
+        console.log(`📊 [CompetitorConquesting] Minimal progress loaded: ${parsed.rowCount} total rows, ${parsed.completedCount || 0} completed`);
+      }
     } catch (err) {
       console.warn('[CompetitorConquesting] Failed to load saved progress:', err);
       localStorage.removeItem('apollo_competitor_conquesting_progress');
@@ -267,8 +280,9 @@ const CompetitorConquestingPage: React.FC = () => {
   }, []);
 
   /**
-   * autoSaveProgress (debounced)
-   * Why this matters: Persists state changes so reloads return to the same table view.
+   * autoSaveProgress (debounced with quota-aware storage)
+   * Why this matters: Persists state changes so reloads return to the same table view,
+   * but excludes heavy content to avoid localStorage quota issues.
    */
   React.useEffect(() => {
     if (isInitialLoadRef.current) return;
@@ -276,18 +290,73 @@ const CompetitorConquestingPage: React.FC = () => {
 
     autoSaveTimeoutRef.current = setTimeout(() => {
       try {
+        // Create lightweight version of rows without heavy content
+        const lightweightRows = rows.map(row => ({
+          id: row.id,
+          keyword: row.keyword,
+          url: row.url,
+          monthlyVolume: row.monthlyVolume,
+          avgDifficulty: row.avgDifficulty,
+          status: row.status,
+          createdAt: row.createdAt,
+          // Only save first 100 chars of output to preserve status info
+          output: row.output ? row.output.substring(0, 100) + (row.output.length > 100 ? '...' : '') : undefined,
+          // Exclude heavy workflowDetails and metadata to save space
+          hasContent: !!row.output && row.output.length > 100
+        }));
+
         const progress = {
           selectedCompetitor,
-          rows,
+          rows: lightweightRows,
           selectedRows: Array.from(selectedRows),
           sortField,
           sortDirection,
           sequentialRemaining,
           timestamp: new Date().toISOString()
         };
-        localStorage.setItem('apollo_competitor_conquesting_progress', JSON.stringify(progress));
-      } catch (err) {
-        console.warn('[CompetitorConquesting] Failed to save progress:', err);
+
+        // Check size before saving (rough estimate)
+        const progressStr = JSON.stringify(progress);
+        const sizeInMB = new Blob([progressStr]).size / (1024 * 1024);
+        
+        if (sizeInMB > 4) {
+          // If still too large, save only essential data
+          const minimalProgress = {
+            selectedCompetitor,
+            selectedRows: Array.from(selectedRows),
+            sortField,
+            sortDirection,
+            sequentialRemaining,
+            rowCount: rows.length,
+            completedCount: rows.filter(r => r.status === 'completed').length,
+            timestamp: new Date().toISOString()
+          };
+          localStorage.setItem('apollo_competitor_conquesting_progress', JSON.stringify(minimalProgress));
+          console.log(`📦 [CompetitorConquesting] Saved minimal progress (${rows.length} rows, ${sizeInMB.toFixed(1)}MB was too large)`);
+        } else {
+          localStorage.setItem('apollo_competitor_conquesting_progress', JSON.stringify(progress));
+          console.log(`💾 [CompetitorConquesting] Saved progress: ${lightweightRows.length} rows (${sizeInMB.toFixed(2)}MB)`);
+        }
+      } catch (err: any) {
+        if (err?.name === 'QuotaExceededError') {
+          console.warn('[CompetitorConquesting] localStorage quota exceeded, clearing old data and saving minimal progress');
+          // Clear old data and save only essential info
+          try {
+            localStorage.removeItem('apollo_competitor_conquesting_progress');
+            const minimalProgress = {
+              selectedCompetitor,
+              selectedRows: Array.from(selectedRows),
+              sortField,
+              sortDirection,
+              timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('apollo_competitor_conquesting_progress', JSON.stringify(minimalProgress));
+          } catch (secondErr: any) {
+            console.error('[CompetitorConquesting] Failed to save even minimal progress:', secondErr);
+          }
+        } else {
+          console.warn('[CompetitorConquesting] Failed to save progress:', err);
+        }
       }
     }, 800);
 
@@ -303,6 +372,36 @@ const CompetitorConquestingPage: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const clearPersistedData = () => {
     try { localStorage.removeItem('apollo_competitor_conquesting_progress'); } catch {}
+  };
+
+  /**
+   * cleanupLocalStorage
+   * Why this matters: Proactively cleans up localStorage to prevent quota issues.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const cleanupLocalStorage = () => {
+    try {
+      // Remove other potentially large items that might be taking up space
+      const keysToCheck = [
+        'apollo_blog_creator_progress',
+        'apollo_reddit_analysis_cache',
+        'apollo_content_cache'
+      ];
+      
+      keysToCheck.forEach(key => {
+        try {
+          const item = localStorage.getItem(key);
+          if (item && item.length > 1024 * 1024) { // > 1MB
+            console.log(`🧹 [CompetitorConquesting] Removing large localStorage item: ${key} (${(item.length / 1024 / 1024).toFixed(1)}MB)`);
+            localStorage.removeItem(key);
+          }
+        } catch (e) {
+          // Ignore individual item errors
+        }
+      });
+    } catch (err) {
+      console.warn('[CompetitorConquesting] Failed to cleanup localStorage:', err);
+    }
   };
 
   /**
@@ -858,8 +957,42 @@ const CompetitorConquestingPage: React.FC = () => {
             const completedContent = String(
               resultPayload?.content ?? resultPayload?.raw_content ?? ''
             );
+            
+            console.log(`🎉 [CompetitorConquesting] Job ${jobId} completed for ${row.keyword}`);
+            console.log(`📄 Content length: ${completedContent.length} characters`);
+            console.log(`📊 Result payload:`, resultPayload);
+            console.log(`🔍 [DEBUG] Content preview:`, completedContent.substring(0, 200));
+            console.log(`🔍 [DEBUG] Content type:`, typeof completedContent);
+            console.log(`🔍 [DEBUG] Raw result structure:`, {
+              hasResult: !!jobData.result,
+              hasData: !!jobData.data,
+              resultKeys: jobData.result ? Object.keys(jobData.result) : [],
+              dataKeys: jobData.data ? Object.keys(jobData.data) : [],
+              payloadKeys: Object.keys(resultPayload || {}),
+              contentType: typeof resultPayload?.content,
+              rawContentType: typeof resultPayload?.raw_content
+            });
+            
+            // Parse content if it's JSON string (common issue with workflowOrchestrator)
+            let finalContent = completedContent;
             if (completedContent.length > 0) {
-            // Job completed successfully
+              try {
+                // Check if content is a JSON string that needs parsing
+                if (completedContent.startsWith('{') && completedContent.includes('"content"')) {
+                  const parsed = JSON.parse(completedContent);
+                  if (parsed.content && typeof parsed.content === 'string') {
+                    finalContent = parsed.content;
+                    console.log(`🔧 [CompetitorConquesting] Parsed JSON content for ${row.keyword}`);
+                    console.log(`📄 Parsed content length: ${finalContent.length} characters`);
+                  }
+                }
+              } catch (parseError) {
+                console.log(`⚠️ [CompetitorConquesting] Content is not JSON, using as-is:`, parseError);
+                // Use original content if parsing fails
+              }
+            }
+            
+            // Job completed successfully - always update the row even if content is empty
             const resp = { data: { success: true, data: resultPayload } };
             const data = resp.data?.data || resp.data;
             const workflowDetails = buildWorkflowDetailsFromResult(data) || row.workflowDetails || {};
@@ -869,7 +1002,7 @@ const CompetitorConquestingPage: React.FC = () => {
             const updatedRow = {
               ...row,
               status: 'completed' as const,
-              output: completedContent,
+              output: finalContent.length > 0 ? finalContent : 'Content generation completed but no content was returned. Please try regenerating.',
               workflowDetails,
               metadata: {
                 title: metadata.title || `${row.keyword} - Outrank Competitors`,
@@ -884,9 +1017,17 @@ const CompetitorConquestingPage: React.FC = () => {
               }
             };
             
+            console.log(`✅ [CompetitorConquesting] Updated row for ${row.keyword}:`, {
+              status: updatedRow.status,
+              hasOutput: !!updatedRow.output,
+              outputLength: updatedRow.output?.length || 0,
+              finalContentLength: finalContent.length,
+              originalContentLength: completedContent.length,
+              contentWasParsed: finalContent !== completedContent
+            });
+            
             setRows(prev => prev.map(r => (r.id === rowId ? updatedRow : r)));
             return; // Success - exit the function
-            }
           } else if (jobData.status === 'error') {
             throw new Error(jobData.error || 'Content generation failed');
           }
@@ -1002,8 +1143,39 @@ const CompetitorConquestingPage: React.FC = () => {
    * Why this matters: Allows editing/regenerating output with tailored competitor prompts.
    */
   const openActionModal = (rowId: string) => {
+    const row = rows.find(r => r.id === rowId);
+    console.log(`🔍 [CompetitorConquesting] Opening action modal for row:`, {
+      rowId,
+      hasRow: !!row,
+      status: row?.status,
+      hasOutput: !!row?.output,
+      outputLength: row?.output?.length || 0,
+      output: row?.output?.substring(0, 100) + '...',
+      totalRows: rows.length,
+      allRowIds: rows.map(r => r.id),
+      modalStates: {
+        isActionModalOpen,
+        activeModalRowId
+      }
+    });
+    
+    if (!row) {
+      console.error('🚨 [CompetitorConquesting] Cannot open modal - row not found:', rowId);
+      alert('Error: Row not found. Please refresh the page and try again.');
+      return;
+    }
+    
+    console.log('✅ [CompetitorConquesting] Setting modal state to open');
     setActiveModalRowId(rowId);
     setIsActionModalOpen(true);
+    
+    // Verify state was set
+    setTimeout(() => {
+      console.log('🔍 [CompetitorConquesting] Modal state after setting:', {
+        isActionModalOpen: true, // This will be the old value due to closure
+        activeModalRowId: rowId
+      });
+    }, 100);
   };
   const closeActionModal = () => {
     setIsActionModalOpen(false);
@@ -1274,7 +1446,22 @@ const CompetitorConquestingPage: React.FC = () => {
                   </td>
                   <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
                     <button
-                      onClick={() => openActionModal(r.id)}
+                      onClick={() => {
+                        console.log(`🖱️ [CompetitorConquesting] See Output clicked for ${r.keyword}:`, {
+                          id: r.id,
+                          status: r.status,
+                          hasOutput: !!r.output,
+                          outputLength: r.output?.length || 0,
+                          disabled: !r.output || r.status === 'running',
+                          currentModalState: { isActionModalOpen, activeModalRowId }
+                        });
+                        console.log('🔍 [CompetitorConquesting] About to call openActionModal with:', r.id);
+                        openActionModal(r.id);
+                        console.log('🔍 [CompetitorConquesting] openActionModal called, checking state in 100ms...');
+                        setTimeout(() => {
+                          console.log('🔍 [CompetitorConquesting] State after openActionModal:', { isActionModalOpen, activeModalRowId });
+                        }, 100);
+                      }}
                       disabled={!r.output || r.status === 'running'}
                       style={{
                         padding: '0.3125rem 0.625rem',
@@ -1441,7 +1628,7 @@ const CompetitorConquestingPage: React.FC = () => {
       {/* Competitor Content Action Modal */}
       {isActionModalOpen && activeModalRowId && (
         <CompetitorContentActionModal
-          isOpen={true}
+          isOpen={isActionModalOpen}
           onClose={closeActionModal}
           row={rows.find(r => r.id === activeModalRowId)!}
           brandKit={null}
