@@ -12,6 +12,7 @@ import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import BrandKitPage from './pages/BrandKitPage';
 import VoCKitPage from './pages/VoCKitPage';
+import VoiceOfCustomerAgentPage from './pages/VoiceOfCustomerAgentPage';
 import CTACreatorPage from './pages/CTACreatorPage';
 import BlogCreatorPage from './pages/BlogCreatorPage';
 import GongAnalysisPage from './pages/GongAnalysisPage';
@@ -97,6 +98,7 @@ const AppLayout: React.FC = () => {
             <Route path="/brand-kit" element={<BrandKitPage />} />
             <Route path="/cta-creator" element={<CTACreatorPage />} />
             <Route path="/voc-kit" element={<VoCKitPage />} />
+            <Route path="/voice-of-customer-agent" element={<VoiceOfCustomerAgentPage />} />
             <Route path="/knowledge-base/sitemap" element={<SitemapPageEnhanced />} />
             <Route path="/knowledge-base/sitemap-old" element={<SitemapPage />} />
             <Route path="/knowledge-base/sitemap/details/:sitemapId" element={<SitemapDetailPage />} />
