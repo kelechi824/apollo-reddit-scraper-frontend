@@ -172,9 +172,17 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             </NavLink>
           )}
           
-          <NavLink 
-            to="/cta-creator" 
+          <NavLink
+            to="/voice-of-customer-agent"
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onItemClick}
+          >
+            <Users className="nav-icon" />
+            VoC Agent
+          </NavLink>
+
+          <NavLink
+            to="/cta-creator"            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             onClick={onItemClick}
           >
             <Target className="nav-icon" />
