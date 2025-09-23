@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Union">
+<path d="M0 0V18.6667C0 20.2315 1.26853 21.5 2.83333 21.5H21.5V19.8333H2.83333C2.189 19.8333 1.66667 19.311 1.66667 18.6667V0H0Z" fill="var(--fill-0, #1A1A1A)"/>
+<path d="M16.6667 18V3.33333H18.3333V18H16.6667Z" fill="var(--fill-0, #1A1A1A)"/>
+<path d="M8.66667 18V8.66667H10.3333V18H8.66667Z" fill="var(--fill-0, #1A1A1A)"/>
+<path d="M4.66667 18V14H6.33333V18H4.66667Z" fill="var(--fill-0, #1A1A1A)"/>
+<path d="M12.6667 12.6667V18H14.3333V12.6667H12.6667Z" fill="var(--fill-0, #1A1A1A)"/>
+</g>
+</svg>

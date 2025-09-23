@@ -10,6 +10,7 @@ interface NavigationProps {
 const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
   const [showBlogSubMenu, setShowBlogSubMenu] = useState(false);
   const [showRedditAgentsSubMenu, setShowRedditAgentsSubMenu] = useState(false);
+  const [showNewsletterAgentsSubMenu, setShowNewsletterAgentsSubMenu] = useState(false);
   const [showKitsSection, setShowKitsSection] = useState(false);
   const [showKnowledgeBaseSection, setShowKnowledgeBaseSection] = useState(false);
 
@@ -28,6 +29,14 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
    */
   const handleRedditAgentsInteraction = (show: boolean) => {
     setShowRedditAgentsSubMenu(show);
+  };
+
+  /**
+   * Handle Newsletter Agents click to toggle sub-menu
+   * Why this matters: Provides access to newsletter and email template features via click interaction
+   */
+  const handleNewsletterAgentsInteraction = (show: boolean) => {
+    setShowNewsletterAgentsSubMenu(show);
   };
 
   /**
@@ -172,14 +181,37 @@ const Navigation: React.FC<NavigationProps> = ({ onItemClick }) => {
             </NavLink>
           )}
           
-          <NavLink
-            to="/email-newsletter"
-            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            onClick={onItemClick}
+          <div 
+            className="nav-item-with-submenu"
+            onClick={() => handleNewsletterAgentsInteraction(!showNewsletterAgentsSubMenu)}
           >
-            <Mail className="nav-icon" />
-            Newsletter Agent
-          </NavLink>
+            <div className="nav-item nav-item-unclickable">
+              <Mail className="nav-icon" />
+              Newsletter Agent
+              <ChevronRight className={`nav-submenu-icon ${showNewsletterAgentsSubMenu ? 'rotated' : ''}`} />
+            </div>
+            
+            {showNewsletterAgentsSubMenu && (
+              <div className="nav-submenu">
+                <NavLink 
+                  to="/email-newsletter" 
+                  className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
+                  onClick={onItemClick}
+                >
+                  <Mail className="nav-icon" />
+                  Newsletter Generator
+                </NavLink>
+                <NavLink 
+                  to="/mds-email-templates" 
+                  className={({ isActive }) => `nav-submenu-item ${isActive ? 'active' : ''}`}
+                  onClick={onItemClick}
+                >
+                  <FileText className="nav-icon" />
+                  MDS: Email Templates
+                </NavLink>
+              </div>
+            )}
+          </div>
 
           <NavLink
             to="/voice-of-customer-agent"

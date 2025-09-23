@@ -24,6 +24,7 @@ import SitemapPageEnhanced from './pages/SitemapPageEnhanced';
 import SitemapDetailPage from './pages/SitemapDetailPage';
 import UncoverPage from './pages/UncoverPage';
 import EmailNewsletterPage from './pages/EmailNewsletterPage';
+import MDSEmailTemplatesPage from './pages/MDSEmailTemplatesPage';
 import { FEATURE_FLAGS, FeatureFlags } from './utils/featureFlags';
 
 const AppLayout: React.FC = () => {
@@ -99,6 +100,7 @@ const AppLayout: React.FC = () => {
             <Route path="/brand-kit" element={<BrandKitPage />} />
             <Route path="/cta-creator" element={<CTACreatorPage />} />
             <Route path="/email-newsletter" element={<EmailNewsletterPage />} />
+            <Route path="/mds-email-templates" element={<MDSEmailTemplatesPage />} />
             <Route path="/voc-kit" element={<VoCKitPage />} />
             <Route path="/voice-of-customer-agent" element={<VoiceOfCustomerAgentPage />} />
             <Route path="/knowledge-base/sitemap" element={<SitemapPageEnhanced />} />
