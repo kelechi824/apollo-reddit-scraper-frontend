@@ -16,7 +16,14 @@ const config: Config = {
         'apollo-gray-900': '#111827',
       },
       fontFamily: {
-        'sans': ['Inter', 'system-ui', 'sans-serif'],
+        'sans': ['ABCDiatype', 'Inter', 'system-ui', 'sans-serif'],
+        'mono': ['FoundersGroteskMono', 'Courier New', 'monospace'],
+        'headline': ['FoundersGrotesk', 'Arial', 'sans-serif'],
+        'body': ['ABCDiatype', 'Inter', 'system-ui', 'sans-serif'],
+        'cta-category': ['FoundersGroteskMono', 'Courier New', 'monospace'],
+        'cta-headline': ['FoundersGrotesk', 'Arial', 'sans-serif'],
+        'cta-body': ['ABCDiatype', 'Inter', 'system-ui', 'sans-serif'],
+        'cta-button': ['ABCDiatype', 'Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         'apollo': '0 0.0625 0.1875rem 0 rgba(0, 0, 0, 0.1), 0 0.0625 0.125rem 0 rgba(0, 0, 0, 0.06)',

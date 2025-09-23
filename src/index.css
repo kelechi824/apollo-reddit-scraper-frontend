@@ -1,6 +1,31 @@
 /* Professional Apollo SaaS Styling */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+/* Custom Apollo Brand Fonts */
+@font-face {
+  font-family: 'FoundersGroteskMono';
+  src: url('./fonts/FoundersGroteskMono-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'FoundersGrotesk';
+  src: url('./fonts/FoundersGrotesk-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ABCDiatype';
+  src: url('./fonts/ABCDiatype-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Reset and base styles */
 * {
   margin: 0;
@@ -9,7 +34,7 @@
 }
 
 body {
-  font-family: "__foundersGrotesk_22a100","__foundersGrotesk_Fallback_22a100", 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: 'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   line-height: 1.6;
   color: #111827;
   background-color: #ffffff;
@@ -27,6 +52,15 @@ body {
   --apollo-gray-200: #e5e7eb;
   --apollo-gray-600: #4b5563;
   --apollo-gray-900: #111827;
+  
+  /* Apollo Brand Fonts */
+  --font-mono: 'FoundersGroteskMono', 'Courier New', monospace;
+  --font-headline: 'FoundersGrotesk', Arial, sans-serif;
+  --font-body: 'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-cta-category: 'FoundersGroteskMono', 'Courier New', monospace;
+  --font-cta-headline: 'FoundersGrotesk', Arial, sans-serif;
+  --font-cta-body: 'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-cta-button: 'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Layout Classes */
