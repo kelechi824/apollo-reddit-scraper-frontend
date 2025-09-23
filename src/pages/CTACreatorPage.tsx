@@ -655,21 +655,26 @@ const CTACreatorPage: React.FC = () => {
     const generateStyledShortcode = (ctaData: any, position: string) => {
       const signUpUrl = generateApolloSignUpUrl(position);
       return `<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem; position: relative;">
-  <div style="font-size: 0.875rem; font-weight: 600; color: #ffffff; margin-bottom: 1rem; letter-spacing: 0.1em; text-transform: uppercase;">
+  <div style="font-size: 1rem; font-weight: 600; font-family: FoundersGroteskMono, 'Courier New', monospace; color: #ffffff; margin-bottom: 1rem; letter-spacing: 0.1em; text-transform: uppercase;">
     ${ctaData.cta.category_header}
   </div>
   <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
-    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0;">
-      <img src="/apollo logo only.png" alt="Apollo Logo" style="width: 100%; height: 100%; object-fit: cover;" />
+    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0; background-color: #EBF212; display: flex; align-items: center; justify-content: center;">
+      <svg width="48" height="48" viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
+        <path d="M57.0805 0.247752L57.0972 38.0858C57.0995 44.0636 50.7395 47.8962 45.4553 45.1012L7.52197 25.0385C10.415 20.2771 14.0531 16.0198 18.2708 12.4222L48.0217 39.918C49.5981 41.3746 52.0832 39.7953 51.4338 37.7499L39.8963 1.41795C43.7798 0.492622 47.8304 0 51.9962 0C53.7121 0 55.4072 0.085273 57.0805 0.247752Z" fill="#000000"/>
+        <path d="M46.7872 103.741L46.7705 66.0934C46.7682 60.1156 53.1282 56.2829 58.4124 59.0779L96.3596 79.1482C93.4469 83.8969 89.7922 88.1404 85.5578 91.7213L55.846 64.2611C54.2696 62.8046 51.7845 64.3839 52.4338 66.4293L63.9277 102.624C60.0983 103.523 56.1059 104 52.0017 104C50.242 104 48.5019 103.912 46.7872 103.741Z" fill="#000000"/>
+        <path d="M64.1047 48.1799L91.6575 18.3702C88.0626 14.1359 83.8046 10.483 79.0401 7.57684L58.9208 45.6137C56.1257 50.8977 59.9591 57.258 65.937 57.2552L103.738 57.2384C103.911 55.5157 104 53.7682 104 51.9999C104 47.8878 103.521 43.8881 102.618 40.0514L66.2729 51.592C64.2275 52.2413 62.6481 49.7563 64.1047 48.1799Z" fill="#000000"/>
+        <path d="M0.245458 46.9406L37.9322 46.9239C43.9107 46.9216 47.7435 53.2814 44.9484 58.5654L24.9328 96.4064C20.1868 93.5071 15.9431 89.8674 12.3592 85.6499L39.7651 55.9991C41.2217 54.4228 39.6418 51.9377 37.5963 52.5871L1.41281 64.0764C0.490912 60.2011 0 56.1582 0 52C0 50.2928 0.0847011 48.6052 0.245458 46.9406Z" fill="#000000"/>
+      </svg>
     </div>
     <div style="flex: 1;">
-      <h4 style="font-size: 1.5rem; font-weight: 700; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
+      <h4 style="font-size: 1.625rem; font-weight: 700; font-family: FoundersGrotesk, Arial, sans-serif; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
         ${ctaData.cta.headline}
       </h4>
-      <p style="font-size: 1rem; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
+      <p style="font-size: 1.125rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
         ${ctaData.cta.description}
       </p>
-      <a href="${signUpUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(189, 245, 72, 0.3); text-decoration: none;">
+      <a href="${signUpUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1.125rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; font-weight: 700; cursor: pointer; transition: all 0.3s ease; text-decoration: none;">
         ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
         <span style="font-size: 1.1rem;">→</span>
       </a>
@@ -1551,25 +1556,34 @@ Paste your markdown content here...
                           borderRadius: '0.75rem',
                           overflow: 'hidden',
                           flexShrink: 0,
-                          position: 'relative'
+                          position: 'relative',
+                          backgroundColor: '#EBF212',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}>
-                          <img 
-                            src="/apollo logo only.png" 
-                            alt="Apollo Logo"
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover'
-                            }}
-                          />
+                          <svg 
+                            width="48" 
+                            height="48" 
+                            viewBox="0 0 104 104" 
+                            fill="none" 
+                            xmlns="http://www.w3.org/2000/svg"
+                            style={{ display: 'block' }}
+                          >
+                            <path d="M57.0805 0.247752L57.0972 38.0858C57.0995 44.0636 50.7395 47.8962 45.4553 45.1012L7.52197 25.0385C10.415 20.2771 14.0531 16.0198 18.2708 12.4222L48.0217 39.918C49.5981 41.3746 52.0832 39.7953 51.4338 37.7499L39.8963 1.41795C43.7798 0.492622 47.8304 0 51.9962 0C53.7121 0 55.4072 0.085273 57.0805 0.247752Z" fill="#000000"/>
+                            <path d="M46.7872 103.741L46.7705 66.0934C46.7682 60.1156 53.1282 56.2829 58.4124 59.0779L96.3596 79.1482C93.4469 83.8969 89.7922 88.1404 85.5578 91.7213L55.846 64.2611C54.2696 62.8046 51.7845 64.3839 52.4338 66.4293L63.9277 102.624C60.0983 103.523 56.1059 104 52.0017 104C50.242 104 48.5019 103.912 46.7872 103.741Z" fill="#000000"/>
+                            <path d="M64.1047 48.1799L91.6575 18.3702C88.0626 14.1359 83.8046 10.483 79.0401 7.57684L58.9208 45.6137C56.1257 50.8977 59.9591 57.258 65.937 57.2552L103.738 57.2384C103.911 55.5157 104 53.7682 104 51.9999C104 47.8878 103.521 43.8881 102.618 40.0514L66.2729 51.592C64.2275 52.2413 62.6481 49.7563 64.1047 48.1799Z" fill="#000000"/>
+                            <path d="M0.245458 46.9406L37.9322 46.9239C43.9107 46.9216 47.7435 53.2814 44.9484 58.5654L24.9328 96.4064C20.1868 93.5071 15.9431 89.8674 12.3592 85.6499L39.7651 55.9991C41.2217 54.4228 39.6418 51.9377 37.5963 52.5871L1.41281 64.0764C0.490912 60.2011 0 56.1582 0 52C0 50.2928 0.0847011 48.6052 0.245458 46.9406Z" fill="#000000"/>
+                          </svg>
                         </div>
 
                         {/* Content */}
                         <div style={{ flex: 1 }}>
                           {/* Category Header */}
                           <div style={{ 
-                            fontSize: '0.875rem', 
+                            fontSize: '1rem', 
                             fontWeight: '600', 
+                            fontFamily: 'FoundersGroteskMono, "Courier New", monospace',
                             color: '#ffffff',
                             marginBottom: '1rem',
                             letterSpacing: '0.1em',
@@ -1579,8 +1593,9 @@ Paste your markdown content here...
                           </div>
 
                           <h4 style={{ 
-                            fontSize: '1.5rem', 
+                            fontSize: '1.625rem', 
                             fontWeight: '700', 
+                            fontFamily: 'FoundersGrotesk, Arial, sans-serif',
                             color: '#ffffff',
                             margin: '0 0 1rem 0',
                             lineHeight: '1.3'
@@ -1589,7 +1604,8 @@ Paste your markdown content here...
                           </h4>
 
                           <p style={{ 
-                            fontSize: '1rem', 
+                            fontSize: '1.125rem', 
+                            fontFamily: 'ABCDiatype, Inter, -apple-system, sans-serif',
                             color: '#ffffff',
                             lineHeight: '1.6',
                             margin: '0 0 1.5rem 0',
@@ -1611,22 +1627,20 @@ Paste your markdown content here...
                               backgroundColor: '#BDF548',
                               color: '#192307',
                               borderRadius: '0.625rem',
-                              fontSize: '1rem',
+                              fontSize: '1.125rem',
+                              fontFamily: 'ABCDiatype, Inter, -apple-system, sans-serif',
                               fontWeight: '700',
                               cursor: 'pointer',
                               transition: 'all 0.3s ease',
-                              boxShadow: '0 4px 12px rgba(189, 245, 72, 0.3)',
                               textDecoration: 'none'
                             }}
                             onMouseOver={(e) => {
                               e.currentTarget.style.backgroundColor = '#A8E63A';
                               e.currentTarget.style.transform = 'translateY(-2px)';
-                              e.currentTarget.style.boxShadow = '0 6px 20px rgba(189, 245, 72, 0.4)';
                             }}
                             onMouseOut={(e) => {
                               e.currentTarget.style.backgroundColor = '#BDF548';
                               e.currentTarget.style.transform = 'translateY(0)';
-                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(189, 245, 72, 0.3)';
                             }}
                           >
                             {ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
@@ -1776,25 +1790,34 @@ Paste your markdown content here...
                                     borderRadius: '0.75rem',
                                     overflow: 'hidden',
                                     flexShrink: 0,
-                                    position: 'relative'
+                                    position: 'relative',
+                                    backgroundColor: '#EBF212',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
                                   }}>
-                                    <img 
-                                      src="/apollo logo only.png" 
-                                      alt="Apollo Logo"
-                                      style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover'
-                                      }}
-                                    />
+                                    <svg 
+                                      width="48" 
+                                      height="48" 
+                                      viewBox="0 0 104 104" 
+                                      fill="none" 
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      style={{ display: 'block' }}
+                                    >
+                                      <path d="M57.0805 0.247752L57.0972 38.0858C57.0995 44.0636 50.7395 47.8962 45.4553 45.1012L7.52197 25.0385C10.415 20.2771 14.0531 16.0198 18.2708 12.4222L48.0217 39.918C49.5981 41.3746 52.0832 39.7953 51.4338 37.7499L39.8963 1.41795C43.7798 0.492622 47.8304 0 51.9962 0C53.7121 0 55.4072 0.085273 57.0805 0.247752Z" fill="#000000"/>
+                                      <path d="M46.7872 103.741L46.7705 66.0934C46.7682 60.1156 53.1282 56.2829 58.4124 59.0779L96.3596 79.1482C93.4469 83.8969 89.7922 88.1404 85.5578 91.7213L55.846 64.2611C54.2696 62.8046 51.7845 64.3839 52.4338 66.4293L63.9277 102.624C60.0983 103.523 56.1059 104 52.0017 104C50.242 104 48.5019 103.912 46.7872 103.741Z" fill="#000000"/>
+                                      <path d="M64.1047 48.1799L91.6575 18.3702C88.0626 14.1359 83.8046 10.483 79.0401 7.57684L58.9208 45.6137C56.1257 50.8977 59.9591 57.258 65.937 57.2552L103.738 57.2384C103.911 55.5157 104 53.7682 104 51.9999C104 47.8878 103.521 43.8881 102.618 40.0514L66.2729 51.592C64.2275 52.2413 62.6481 49.7563 64.1047 48.1799Z" fill="#000000"/>
+                                      <path d="M0.245458 46.9406L37.9322 46.9239C43.9107 46.9216 47.7435 53.2814 44.9484 58.5654L24.9328 96.4064C20.1868 93.5071 15.9431 89.8674 12.3592 85.6499L39.7651 55.9991C41.2217 54.4228 39.6418 51.9377 37.5963 52.5871L1.41281 64.0764C0.490912 60.2011 0 56.1582 0 52C0 50.2928 0.0847011 48.6052 0.245458 46.9406Z" fill="#000000"/>
+                                    </svg>
                                   </div>
 
                                   {/* Content */}
                                   <div style={{ flex: 1 }}>
                                     {/* Category Header */}
                                     <div style={{ 
-                                      fontSize: '0.875rem', 
+                                      fontSize: '1rem', 
                                       fontWeight: '600', 
+                                      fontFamily: 'FoundersGroteskMono, "Courier New", monospace',
                                       color: '#ffffff',
                                       marginBottom: '1rem',
                                       letterSpacing: '0.1em',
@@ -1804,8 +1827,9 @@ Paste your markdown content here...
                                     </div>
 
                                     <h4 style={{ 
-                                      fontSize: '1.5rem', 
+                                      fontSize: '1.625rem', 
                                       fontWeight: '700', 
+                                      fontFamily: 'FoundersGrotesk, Arial, sans-serif',
                                       color: '#ffffff',
                                       margin: '0 0 1rem 0',
                                       lineHeight: '1.3'
@@ -1814,7 +1838,8 @@ Paste your markdown content here...
                                     </h4>
 
                                     <p style={{ 
-                                      fontSize: '1rem', 
+                                      fontSize: '1.125rem', 
+                                      fontFamily: 'ABCDiatype, Inter, -apple-system, sans-serif',
                                       color: '#ffffff',
                                       lineHeight: '1.6',
                                       margin: '0 0 1.5rem 0',
@@ -1836,22 +1861,20 @@ Paste your markdown content here...
                                         backgroundColor: '#BDF548',
                                         color: '#192307',
                                         borderRadius: '0.625rem',
-                                        fontSize: '1rem',
+                                        fontSize: '1.125rem',
+                                        fontFamily: 'ABCDiatype, Inter, -apple-system, sans-serif',
                                         fontWeight: '700',
                                         cursor: 'pointer',
                                         transition: 'all 0.3s ease',
-                                        boxShadow: '0 4px 12px rgba(189, 245, 72, 0.3)',
                                         textDecoration: 'none'
                                       }}
                                       onMouseOver={(e) => {
                                         e.currentTarget.style.backgroundColor = '#A8E63A';
                                         e.currentTarget.style.transform = 'translateY(-2px)';
-                                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(189, 245, 72, 0.4)';
                                       }}
                                       onMouseOut={(e) => {
                                         e.currentTarget.style.backgroundColor = '#BDF548';
                                         e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(189, 245, 72, 0.3)';
                                       }}
                                     >
                                       {parsed.action.replace(/\s*→\s*$/, '')}
@@ -1929,21 +1952,26 @@ Paste your markdown content here...
                           <button
                             onClick={() => {
                               const styledShortcode = `<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem; position: relative;">
-  <div style="font-size: 0.875rem; font-weight: 600; color: #ffffff; margin-bottom: 1rem; letter-spacing: 0.1em; text-transform: uppercase;">
+  <div style="font-size: 1rem; font-weight: 600; font-family: FoundersGroteskMono, 'Courier New', monospace; color: #ffffff; margin-bottom: 1rem; letter-spacing: 0.1em; text-transform: uppercase;">
     ${ctaData.cta.category_header}
   </div>
   <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
-    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0;">
-      <img src="/apollo logo only.png" alt="Apollo Logo" style="width: 100%; height: 100%; object-fit: cover;" />
+    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0; background-color: #EBF212; display: flex; align-items: center; justify-content: center;">
+      <svg width="48" height="48" viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
+        <path d="M57.0805 0.247752L57.0972 38.0858C57.0995 44.0636 50.7395 47.8962 45.4553 45.1012L7.52197 25.0385C10.415 20.2771 14.0531 16.0198 18.2708 12.4222L48.0217 39.918C49.5981 41.3746 52.0832 39.7953 51.4338 37.7499L39.8963 1.41795C43.7798 0.492622 47.8304 0 51.9962 0C53.7121 0 55.4072 0.085273 57.0805 0.247752Z" fill="#000000"/>
+        <path d="M46.7872 103.741L46.7705 66.0934C46.7682 60.1156 53.1282 56.2829 58.4124 59.0779L96.3596 79.1482C93.4469 83.8969 89.7922 88.1404 85.5578 91.7213L55.846 64.2611C54.2696 62.8046 51.7845 64.3839 52.4338 66.4293L63.9277 102.624C60.0983 103.523 56.1059 104 52.0017 104C50.242 104 48.5019 103.912 46.7872 103.741Z" fill="#000000"/>
+        <path d="M64.1047 48.1799L91.6575 18.3702C88.0626 14.1359 83.8046 10.483 79.0401 7.57684L58.9208 45.6137C56.1257 50.8977 59.9591 57.258 65.937 57.2552L103.738 57.2384C103.911 55.5157 104 53.7682 104 51.9999C104 47.8878 103.521 43.8881 102.618 40.0514L66.2729 51.592C64.2275 52.2413 62.6481 49.7563 64.1047 48.1799Z" fill="#000000"/>
+        <path d="M0.245458 46.9406L37.9322 46.9239C43.9107 46.9216 47.7435 53.2814 44.9484 58.5654L24.9328 96.4064C20.1868 93.5071 15.9431 89.8674 12.3592 85.6499L39.7651 55.9991C41.2217 54.4228 39.6418 51.9377 37.5963 52.5871L1.41281 64.0764C0.490912 60.2011 0 56.1582 0 52C0 50.2928 0.0847011 48.6052 0.245458 46.9406Z" fill="#000000"/>
+      </svg>
     </div>
     <div style="flex: 1;">
-      <h4 style="font-size: 1.5rem; font-weight: 700; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
+      <h4 style="font-size: 1.625rem; font-weight: 700; font-family: FoundersGrotesk, Arial, sans-serif; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
         ${ctaData.cta.headline}
       </h4>
-      <p style="font-size: 1rem; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
+      <p style="font-size: 1.125rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
         ${ctaData.cta.description}
       </p>
-      <a href="${generateApolloSignUpUrl(position)}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(189, 245, 72, 0.3); text-decoration: none;">
+      <a href="${generateApolloSignUpUrl(position)}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; font-weight: 700; cursor: pointer; transition: all 0.3s ease; text-decoration: none;">
         ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
         <span style="font-size: 1.1rem;">→</span>
       </a>
