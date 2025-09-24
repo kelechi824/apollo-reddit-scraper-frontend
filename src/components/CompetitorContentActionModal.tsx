@@ -1,8 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Copy, Check, CheckCircle, RefreshCw, Wand2, ChevronDown, Search, Clock, Globe } from 'lucide-react';
-import { BrandKit } from '../types';
+import { X, Copy, Check, CheckCircle, RefreshCw, Wand2, ChevronDown, Search, Clock, Globe, Target, AlertCircle, ArrowRight, RotateCcw } from 'lucide-react';
+import { BrandKit, CTAGenerationResult } from '../types';
 import googleDocsService from '../services/googleDocsService';
 import { API_ENDPOINTS, buildApiUrl } from '../config/api';
+
+// Skeleton component for loading states (copied from BlogContentActionModal)
+const Skeleton = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+  <div
+    className={className}
+    style={{
+      backgroundColor: '#e5e7eb',
+      borderRadius: '0.25rem',
+      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      ...style
+    }}
+  />
+);
 
 interface CompetitorRowBasic {
   id: string;
@@ -37,6 +50,19 @@ interface CompetitorContentActionModalProps {
   row: CompetitorRowBasic;
   brandKit?: BrandKit | null;
   onContentUpdate?: (rowId: string, newContent: string) => void;
+}
+
+// CTA-related interfaces (copied from BlogContentActionModal)
+interface CTAVariant {
+  position: 'beginning' | 'middle' | 'end';
+  cta: {
+    category_header: string;
+    headline: string;
+    description: string;
+    action_button: string;
+  };
+  strategy: string;
+  shortcode: string;
 }
 
 /**
@@ -277,6 +303,17 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
   const [isEnhancingWithCtas, setIsEnhancingWithCtas] = useState(false);
   const [ctaEnhancementResult, setCtaEnhancementResult] = useState<any>(null);
 
+  // CTA Generation states (copied from BlogContentActionModal)
+  const [generatedCTAs, setGeneratedCTAs] = useState<any>(null);
+  const [isGeneratingCTAs, setIsGeneratingCTAs] = useState(false);
+  const [ctaError, setCtaError] = useState('');
+  const [ctaGenerationStage, setCtaGenerationStage] = useState('');
+  const [showCtaSkeletons, setShowCtaSkeletons] = useState(false);
+  const [ctaCopySuccess, setCtaCopySuccess] = useState<string | null>(null);
+  const [vocKitReady, setVocKitReady] = useState(false);
+  const [vocKitReadyDismissed, setVocKitReadyDismissed] = useState(false);
+  const [painPointsCount, setPainPointsCount] = useState(0);
+
   // Refs
   const systemRef = useRef<HTMLTextAreaElement | null>(null);
   const userRef = useRef<HTMLTextAreaElement | null>(null);
@@ -284,6 +321,7 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
   const systemVariablesButtonRef = useRef<HTMLButtonElement | null>(null);
   const userVariablesButtonRef = useRef<HTMLButtonElement | null>(null);
   const editableContentRef = useRef<HTMLTextAreaElement | null>(null);
+  const rightPanelRef = useRef<HTMLDivElement | null>(null);
 
   /**
    * generateAIMetaFields
@@ -394,6 +432,20 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
       }
     } catch (e) {
       console.error('Failed to load workflow data:', e);
+    }
+    
+    // Load saved CTAs (same pattern as BlogContentActionModal)
+    try {
+      const savedCTAs = localStorage.getItem(`apollo_competitor_ctas_${row.id}`);
+      if (savedCTAs) {
+        const parsedCTAs = JSON.parse(savedCTAs);
+        setGeneratedCTAs(parsedCTAs);
+        console.log('✅ [CompetitorModal] Loaded saved CTAs for row:', row.id, 'CTA variants:', Object.keys(parsedCTAs.cta_variants || {}));
+      } else {
+        console.log('ℹ️ [CompetitorModal] No saved CTAs found for row:', row.id);
+      }
+    } catch (error) {
+      console.error('❌ [CompetitorModal] Error loading saved CTAs:', error);
     }
     
         // Load saved meta fields from localStorage if they exist
@@ -522,6 +574,45 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
       }
     }
   }, [isOpen, autoSaveTimeout]);
+
+  // VoC Kit status checking (copied from BlogContentActionModal)
+  useEffect(() => {
+    const checkVocKit = () => {
+      try {
+        const vocData = localStorage.getItem('apollo_voc_kit');
+        if (vocData) {
+          const parsed = JSON.parse(vocData);
+          const painPoints = parsed?.extractedPainPoints || [];
+          setVocKitReady(painPoints.length > 0);
+          setPainPointsCount(painPoints.length);
+        } else {
+          setVocKitReady(false);
+          setPainPointsCount(0);
+        }
+      } catch {
+        setVocKitReady(false);
+        setPainPointsCount(0);
+      }
+    };
+
+    const checkDismissedState = () => {
+      try {
+        const dismissed = localStorage.getItem('apollo_voc_kit_ready_dismissed');
+        setVocKitReadyDismissed(dismissed === 'true');
+      } catch {
+        setVocKitReadyDismissed(false);
+      }
+    };
+
+    if (isOpen) {
+      checkVocKit();
+      checkDismissedState();
+    }
+
+    const handleVocUpdate = () => checkVocKit();
+    window.addEventListener('apollo_voc_updated', handleVocUpdate);
+    return () => window.removeEventListener('apollo_voc_updated', handleVocUpdate);
+  }, [isOpen]);
 
   /**
    * defaultSystemPrompt / defaultUserPrompt
@@ -1051,6 +1142,16 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      
       .competitor-content-display {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         line-height: 1.6;
@@ -2127,6 +2228,212 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
   };
 
   /**
+   * dismissVocKitReady
+   * Why this matters: Allows users to dismiss the VoC Kit ready notification.
+   */
+  const dismissVocKitReady = () => {
+    setVocKitReadyDismissed(true);
+    localStorage.setItem('apollo_voc_kit_ready_dismissed', 'true');
+  };
+
+  /**
+   * generateApolloSignUpUrl (copied from BlogContentActionModal)
+   * Why this matters: Creates UTM-tracked signup URLs for CTAs.
+   */
+  const generateApolloSignUpUrl = (keyword: string, position: string): string => {
+    const baseUrl = 'https://app.apollo.io/signup';
+    const utmParams = new URLSearchParams({
+      utm_source: 'apollo_blog',
+      utm_medium: 'content_marketing',
+      utm_campaign: 'competitor_content',
+      utm_content: `${position}_cta`,
+      utm_term: keyword.toLowerCase().replace(/\s+/g, '_')
+    });
+    return `${baseUrl}?${utmParams.toString()}`;
+  };
+
+  /**
+   * cycleCTAButton (copied from BlogContentActionModal)
+   * Why this matters: Allows users to cycle through different CTA button text options.
+   */
+  const cycleCTAButton = (position: 'beginning' | 'middle' | 'end') => {
+    if (!generatedCTAs) return;
+
+    const buttonOptions = [
+      'Try Apollo Free',
+      'Start Your Free Trial',
+      'Get Started Free',
+      'Start Prospecting',
+      'Schedule a Demo',
+      'Request a Demo',
+      'Get Leads Now',
+      'Start a Trial'
+    ];
+
+    const currentButton = generatedCTAs.cta_variants[position].cta.action_button.replace(/\s*→\s*$/, '');
+    const currentIndex = buttonOptions.indexOf(currentButton);
+    const nextIndex = (currentIndex + 1) % buttonOptions.length;
+    const newButton = buttonOptions[nextIndex];
+
+    setGeneratedCTAs((prev: any) => ({
+      ...prev,
+      cta_variants: {
+        ...prev.cta_variants,
+        [position]: {
+          ...prev.cta_variants[position],
+          cta: {
+            ...prev.cta_variants[position].cta,
+            action_button: newButton
+          }
+        }
+      }
+    }));
+
+    console.log(`🔄 [CompetitorModal] Cycled CTA button from "${currentButton}" to "${newButton}" for ${position} position`);
+  };
+
+  /**
+   * generateCTAs (copied from BlogContentActionModal)
+   * Why this matters: Uses the generated competitor content to create hyper-relevant CTAs using VoC insights.
+   */
+  const generateCTAs = async () => {
+    if (!generatedContent.trim()) {
+      setCtaError('Please generate competitor content first');
+      return;
+    }
+
+    if (!vocKitReady) {
+      setCtaError('Please extract customer pain points in VoC Kit first');
+      return;
+    }
+
+    setIsGeneratingCTAs(true);
+    setCtaError('');
+    
+    // If CTAs already exist, show skeletons instead of clearing
+    if (generatedCTAs) {
+      setShowCtaSkeletons(true);
+    } else {
+      setGeneratedCTAs(null);
+    }
+    
+    const isRegeneration = !!generatedCTAs;
+    setCtaGenerationStage(isRegeneration ? 'Preparing new CTA variations...' : 'Analyzing voice of customer insights...');
+
+    try {
+      // Get VoC Kit data to send with request
+      let vocKitData = null;
+      try {
+        const storedVocKit = localStorage.getItem('apollo_voc_kit');
+        if (storedVocKit) {
+          vocKitData = JSON.parse(storedVocKit);
+          console.log('🔍 VoC Kit data loaded for CTA generation:', {
+            hasGeneratedAnalysis: vocKitData.hasGeneratedAnalysis,
+            extractedPainPointsCount: vocKitData.extractedPainPoints?.length || 0
+          });
+        }
+      } catch (error) {
+        console.error('Error loading VoC Kit data:', error);
+      }
+
+      const endpoint = buildApiUrl('/api/cta-generation/generate-from-text');
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: generatedContent,
+          enhanced_analysis: true,
+          voc_kit_data: vocKitData,
+          regenerate: !!generatedCTAs,
+          timestamp: Date.now()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`CTA generation failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('✅ [CompetitorModal] CTA generation successful:', result);
+        setGeneratedCTAs(result.data);
+        setShowCtaSkeletons(false);
+        setCtaGenerationStage('');
+        
+        // Auto-save the generated CTAs
+        try {
+          localStorage.setItem(`apollo_competitor_ctas_${row.id}`, JSON.stringify(result.data));
+        } catch (e) {
+          console.warn('Failed to save CTAs to localStorage:', e);
+        }
+      } else {
+        throw new Error(result.error || 'CTA generation failed');
+      }
+
+    } catch (error) {
+      console.error('❌ [CompetitorModal] CTA generation failed:', error);
+      setCtaError(error instanceof Error ? error.message : 'Failed to generate CTAs');
+      setShowCtaSkeletons(false);
+    } finally {
+      setIsGeneratingCTAs(false);
+    }
+  };
+
+  /**
+   * getStyledCtaHtml (copied from BlogContentActionModal)
+   * Why this matters: Generates the full styled HTML for CTAs that can be copied and pasted.
+   */
+  const getStyledCtaHtml = (position: 'beginning' | 'middle' | 'end'): string => {
+    if (!generatedCTAs) return '';
+    
+    const ctaData = generatedCTAs.cta_variants[position];
+    const signUpUrl = generateApolloSignUpUrl(row.keyword, position);
+    
+    return `<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem; margin: 2rem 0; position: relative;">
+  <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
+    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0; background-color: #EBF212; display: flex; align-items: center; justify-content: center;">
+      <svg width="48" height="48" viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
+        <path d="M57.0805 0.247752L57.0972 38.0858C57.0995 44.0636 50.7395 47.8962 45.4553 45.1012L7.52197 25.0385C10.415 20.2771 14.0531 16.0198 18.2708 12.4222L48.0217 39.918C49.5981 41.3746 52.0832 39.7953 51.4338 37.7499L39.8963 1.41795C43.7798 0.492622 47.8304 0 51.9962 0C53.7121 0 55.4072 0.085273 57.0805 0.247752Z" fill="#000000"/>
+        <path d="M46.7872 103.741L46.7705 66.0934C46.7682 60.1156 53.1282 56.2829 58.4124 59.0779L96.3596 79.1482C93.4469 83.8969 89.7922 88.1404 85.5578 91.7213L55.846 64.2611C54.2696 62.8046 51.7845 64.3839 52.4338 66.4293L63.9277 102.624C60.0983 103.523 56.1059 104 52.0017 104C50.242 104 48.5019 103.912 46.7872 103.741Z" fill="#000000"/>
+        <path d="M64.1047 48.1799L91.6575 18.3702C88.0626 14.1359 83.8046 10.483 79.0401 7.57684L58.9208 45.6137C56.1257 50.8977 59.9591 57.258 65.937 57.2552L103.738 57.2384C103.911 55.5157 104 53.7682 104 51.9999C104 47.8878 103.521 43.8881 102.618 40.0514L66.2729 51.592C64.2275 52.2413 62.6481 49.7563 64.1047 48.1799Z" fill="#000000"/>
+        <path d="M0.245458 46.9406L37.9322 46.9239C43.9107 46.9216 47.7435 53.2814 44.9484 58.5654L24.9328 96.4064C20.1868 93.5071 15.9431 89.8674 12.3592 85.6499L39.7651 55.9991C41.2217 54.4228 39.6418 51.9377 37.5963 52.5871L1.41281 64.0764C0.490912 60.2011 0 56.1582 0 52C0 50.2928 0.0847011 48.6052 0.245458 46.9406Z" fill="#000000"/>
+      </svg>
+    </div>
+    <div style="flex: 1;">
+      <div style="font-size: 1rem; font-weight: 600; font-family: FoundersGroteskMono, 'Courier New', monospace; color: #ffffff; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;">
+        ${ctaData.cta.category_header}
+      </div>
+      <h4 style="font-size: 1.625rem; font-weight: 700; font-family: FoundersGrotesk, Arial, sans-serif; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
+        ${ctaData.cta.headline}
+      </h4>
+      <p style="font-size: 1rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
+        ${ctaData.cta.description}
+      </p>
+      <a href="${signUpUrl}" style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.75rem 1.5rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; font-weight: 700; text-decoration: none; transition: all 0.3s ease;">
+        ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
+        <span style="font-size: 1rem;">→</span>
+      </a>
+    </div>
+  </div>
+</div>`;
+  };
+
+  /**
+   * copyCtaToClipboard (copied from BlogContentActionModal)
+   * Why this matters: Provides feedback when copying CTA HTML code.
+   */
+  const copyCtaToClipboard = async (text: string, position: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCtaCopySuccess(position);
+      setTimeout(() => setCtaCopySuccess(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy CTA:', err);
+    }
+  };
+
+  /**
    * handleGenerate
    * Why this matters: Regenerates content for this keyword+URL using the tailored prompts with brand kit processing.
    */
@@ -2462,114 +2769,626 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
         </div>
 
         {/* Content Layout - two panels */}
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-          {/* Left Panel - Prompts (match ContentCreationModal) */}
-          <div className="content-modal-panel" style={{ padding: '1.5rem', overflowY: 'auto', borderRight: '0.0625rem solid #e5e7eb' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1.5rem', color: '#374151' }}>Content Generation Prompts</h3>
+        <div className="content-modal-layout" style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+          {/* Left Panel - CTA Generation Interface (copied from BlogContentActionModal) */}
+          <div className="content-modal-panel" style={{ 
+            padding: '1.5rem', 
+            overflowY: 'auto',
+            borderRight: '0.0625rem solid #e5e7eb'
+          }}>
+            {/* VoC Kit Status Check */}
+            {!vocKitReady && (
+              <div style={{
+                padding: '1.5rem',
+                backgroundColor: '#E0DBFF',
+                border: '0.125rem solid #B8B0E8',
+                borderRadius: '0.75rem',
+                marginBottom: '2rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
+                <AlertCircle size={24} style={{ color: '#3b82f6' }} />
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: '600', margin: '0 0 0.25rem 0', color: '#1e40af' }}>
+                    VoC Kit Setup Required
+                  </h3>
+                  <p style={{ fontSize: '0.875rem', color: '#374151', margin: 0 }}>
+                    Please extract customer pain points to generate CTAs.
+                  </p>
+                </div>
+                <a 
+                  href="/voc-kit" 
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#EBF212',
+                    color: 'black',
+                    textDecoration: 'none',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  Go to VoC Kit
+                  <ArrowRight size={16} />
+                </a>
+              </div>
+            )}
 
-          {/* System Prompt */}
-            <div style={{ marginBottom: '2rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <label style={{ fontWeight: 600, color: '#374151', fontSize: '0.9rem' }}>System Prompt</label>
+            {vocKitReady && !vocKitReadyDismissed && (
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#dcfce7',
+                border: '1px solid #22c55e',
+                borderRadius: '0.5rem',
+                marginBottom: '2rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <CheckCircle size={20} style={{ color: '#16a34a' }} />
+                  <span style={{ fontSize: '0.875rem', color: '#16a34a', fontWeight: '500' }}>
+                    VoC Kit is ready! ({painPointsCount} pain points available)
+                  </span>
+                  </div>
                     <button
-                      onClick={handleReset}
-                      style={{ fontSize: '0.8rem', color: '#0077b5', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontWeight: 500 }}
-                      onMouseOver={(e) => (e.currentTarget.style.color = '#005582')}
-                      onMouseOut={(e) => (e.currentTarget.style.color = '#0077b5')}
-                    >
-                      (Reset to default)
+                  onClick={dismissVocKitReady}
+                  style={{
+                    padding: '0.25rem',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '0.25rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#bbf7d0';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  title="Dismiss this notification"
+                >
+                  <X size={16} style={{ color: '#16a34a' }} />
                     </button>
                   </div>
-                  <button
-                    ref={systemVariablesButtonRef}
-                    onClick={() => handleVariablesMenuToggle('system')}
-                    className="content-modal-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#f3f4f6', border: '0.0625rem solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer', padding: '8px 16px' }}
-                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#e5e7eb')}
-                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-                  >
-                    Variables Menu
-                    <ChevronDown size={14} />
-                  </button>
-                </div>
-            <textarea
-              ref={systemRef}
-              value={systemPrompt}
-              onChange={(e) => { setSystemPrompt(e.target.value); setHasUserInput(true); }}
-                rows={8}
-                className="content-creation-textarea"
-                style={{ width: '100%', border: '0.0625rem solid #e5e7eb', borderRadius: '0.5rem', backgroundColor: '#fafafa', padding: '0.75rem', resize: 'vertical', fontFamily: 'inherit', color: '#374151' }}
-            />
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <div style={{
+                padding: '0.5rem',
+                backgroundColor: '#EBF212',
+                borderRadius: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Target size={24} style={{ color: 'black' }} />
+              </div>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: '#374151' }}>
+                Generate CTAs for Content
+              </h3>
           </div>
 
-          {/* User Prompt */}
-            <div style={{ marginBottom: '2rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <label style={{ fontWeight: 600, color: '#374151', fontSize: '0.9rem' }}>User Prompt</label>
+            <p style={{ 
+              fontSize: '0.875rem', 
+              color: '#64748b', 
+              margin: '0 0 1.5rem 0',
+              lineHeight: '1.5'
+            }}>
+              {generatedCTAs 
+                ? 'Regenerate CTAs for the competitor content.'
+                : 'Generate beginning, middle, and ending CTAs using Apollo\'s Voice of Customer insights.'
+              }
+            </p>
+
+            {/* CTA Generation Button */}
+                  <button
+              onClick={generateCTAs}
+              disabled={isGeneratingCTAs || !vocKitReady || !generatedContent.trim()}
+              style={{
+                width: '100%',
+                padding: '1rem 1.5rem',
+                backgroundColor: (isGeneratingCTAs || !vocKitReady || !generatedContent.trim()) ? '#9ca3af' : '#EBF212',
+                color: (isGeneratingCTAs || !vocKitReady || !generatedContent.trim()) ? 'white' : 'black',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                fontWeight: '700',
+                cursor: (isGeneratingCTAs || !vocKitReady || !generatedContent.trim()) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+                transition: 'all 0.2s ease',
+                marginBottom: '1.5rem'
+              }}
+            >
+              {isGeneratingCTAs ? (
+                <>
+                  <div style={{
+                    width: '1rem',
+                    height: '1rem',
+                    border: '0.125rem solid transparent',
+                    borderTop: '0.125rem solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                  {ctaGenerationStage || (generatedCTAs ? 'Regenerating CTAs...' : 'Generating CTAs...')}
+                </>
+              ) : (
+                <>
+                  <Target size={20} strokeWidth={3} />
+                  {generatedCTAs ? 'Regenerate CTAs' : 'Generate CTAs'}
+                </>
+              )}
+                  </button>
+
+            {ctaError && (
+              <div style={{
+                marginBottom: '1.5rem',
+                padding: '0.75rem',
+                backgroundColor: '#fee2e2',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                color: '#dc2626',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <AlertCircle size={16} />
+                {ctaError}
+                </div>
+            )}
+
+
+            {/* Skeleton Loading Section */}
+            {showCtaSkeletons && (
+              <div style={{ marginTop: '1rem' }}>
+                {/* Skeleton Header */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <Skeleton style={{ height: '0.875rem', width: '8rem' }} />
+                  </div>
+          </div>
+
+                {/* Skeleton CTA Variants */}
+                <div style={{ display: 'grid', gap: '1.5rem' }}>
+                  {['beginning', 'middle', 'end'].map((position) => (
+                    <div key={position} style={{
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.75rem',
+                      padding: '1rem',
+                      backgroundColor: '#fafafa'
+                    }}>
+                      {/* Skeleton Position Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <Skeleton style={{ height: '1.5rem', width: '4rem' }} />
+                          <Skeleton style={{ height: '1rem', width: '6rem' }} />
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <Skeleton style={{ height: '2rem', width: '4rem' }} />
+                          <Skeleton style={{ height: '2rem', width: '4rem' }} />
+                        </div>
+                      </div>
+
+                      {/* Skeleton CTA Preview */}
+                      <div style={{ 
+                        backgroundColor: '#192307',
+                        padding: '1.5rem',
+                        borderRadius: '0.5rem',
+                        marginBottom: '1rem'
+                      }}>
+                        <Skeleton style={{ height: '0.875rem', width: '6rem', marginBottom: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                          <Skeleton style={{ height: '3rem', width: '3rem', borderRadius: '0.5rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                          <div style={{ flex: 1 }}>
+                            <Skeleton style={{ height: '1.25rem', width: '100%', marginBottom: '0.75rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                            <Skeleton style={{ height: '1rem', width: '90%', marginBottom: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                            <Skeleton style={{ height: '2.5rem', width: '6rem', backgroundColor: 'rgba(189, 245, 72, 0.3)' }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Skeleton Code Sections */}
+                      <div style={{ display: 'grid', gap: '1rem' }}>
+                        <div>
+                          <Skeleton style={{ height: '0.75rem', width: '8rem', marginBottom: '0.5rem' }} />
+                          <Skeleton style={{ height: '4rem', width: '100%' }} />
+                        </div>
+                        <div>
+                          <Skeleton style={{ height: '0.75rem', width: '6rem', marginBottom: '0.5rem' }} />
+                          <Skeleton style={{ height: '3rem', width: '100%' }} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Generated CTAs Display */}
+            {generatedCTAs && !showCtaSkeletons && (
+              <div style={{ marginTop: '1rem' }}>
+                <h4 style={{ 
+                  fontSize: '0.875rem', 
+                  fontWeight: '600', 
+                  margin: '0 0 1.5rem 0', 
+                  color: '#374151',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <CheckCircle size={14} style={{ color: '#16a34a' }} />
+                  Generated CTAs
+                </h4>
+
+                {/* CTA Variants Display */}
+                <div style={{ display: 'grid', gap: '1.5rem' }}>
+                  {Object.entries(generatedCTAs.cta_variants).map(([position, ctaData]) => (
+                    <div key={position} style={{
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.75rem',
+                      padding: '1rem',
+                      backgroundColor: '#fafafa',
+                      overflow: 'hidden',
+                      wordWrap: 'break-word',
+                      maxWidth: '100%'
+                    }}>
+                      {/* Position Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <div style={{
+                          padding: '0.25rem 0.75rem',
+                          backgroundColor: position === 'beginning' ? '#dbeafe' : position === 'middle' ? '#fef3c7' : '#dcfce7',
+                          color: position === 'beginning' ? '#1e40af' : position === 'middle' ? '#b45309' : '#16a34a',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          textTransform: 'uppercase'
+                        }}>
+                          {position === 'end' ? 'ending' : position}
+                        </div>
+                      </div>
+
+                      {/* CTA Preview - Apollo Design */}
+                      <div style={{ 
+                        backgroundColor: '#192307',
+                        padding: '1.5rem',
+                        borderRadius: '0.875rem',
+                        marginBottom: '1rem',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        wordWrap: 'break-word'
+                      }}>
+                        {/* Change CTA Button - Positioned in corner */}
+                        <div style={{ 
+                          position: 'absolute',
+                          top: '1rem',
+                          right: '1rem'
+                        }}>
                     <button
-                      onClick={handleReset}
-                      style={{ fontSize: '0.8rem', color: '#0077b5', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontWeight: 500 }}
-                      onMouseOver={(e) => (e.currentTarget.style.color = '#005582')}
-                      onMouseOut={(e) => (e.currentTarget.style.color = '#0077b5')}
-                    >
-                      (Reset to default)
+                            onClick={() => cycleCTAButton(position as 'beginning' | 'middle' | 'end')}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                              color: '#ffffff',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              borderRadius: '0.375rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              transition: 'all 0.2s ease',
+                              backdropFilter: 'blur(10px)'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                            title="Change to a different CTA button"
+                          >
+                            <RotateCcw size={12} />
+                            Change CTA
                     </button>
                   </div>
-                  <button
-                    ref={userVariablesButtonRef}
-                    onClick={() => handleVariablesMenuToggle('user')}
-                    className="content-modal-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#f3f4f6', border: '0.0625rem solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer', padding: '8px 16px' }}
-                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#e5e7eb')}
-                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-                  >
-                    Variables Menu
-                    <ChevronDown size={14} />
-                  </button>
+
+                        {/* Content Layout with Logo */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                          {/* Apollo Logo */}
+                          <div style={{
+                            width: '3rem',
+                            height: '3rem',
+                            borderRadius: '0.75rem',
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                            backgroundColor: '#EBF212',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <svg 
+                              width="36" 
+                              height="36" 
+                              viewBox="0 0 104 104" 
+                              fill="none" 
+                              xmlns="http://www.w3.org/2000/svg"
+                              style={{ display: 'block' }}
+                            >
+                              <path d="M57.0805 0.247752L57.0972 38.0858C57.0995 44.0636 50.7395 47.8962 45.4553 45.1012L7.52197 25.0385C10.415 20.2771 14.0531 16.0198 18.2708 12.4222L48.0217 39.918C49.5981 41.3746 52.0832 39.7953 51.4338 37.7499L39.8963 1.41795C43.7798 0.492622 47.8304 0 51.9962 0C53.7121 0 55.4072 0.085273 57.0805 0.247752Z" fill="#000000"/>
+                              <path d="M46.7872 103.741L46.7705 66.0934C46.7682 60.1156 53.1282 56.2829 58.4124 59.0779L96.3596 79.1482C93.4469 83.8969 89.7922 88.1404 85.5578 91.7213L55.846 64.2611C54.2696 62.8046 51.7845 64.3839 52.4338 66.4293L63.9277 102.624C60.0983 103.523 56.1059 104 52.0017 104C50.242 104 48.5019 103.912 46.7872 103.741Z" fill="#000000"/>
+                              <path d="M64.1047 48.1799L91.6575 18.3702C88.0626 14.1359 83.8046 10.483 79.0401 7.57684L58.9208 45.6137C56.1257 50.8977 59.9591 57.258 65.937 57.2552L103.738 57.2384C103.911 55.5157 104 53.7682 104 51.9999C104 47.8878 103.521 43.8881 102.618 40.0514L66.2729 51.592C64.2275 52.2413 62.6481 49.7563 64.1047 48.1799Z" fill="#000000"/>
+                              <path d="M0.245458 46.9406L37.9322 46.9239C43.9107 46.9216 47.7435 53.2814 44.9484 58.5654L24.9328 96.4064C20.1868 93.5071 15.9431 89.8674 12.3592 85.6499L39.7651 55.9991C41.2217 54.4228 39.6418 51.9377 37.5963 52.5871L1.41281 64.0764C0.490912 60.2011 0 56.1582 0 52C0 50.2928 0.0847011 48.6052 0.245458 46.9406Z" fill="#000000"/>
+                            </svg>
                 </div>
-            <textarea
-              ref={userRef}
-              value={userPrompt}
-              onChange={(e) => { setUserPrompt(e.target.value); setHasUserInput(true); }}
-                rows={10}
-                className="content-creation-textarea"
-                style={{ width: '100%', border: '0.0625rem solid #e5e7eb', borderRadius: '0.5rem', backgroundColor: '#fafafa', padding: '0.75rem', resize: 'vertical', fontFamily: 'inherit', color: '#374151' }}
-              />
+
+                          {/* Content */}
+                          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                            {/* Category Header */}
+                            <div style={{ 
+                              fontSize: '0.875rem', 
+                              fontWeight: '600', 
+                              fontFamily: 'FoundersGroteskMono, "Courier New", monospace',
+                              color: '#ffffff',
+                              marginBottom: '0.5rem',
+                              letterSpacing: '0.1em',
+                              textTransform: 'uppercase',
+                              wordWrap: 'break-word',
+                              overflowWrap: 'break-word'
+                            }}>
+                              {(ctaData as any).cta.category_header}
             </div>
 
-            {/* Generate Button (match ContentCreationModal) */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backgroundColor: '#fafafa', borderRadius: '0.75rem', border: '0.0625rem solid #f3f4f6' }}>
+                            <h4 style={{ 
+                              fontSize: '1.25rem', 
+                              fontWeight: '700', 
+                              fontFamily: 'FoundersGrotesk, Arial, sans-serif',
+                              color: '#ffffff',
+                              margin: '0 0 0.75rem 0',
+                              lineHeight: '1.3',
+                              wordWrap: 'break-word',
+                              overflowWrap: 'break-word'
+                            }}>
+                              {(ctaData as any).cta.headline}
+                            </h4>
+
+                            <p style={{ 
+                              fontSize: '1rem', 
+                              fontFamily: 'ABCDiatype, Inter, -apple-system, sans-serif',
+                              color: '#ffffff',
+                              lineHeight: '1.6',
+                              margin: '0 0 1rem 0',
+                              opacity: 0.9,
+                              wordWrap: 'break-word',
+                              overflowWrap: 'break-word'
+                            }}>
+                              {(ctaData as any).cta.description}
+                            </p>
+
+                            {/* CTA Button */}
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              padding: '0.75rem 1.5rem',
+                              backgroundColor: '#BDF548',
+                              color: '#192307',
+                              borderRadius: '0.625rem',
+                              fontSize: '1rem',
+                              fontFamily: 'ABCDiatype, Inter, -apple-system, sans-serif',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease'
+                            }}>
+                              {(ctaData as any).cta.action_button.replace(/\s*→\s*$/, '')}
+                              <span style={{ fontSize: '1rem' }}>→</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* VoC Insights for this CTA */}
+                      {((generatedCTAs?.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]) || generatedCTAs?.pain_point_context) && vocKitReady && (
+                        <div style={{
+                          backgroundColor: '#f0fdf4',
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '0.5rem',
+                          padding: '0.75rem',
+                          marginBottom: '1rem'
+                        }}>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem', 
+                            marginBottom: '0.5rem' 
+                          }}>
+                            <div style={{
+                              width: '0.75rem',
+                              height: '0.75rem',
+                              borderRadius: '50%',
+                              backgroundColor: '#16a34a',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <CheckCircle size={8} style={{ color: 'white' }} />
+                            </div>
+                            <span style={{ 
+                              fontSize: '0.75rem', 
+                              fontWeight: '600', 
+                              color: '#16a34a' 
+                            }}>
+                              🎯 VoC Insights Used in This {position === 'end' ? 'Ending' : position.charAt(0).toUpperCase() + position.slice(1)} CTA
+                            </span>
+                          </div>
+                          
+                          <div style={{ fontSize: '0.625rem', color: '#374151' }}>
+                            <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>💬 Customer Language Used:</div>
+                            {(generatedCTAs.position_specific_context?.[position as keyof typeof generatedCTAs.position_specific_context]?.customer_quotes || 
+                              generatedCTAs.pain_point_context?.customer_quotes_used || [])?.map((quote: string, idx: number) => (
+                              <div key={idx} style={{
+                                fontSize: '0.6875rem',
+                                fontStyle: 'italic',
+                                color: '#059669',
+                                backgroundColor: '#ecfdf5',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '0.25rem',
+                                marginBottom: '0.25rem',
+                                border: '1px solid #bbf7d0'
+                              }}>
+                                "{quote}"
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Copy Shortcode Button */}
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        marginBottom: '0.5rem' 
+                      }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151' }}>
+                          Styled HTML Code:
+                        </div>
               <button
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="apollo-btn-gradient"
-                style={{ opacity: isGenerating ? 0.6 : 1, cursor: isGenerating ? 'not-allowed' : 'pointer' }}
-              >
-                {isGenerating ? (
-                  <>
-                    <Clock className="animate-spin" style={{ width: '1rem', height: '1rem', marginRight: '0.5rem' }} />
-                    Generating…
+                          onClick={() => copyCtaToClipboard(getStyledCtaHtml(position as 'beginning' | 'middle' | 'end'), `${position}_shortcode`)}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            backgroundColor: ctaCopySuccess === `${position}_shortcode` ? '#dcfce7' : '#6b7280',
+                            color: ctaCopySuccess === `${position}_shortcode` ? '#16a34a' : 'white',
+                            border: 'none',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                        >
+                          {ctaCopySuccess === `${position}_shortcode` ? (
+                            <>
+                              <CheckCircle size={10} />
+                              Copied!
                   </>
                 ) : (
                   <>
-                    <Wand2 size={16} style={{ marginRight: '0.5rem' }} />
-                    Regenerate Article
+                              <Copy size={10} />
+                              Copy
                   </>
                 )}
               </button>
             </div>
+                      
+                      <div style={{
+                        backgroundColor: '#f3f4f6',
+                        padding: '0.5rem',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.625rem',
+                        fontFamily: 'monospace',
+                        color: '#374151',
+                        whiteSpace: 'pre-wrap',
+                        border: '1px solid #e5e7eb',
+                        maxHeight: '8rem',
+                        overflow: 'auto',
+                        wordWrap: 'break-word',
+                        overflowWrap: 'break-word',
+                        maxWidth: '100%'
+                      }}>
+                        {getStyledCtaHtml(position as 'beginning' | 'middle' | 'end')}
+                      </div>
+
+                      {/* URL Preview */}
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <div style={{ 
+                          fontSize: '0.75rem', 
+                          fontWeight: '600', 
+                          color: '#374151',
+                          marginBottom: '0.25rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}>
+                          🔗 Sign-up URL:
+                        </div>
+                        <div style={{
+                          backgroundColor: '#eff6ff',
+                          padding: '0.5rem',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.625rem',
+                          fontFamily: 'monospace',
+                          color: '#1e40af',
+                          border: '1px solid #bfdbfe',
+                          wordBreak: 'break-all',
+                          overflow: 'hidden',
+                          maxWidth: '100%'
+                        }}>
+                          {generateApolloSignUpUrl(row.keyword, position)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Panel - Output & Actions */}
-          <div className="content-modal-panel" style={{ position: 'relative', padding: '1.5rem', overflowY: 'auto' }}>
+          <div ref={rightPanelRef} className="content-modal-panel" style={{ 
+            position: 'relative',
+            padding: '1.5rem',
+            overflowY: 'auto'
+          }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 className="mobile-only-heading" style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0, marginBottom: '1rem' }}>
+                Generated Content
+              </h3>
+              
+              {/* Clear Button - Centered */}
               {generatedContent && (
                 <button
                   onClick={clearGeneratedContent}
                   className="content-modal-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#fef2f2', border: '0.0625rem solid #fecaca', borderRadius: '0.5rem', color: '#dc2626', padding: '0.5rem 0.75rem', cursor: 'pointer' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    backgroundColor: '#fef2f2',
+                    border: '0.0625rem solid #fecaca',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    color: '#dc2626',
+                    transition: 'all 0.2s ease',
+                    gap: '0.5rem',
+                    padding: '0.5rem 0.75rem'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#dc2626';
+                    e.currentTarget.style.color = 'white';
+                    e.currentTarget.style.borderColor = '#dc2626';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#fef2f2';
+                    e.currentTarget.style.color = '#dc2626';
+                    e.currentTarget.style.borderColor = '#fecaca';
+                  }}
                 >
                   <X size={14} /> Clear Generated Content
                 </button>

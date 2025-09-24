@@ -18,6 +18,8 @@ interface CompetitorRow {
   output?: string;
   progressInfo?: string; // Stores the current pipeline stage and progress
   createdAt: string;
+  wasTruncated?: boolean; // Indicates if content was truncated during storage
+  hasContent?: boolean; // Indicates if row has substantial content
   metadata?: {
     title: string;
     description: string;
@@ -84,7 +86,7 @@ const CompetitorConquestingPage: React.FC = () => {
     { key: 'kaspr', label: 'Kaspr (coming soon)', csvPath: null }
   ];
 
-  const [selectedCompetitor, setSelectedCompetitor] = React.useState<string>('');
+  const [selectedCompetitor, setSelectedCompetitor] = React.useState<string>('cognism');
   const [rows, setRows] = React.useState<CompetitorRow[]>([]);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [, setLoadedCount] = React.useState<number>(0);
@@ -115,6 +117,8 @@ const CompetitorConquestingPage: React.FC = () => {
   const batchRef = React.useRef<CompetitorRow[]>([]);
   // Cancel flag when switching competitors or unmounting
   const cancelledRef = React.useRef<boolean>(false);
+  // Flag to prevent default loading from running multiple times
+  const defaultLoadTriggeredRef = React.useRef<boolean>(false);
 
   /**
    * parseCsvStream
@@ -215,6 +219,7 @@ const CompetitorConquestingPage: React.FC = () => {
   /**
    * handleCompetitorChange
    * Why this matters: Centralizes competitor selection and modular CSV wiring for future datasets.
+   * Now preserves generated content by checking for saved competitor data before reloading CSV.
    */
   const handleCompetitorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const key = e.target.value;
@@ -233,6 +238,40 @@ const CompetitorConquestingPage: React.FC = () => {
         setIsLoading(false);
         return;
       }
+
+      // Check if we have saved data for this competitor
+      const competitorKey = `apollo_competitor_${key}_data`;
+      try {
+        const savedData = localStorage.getItem(competitorKey);
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          if (Array.isArray(parsedData) && parsedData.length > 0) {
+            console.log(`🔄 [CompetitorConquesting] Restoring saved ${key} data: ${parsedData.length} rows`);
+            setRows(parsedData);
+            setLoadedCount(parsedData.length);
+            setError(null);
+            setIsLoading(false);
+            
+            // Auto-uncheck any completed rows from selection
+            const completedRowIds = new Set(parsedData.filter((r: any) => r.status === 'completed').map((r: any) => r.id));
+            if (completedRowIds.size > 0) {
+              setSelectedRows(prev => {
+                const newSelection = new Set(prev);
+                completedRowIds.forEach(id => newSelection.delete(id));
+                return newSelection;
+              });
+              console.log(`🔄 [CompetitorConquesting] Auto-unchecked ${completedRowIds.size} completed rows from selection`);
+            }
+            
+            return; // Don't reload CSV if we have saved data
+          }
+        }
+      } catch (err) {
+        console.warn(`Failed to restore saved data for ${key}:`, err);
+      }
+
+      // No saved data found, load from CSV
+      console.log(`📥 [CompetitorConquesting] No saved data for ${key}, loading from CSV`);
       parseCsvStream(option.csvPath);
     }, 0);
   };
@@ -240,7 +279,7 @@ const CompetitorConquestingPage: React.FC = () => {
   /**
    * loadSavedProgress
    * Why this matters: Restores table state after refresh/navigation so work isn't lost.
-   * Now handles both full and lightweight saved formats.
+   * Now loads competitor-specific data to preserve generated content.
    */
   React.useEffect(() => {
     try {
@@ -251,21 +290,49 @@ const CompetitorConquestingPage: React.FC = () => {
       }
       const parsed = JSON.parse(saved);
       
-      if (parsed.selectedCompetitor) setSelectedCompetitor(parsed.selectedCompetitor);
       if (Array.isArray(parsed.selectedRows)) setSelectedRows(new Set(parsed.selectedRows));
       if (parsed.sortField) setSortField(parsed.sortField);
       if (parsed.sortDirection) setSortDirection(parsed.sortDirection);
       if (Array.isArray(parsed.sequentialRemaining)) setSequentialRemaining(parsed.sequentialRemaining);
       
-      // Handle rows - could be full rows or lightweight rows or missing (minimal format)
-      if (Array.isArray(parsed.rows)) {
-        // Restore lightweight rows, but don't overwrite if we have more complete data
-        if (rows.length === 0) {
-          setRows(parsed.rows);
-          console.log(`🔄 [CompetitorConquesting] Restored ${parsed.rows.length} rows from saved progress`);
+      // Restore selected competitor and its data
+      if (parsed.selectedCompetitor) {
+        setSelectedCompetitor(parsed.selectedCompetitor);
+        
+        // Try to load competitor-specific data
+        const competitorKey = `apollo_competitor_${parsed.selectedCompetitor}_data`;
+        try {
+          const competitorData = localStorage.getItem(competitorKey);
+          if (competitorData) {
+            const parsedData = JSON.parse(competitorData);
+            if (Array.isArray(parsedData) && parsedData.length > 0) {
+              setRows(parsedData);
+              setLoadedCount(parsedData.length);
+              
+              // Auto-uncheck any completed rows from selection
+              const completedRowIds = new Set(parsedData.filter((r: any) => r.status === 'completed').map((r: any) => r.id));
+              if (completedRowIds.size > 0) {
+                setSelectedRows(prev => {
+                  const newSelection = new Set(prev);
+                  completedRowIds.forEach(id => newSelection.delete(id));
+                  return newSelection;
+                });
+                console.log(`🔄 [CompetitorConquesting] Auto-unchecked ${completedRowIds.size} completed rows from selection`);
+              }
+              
+              console.log(`🔄 [CompetitorConquesting] Restored ${parsed.selectedCompetitor} data: ${parsedData.length} rows (${parsedData.filter((r: any) => r.status === 'completed').length} completed)`);
+            }
+          }
+        } catch (competitorErr) {
+          console.warn(`Failed to load competitor data for ${parsed.selectedCompetitor}:`, competitorErr);
         }
-      } else if (parsed.rowCount) {
-        // Minimal format - just log the info
+      }
+      
+      // Legacy support: Handle old format with rows in main progress
+      if (Array.isArray(parsed.rows) && rows.length === 0) {
+        setRows(parsed.rows);
+        console.log(`🔄 [CompetitorConquesting] Restored ${parsed.rows.length} rows from legacy format`);
+      } else if (parsed.rowCount && rows.length === 0) {
         console.log(`📊 [CompetitorConquesting] Minimal progress loaded: ${parsed.rowCount} total rows, ${parsed.completedCount || 0} completed`);
       }
     } catch (err) {
@@ -280,9 +347,54 @@ const CompetitorConquestingPage: React.FC = () => {
   }, []);
 
   /**
+   * loadDefaultCompetitor
+   * Why this matters: Automatically loads Cognism data when the page first loads
+   * if no saved progress exists, providing immediate value to users.
+   */
+  React.useEffect(() => {
+    // If Cognism is selected but no data is loaded, load it
+    if (selectedCompetitor === 'cognism' && rows.length === 0 && !defaultLoadTriggeredRef.current) {
+      const competitorKey = `apollo_competitor_cognism_data`;
+      const savedData = localStorage.getItem(competitorKey);
+      
+      let shouldLoadFromCsv = false;
+      
+      if (!savedData) {
+        shouldLoadFromCsv = true;
+        console.log('🚀 [CompetitorConquesting] No saved data found, loading from CSV...');
+      } else {
+        try {
+          const parsedData = JSON.parse(savedData);
+          if (!Array.isArray(parsedData) || parsedData.length === 0) {
+            shouldLoadFromCsv = true;
+            console.log('🚀 [CompetitorConquesting] Saved data is empty, loading from CSV...');
+          }
+        } catch (e) {
+          shouldLoadFromCsv = true;
+          console.log('🚀 [CompetitorConquesting] Saved data is corrupted, loading from CSV...');
+        }
+      }
+      
+      if (shouldLoadFromCsv) {
+        defaultLoadTriggeredRef.current = true; // Prevent multiple triggers
+        const cognismOption = competitors.find(c => c.key === 'cognism');
+        if (cognismOption?.csvPath) {
+          parseCsvStream(cognismOption.csvPath);
+        }
+        
+        // Reset the flag after 5 seconds in case something goes wrong
+        setTimeout(() => {
+          defaultLoadTriggeredRef.current = false;
+        }, 5000);
+      }
+    }
+  }, [selectedCompetitor, rows.length]); // Need rows.length but with protection
+
+  /**
    * autoSaveProgress (debounced with quota-aware storage)
    * Why this matters: Persists state changes so reloads return to the same table view,
    * but excludes heavy content to avoid localStorage quota issues.
+   * Now saves competitor-specific data separately to retain generated content when switching.
    */
   React.useEffect(() => {
     if (isInitialLoadRef.current) return;
@@ -290,38 +402,74 @@ const CompetitorConquestingPage: React.FC = () => {
 
     autoSaveTimeoutRef.current = setTimeout(() => {
       try {
-        // Create lightweight version of rows without heavy content
-        const lightweightRows = rows.map(row => ({
-          id: row.id,
-          keyword: row.keyword,
-          url: row.url,
-          monthlyVolume: row.monthlyVolume,
-          avgDifficulty: row.avgDifficulty,
-          status: row.status,
-          createdAt: row.createdAt,
-          // Only save first 100 chars of output to preserve status info
-          output: row.output ? row.output.substring(0, 100) + (row.output.length > 100 ? '...' : '') : undefined,
-          // Exclude heavy workflowDetails and metadata to save space
-          hasContent: !!row.output && row.output.length > 100
-        }));
+        // Save competitor-specific data separately to retain generated content
+        if (selectedCompetitor && rows.length > 0) {
+          const competitorKey = `apollo_competitor_${selectedCompetitor}_data`;
+          
+          // Create version of rows that preserves all generated content
+          const lightweightRows = rows.map(row => ({
+            id: row.id,
+            keyword: row.keyword,
+            url: row.url,
+            monthlyVolume: row.monthlyVolume,
+            avgDifficulty: row.avgDifficulty,
+            status: row.status,
+            createdAt: row.createdAt,
+            // Always save full output for any row that has content
+            output: row.output,
+            // Save all metadata for rows with content
+            metadata: row.metadata,
+            // Save workflow details for rows with content
+            workflowDetails: row.workflowDetails,
+            // Keep progress info for running rows
+            progressInfo: row.progressInfo,
+            // Keep generation result for debugging
+            generationResult: row.generationResult,
+            hasContent: !!row.output && row.output.length > 100
+          }));
 
+          // Check size before saving competitor-specific data
+          const competitorDataStr = JSON.stringify(lightweightRows);
+          const sizeInMB = new Blob([competitorDataStr]).size / (1024 * 1024);
+          
+          if (sizeInMB < 4) {
+            localStorage.setItem(competitorKey, competitorDataStr);
+            console.log(`💾 [CompetitorConquesting] Saved ${selectedCompetitor} data: ${lightweightRows.length} rows (${sizeInMB.toFixed(2)}MB)`);
+          } else {
+            // If too large, save only essential data with truncated content
+            console.warn(`⚠️ [CompetitorConquesting] ${selectedCompetitor} data too large (${sizeInMB.toFixed(1)}MB), saving truncated version`);
+            const truncatedRows = rows.map(row => ({
+              id: row.id,
+              keyword: row.keyword,
+              url: row.url,
+              monthlyVolume: row.monthlyVolume,
+              avgDifficulty: row.avgDifficulty,
+              status: row.status,
+              createdAt: row.createdAt,
+              // Save first 500 chars of output to preserve more content than before
+              output: row.output ? (row.output.length > 500 ? row.output.substring(0, 500) + '...[truncated]' : row.output) : undefined,
+              // Save basic metadata
+              metadata: row.metadata ? {
+                title: row.metadata.title,
+                description: row.metadata.description,
+                word_count: row.metadata.word_count,
+                seo_optimized: row.metadata.seo_optimized
+              } : undefined,
+              hasContent: !!row.output && row.output.length > 100,
+              wasTruncated: row.output && row.output.length > 500
+            }));
+            
+            try {
+              localStorage.setItem(competitorKey, JSON.stringify(truncatedRows));
+              console.log(`💾 [CompetitorConquesting] Saved truncated ${selectedCompetitor} data: ${truncatedRows.length} rows`);
+            } catch (truncErr) {
+              console.error(`❌ [CompetitorConquesting] Failed to save even truncated data for ${selectedCompetitor}:`, truncErr);
+            }
+          }
+        }
+
+        // Save general progress (without rows to save space)
         const progress = {
-          selectedCompetitor,
-          rows: lightweightRows,
-          selectedRows: Array.from(selectedRows),
-          sortField,
-          sortDirection,
-          sequentialRemaining,
-          timestamp: new Date().toISOString()
-        };
-
-        // Check size before saving (rough estimate)
-        const progressStr = JSON.stringify(progress);
-        const sizeInMB = new Blob([progressStr]).size / (1024 * 1024);
-        
-        if (sizeInMB > 4) {
-          // If still too large, save only essential data
-          const minimalProgress = {
             selectedCompetitor,
             selectedRows: Array.from(selectedRows),
             sortField,
@@ -331,12 +479,10 @@ const CompetitorConquestingPage: React.FC = () => {
             completedCount: rows.filter(r => r.status === 'completed').length,
             timestamp: new Date().toISOString()
           };
-          localStorage.setItem('apollo_competitor_conquesting_progress', JSON.stringify(minimalProgress));
-          console.log(`📦 [CompetitorConquesting] Saved minimal progress (${rows.length} rows, ${sizeInMB.toFixed(1)}MB was too large)`);
-        } else {
+
+        // Save general progress
           localStorage.setItem('apollo_competitor_conquesting_progress', JSON.stringify(progress));
-          console.log(`💾 [CompetitorConquesting] Saved progress: ${lightweightRows.length} rows (${sizeInMB.toFixed(2)}MB)`);
-        }
+        console.log(`💾 [CompetitorConquesting] Saved general progress: ${selectedCompetitor} (${rows.length} rows, ${rows.filter(r => r.status === 'completed').length} completed)`);
       } catch (err: any) {
         if (err?.name === 'QuotaExceededError') {
           console.warn('[CompetitorConquesting] localStorage quota exceeded, clearing old data and saving minimal progress');
@@ -486,7 +632,12 @@ const CompetitorConquestingPage: React.FC = () => {
     });
     setSelectionMadeBySelectAll(false);
   };
-  const selectAll = () => { setSelectedRows(new Set(rows.map(r => r.id))); setSelectionMadeBySelectAll(true); };
+  const selectAll = () => { 
+    // Only select rows that are not completed
+    const selectableRows = rows.filter(r => r.status !== 'completed').map(r => r.id);
+    setSelectedRows(new Set(selectableRows)); 
+    setSelectionMadeBySelectAll(true); 
+  };
   const clearSelection = () => { setSelectedRows(new Set()); setSelectionMadeBySelectAll(false); };
 
   /**
@@ -499,11 +650,20 @@ const CompetitorConquestingPage: React.FC = () => {
     console.log(`  • selectedCompetitor: "${selectedCompetitor}" (type: ${typeof selectedCompetitor})`);
     console.log(`  • targetRowIds:`, targetRowIds);
     
-    const queue = (targetRowIds && targetRowIds.length > 0 ? targetRowIds : rows.map(r => r.id)).filter(id => {
+    // Get initial queue of eligible rows
+    const eligibleRowIds = (targetRowIds && targetRowIds.length > 0 ? targetRowIds : rows.map(r => r.id)).filter(id => {
       const row = rows.find(r => r.id === id);
       // Only process rows that are not running AND not completed (idle, error, or queued)
       return row && row.status !== 'running' && row.status !== 'completed';
     });
+    
+    // Sort queue by row position (top to bottom) for predictable execution order
+    const queue = eligibleRowIds.sort((a, b) => {
+      const indexA = rows.findIndex(r => r.id === a);
+      const indexB = rows.findIndex(r => r.id === b);
+      return indexA - indexB;
+    });
+    
     // Only process up to 5 at a time even if more were passed in
     const limitedQueue = queue.slice(0, 5);
     
@@ -555,10 +715,18 @@ const CompetitorConquestingPage: React.FC = () => {
     console.log(`  • selectedCompetitor: "${selectedCompetitor}" (type: ${typeof selectedCompetitor})`);
     console.log(`  • targetRowIds:`, targetRowIds);
     
-    const queue = (targetRowIds && targetRowIds.length > 0 ? targetRowIds : rows.map(r => r.id)).filter(id => {
+    // Get initial queue of eligible rows
+    const eligibleRowIds = (targetRowIds && targetRowIds.length > 0 ? targetRowIds : rows.map(r => r.id)).filter(id => {
       const row = rows.find(r => r.id === id);
       // Only process rows that are not running AND not completed (idle, error, or queued)
       return row && row.status !== 'running' && row.status !== 'completed';
+    });
+    
+    // Sort queue by row position (top to bottom) for predictable execution order
+    const queue = eligibleRowIds.sort((a, b) => {
+      const indexA = rows.findIndex(r => r.id === a);
+      const indexB = rows.findIndex(r => r.id === b);
+      return indexA - indexB;
     });
     
     console.log(`🔍 [BULK DEBUG] Queue processed: ${queue.length} rows to execute`);
@@ -922,41 +1090,82 @@ const CompetitorConquestingPage: React.FC = () => {
           const jobData = statusData.data;
           
           // Update progress in UI with pipeline stage information
-          if (jobData.progress !== undefined) {
+          // But don't update if job is already completed to avoid race conditions
+          if (jobData.progress !== undefined && jobData.status !== 'completed') {
             const stage = jobData.stage || '';
             const message = jobData.message || '';
             
-            // Map stages to user-friendly descriptions
-            let stageDescription = '';
-            if (stage.includes('research')) {
-              stageDescription = '🔬 Deep Research';
-            } else if (stage.includes('firecrawl') || stage.includes('competitor')) {
-              stageDescription = '🔍 Analyzing Competitor Content';
-            } else if (stage.includes('gap')) {
-              stageDescription = '📊 Gap Analysis';
-            } else if (stage.includes('content') || stage.includes('generation')) {
-              stageDescription = '✍️ Content Generation';
+            // Check if this is actually completion (100% + completion message)
+            const isActuallyCompleted = jobData.progress >= 100 && (
+              message.toLowerCase().includes('completed') || 
+              message.toLowerCase().includes('complete') ||  // "complete" or "complete!"
+              message.toLowerCase().includes('finished') ||
+              message.toLowerCase().includes('done') ||
+              message.includes('✅') ||  // Check for checkmark emoji
+              message.toLowerCase().includes('generation complete') ||  // Specific pattern from logs
+              stage.toLowerCase().includes('completed') ||
+              stage.toLowerCase().includes('complete')
+            );
+            
+            console.log(`🔍 [CompetitorConquesting] Job ${jobId} completion check: progress=${jobData.progress}%, message="${message}", stage="${stage}", isActuallyCompleted=${isActuallyCompleted}`);
+            
+            if (isActuallyCompleted) {
+              console.log(`🎯 [CompetitorConquesting] Job ${jobId} appears completed based on progress (${jobData.progress}%) and message: "${message}"`);
+              // Don't update progress, let the completion check handle it
+              // This prevents the "stuck at 100%" issue
             } else {
-              stageDescription = '⚙️ Processing';
+              // Map stages to user-friendly descriptions
+              let stageDescription = '';
+              if (stage.includes('research')) {
+                stageDescription = '🔬 Deep Research';
+              } else if (stage.includes('firecrawl') || stage.includes('competitor')) {
+                stageDescription = '🔍 Analyzing Competitor Content';
+              } else if (stage.includes('gap')) {
+                stageDescription = '📊 Gap Analysis';
+              } else if (stage.includes('content') || stage.includes('generation')) {
+                stageDescription = '✍️ Content Generation';
+              } else {
+                stageDescription = '⚙️ Processing';
+              }
+              
+              console.log(`📊 Job ${jobId} [${stageDescription}] ${jobData.progress}% - ${message}`);
+              
+              // Update the row with progress information for UI display
+              const progressText = `${stageDescription}: ${jobData.progress}% - ${message}`;
+              setRows(prev => prev.map(r => 
+                r.id === rowId 
+                  ? { ...r, status: 'running' as const, progressInfo: progressText, output: progressText }
+                  : r
+              ));
             }
-            
-            console.log(`📊 Job ${jobId} [${stageDescription}] ${jobData.progress}% - ${message}`);
-            
-            // Update the row with progress information for UI display
-            const progressText = `${stageDescription}: ${jobData.progress}% - ${message}`;
-            setRows(prev => prev.map(r => 
-              r.id === rowId 
-                ? { ...r, status: 'running' as const, progressInfo: progressText, output: progressText }
-                : r
-            ));
           }
           
-          if (jobData.status === 'completed') {
-            // Prefer structured result; fall back to raw_content when content is empty
+          // Check for completion: explicit status 'completed' is more reliable
+          // Don't rely on progress messages alone as they may indicate completion before content is ready
+          const isCompleted = jobData.status === 'completed';
+          
+          console.log(`🔍 [CompetitorConquesting] Job ${jobId} final completion check: status="${jobData.status}", progress=${jobData.progress}%, message="${jobData.message}", isCompleted=${isCompleted}`);
+          
+          if (isCompleted) {
+            console.log(`🎯 [CompetitorConquesting] Job ${jobId} is completed (status: ${jobData.status}, progress: ${jobData.progress}%), processing final result...`);
+            console.log(`🔍 [DEBUG] Full jobData structure:`, JSON.stringify(jobData, null, 2));
+            
+            // Try multiple possible locations for the content
             const resultPayload = jobData.result || jobData.data || jobData;
-            const completedContent = String(
-              resultPayload?.content ?? resultPayload?.raw_content ?? ''
-            );
+            
+            // Check various possible content fields
+            const possibleContent = 
+              resultPayload?.content ||
+              resultPayload?.raw_content ||
+              resultPayload?.generated_content ||
+              resultPayload?.output ||
+              resultPayload?.text ||
+              resultPayload?.markdown ||
+              jobData?.content ||
+              jobData?.output ||
+              '';
+              
+            const completedContent = String(possibleContent);
             
             console.log(`🎉 [CompetitorConquesting] Job ${jobId} completed for ${row.keyword}`);
             console.log(`📄 Content length: ${completedContent.length} characters`);
@@ -1027,6 +1236,14 @@ const CompetitorConquestingPage: React.FC = () => {
             });
             
             setRows(prev => prev.map(r => (r.id === rowId ? updatedRow : r)));
+            
+            // Uncheck completed row from selection since it no longer needs processing
+            setSelectedRows(prev => {
+              const newSelection = new Set(prev);
+              newSelection.delete(rowId);
+              return newSelection;
+            });
+            
             return; // Success - exit the function
           } else if (jobData.status === 'error') {
             throw new Error(jobData.error || 'Content generation failed');
@@ -1270,8 +1487,9 @@ const CompetitorConquestingPage: React.FC = () => {
         {/* Bulk controls - Why this matters: removing marginLeft:auto left-aligns buttons next to the loaded count. */}
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <button onClick={() => {
-            const allSelected = selectedRows.size === rows.length && rows.length > 0;
-            if ((selectionMadeBySelectAll && allSelected) || selectedRows.size > 0) {
+            const selectableRows = rows.filter(r => r.status !== 'completed');
+            const allSelectableSelected = selectedRows.size === selectableRows.length && selectableRows.length > 0;
+            if ((selectionMadeBySelectAll && allSelectableSelected) || selectedRows.size > 0) {
               // Unselect All if selection came from Select All and all are still selected; otherwise unselect current selection
               clearSelection();
             } else {
@@ -1279,10 +1497,11 @@ const CompetitorConquestingPage: React.FC = () => {
             }
           }} style={{ padding: '0.4rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer' }}>
             {(() => {
-              const allSelected = selectedRows.size === rows.length && rows.length > 0;
-              if (selectionMadeBySelectAll && allSelected) return 'Unselect All';
+              const selectableRows = rows.filter(r => r.status !== 'completed');
+              const allSelectableSelected = selectedRows.size === selectableRows.length && selectableRows.length > 0;
+              if (selectionMadeBySelectAll && allSelectableSelected) return 'Unselect All';
               if (selectedRows.size > 0) return `Unselect (${selectedRows.size})`;
-              return 'Select All';
+              return `Select All (${selectableRows.length})`;
             })()}
           </button>
           {selectedRows.size > 0 && (
@@ -1340,10 +1559,14 @@ const CompetitorConquestingPage: React.FC = () => {
                 <th className="sticky-header" style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>
                   <input
                     type="checkbox"
-                    checked={rows.length > 0 && selectedRows.size === rows.length}
+                    checked={(() => {
+                      const selectableRows = rows.filter(r => r.status !== 'completed');
+                      return selectableRows.length > 0 && selectedRows.size === selectableRows.length;
+                    })()}
                     onChange={() => {
-                      const allSelected = selectedRows.size === rows.length && rows.length > 0;
-                      if ((selectionMadeBySelectAll && allSelected) || selectedRows.size > 0) {
+                      const selectableRows = rows.filter(r => r.status !== 'completed');
+                      const allSelectableSelected = selectedRows.size === selectableRows.length && selectableRows.length > 0;
+                      if ((selectionMadeBySelectAll && allSelectableSelected) || selectedRows.size > 0) {
                         clearSelection();
                       } else {
                         selectAll();
@@ -1367,9 +1590,23 @@ const CompetitorConquestingPage: React.FC = () => {
             </thead>
             <tbody style={{ fontSize: '0.875rem' }}>
               {paginatedRows.map((r) => (
-                <tr key={r.id}>
+                <tr key={r.id} style={{
+                  backgroundColor: r.status === 'completed' ? '#e5e7eb' : 'transparent',
+                  opacity: r.status === 'completed' ? 0.5 : 1
+                }}>
                   <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
-                    <input type="checkbox" aria-label={`select ${r.keyword}`} checked={selectedRows.has(r.id)} onChange={() => toggleRowSelection(r.id)} style={{ marginTop: '8px' }} />
+                    <input 
+                      type="checkbox" 
+                      aria-label={`select ${r.keyword}`} 
+                      checked={selectedRows.has(r.id)} 
+                      onChange={() => toggleRowSelection(r.id)} 
+                      disabled={r.status === 'completed'}
+                      style={{ 
+                        marginTop: '8px',
+                        opacity: r.status === 'completed' ? 0.5 : 1,
+                        cursor: r.status === 'completed' ? 'not-allowed' : 'pointer'
+                      }} 
+                    />
                   </td>
                   <td style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
                     <div style={clippedStyle} title={r.keyword}>{r.keyword}</div>
@@ -1452,9 +1689,22 @@ const CompetitorConquestingPage: React.FC = () => {
                           status: r.status,
                           hasOutput: !!r.output,
                           outputLength: r.output?.length || 0,
+                          wasTruncated: r.wasTruncated,
                           disabled: !r.output || r.status === 'running',
                           currentModalState: { isActionModalOpen, activeModalRowId }
                         });
+                        
+                        // Check if content was truncated and offer to regenerate
+                        if (r.wasTruncated) {
+                          const shouldRegenerate = window.confirm(
+                            `This content was truncated during storage. Would you like to regenerate the full content for "${r.keyword}"?`
+                          );
+                          if (shouldRegenerate) {
+                            executeRow(r.id);
+                            return;
+                          }
+                        }
+                        
                         console.log('🔍 [CompetitorConquesting] About to call openActionModal with:', r.id);
                         openActionModal(r.id);
                         console.log('🔍 [CompetitorConquesting] openActionModal called, checking state in 100ms...');
@@ -1467,14 +1717,20 @@ const CompetitorConquestingPage: React.FC = () => {
                         padding: '0.3125rem 0.625rem',
                         borderRadius: '0.5rem',
                         border: '1px solid #e5e7eb',
-                        background: r.output && r.status !== 'running' ? '#EBF212' : '#e5e7eb',
+                        background: r.output && r.status !== 'running' ? 
+                          (r.wasTruncated ? '#fbbf24' : '#EBF212') : '#e5e7eb',
                         color: r.output && r.status !== 'running' ? '#000000' : '#111827',
                         cursor: r.output && r.status !== 'running' ? 'pointer' : 'not-allowed',
                         fontSize: '0.8125rem'
                       }}
-                      title={r.status === 'running' ? 'Please wait for generation to complete' : r.output ? 'View and edit generated content' : 'No content available yet'}
+                      title={
+                        r.status === 'running' ? 'Please wait for generation to complete' : 
+                        !r.output ? 'No content available yet' :
+                        r.wasTruncated ? 'Content was truncated - click to regenerate full content' :
+                        'View and edit generated content'
+                      }
                     >
-                      See Output
+                      {r.wasTruncated ? 'Regenerate' : 'See Output'}
                     </button>
                   </td>
                 </tr>
