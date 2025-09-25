@@ -160,7 +160,7 @@ const VariablesMenu: React.FC<{
               backgroundColor: 'white',
               outline: 'none',
               transition: 'border-color 0.2s ease',
-              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+              fontFamily: "'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
               cursor: 'text',
               color: '#374151'
             }}
@@ -210,7 +210,7 @@ const VariablesMenu: React.FC<{
                   {variable.label}
                 </div>
                 <div style={{ 
-                  fontFamily: 'monospace', 
+                  fontFamily: 'FoundersGroteskMono, monospace', 
                   fontSize: '0.75rem', 
                   color: '#7c3aed',
                   backgroundColor: '#f3f4f6',
@@ -333,12 +333,13 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
       }
 
       .generated-content-display {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-family: 'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         line-height: 1.6;
         color: #374151;
       }
 
       .generated-content-display h1 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
         font-size: 2rem;
         font-weight: 700;
         color: #111827;
@@ -349,6 +350,7 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
       }
 
       .generated-content-display h2 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
         font-size: 1.5rem;
         font-weight: 600;
         color: #1f2937;
@@ -357,11 +359,34 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
       }
 
       .generated-content-display h3 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
         font-size: 1.25rem;
         font-weight: 600;
         color: #374151;
         margin: 1.5rem 0 0.75rem 0;
         line-height: 1.4;
+      }
+
+      .generated-content-display h4,
+      .generated-content-display h5,
+      .generated-content-display h6 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
+        font-weight: 600;
+        color: #374151;
+        margin: 1rem 0 0.5rem 0;
+        line-height: 1.4;
+      }
+
+      .generated-content-display h4 {
+        font-size: 1.125rem;
+      }
+
+      .generated-content-display h5 {
+        font-size: 1rem;
+      }
+
+      .generated-content-display h6 {
+        font-size: 0.875rem;
       }
 
       .generated-content-display p {
@@ -601,10 +626,12 @@ const ContentCreationModal: React.FC<ContentCreationModalProps> = ({ isOpen, onC
           flex-direction: column !important;
         }
         
-        .content-modal-btn {
+        .content-modal-btn,
+        button {
           padding: 0.75rem 1rem !important;
           font-size: 0.875rem !important;
           min-height: 2.75rem !important;
+          font-family: 'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
         }
 
         /* Variables menu mobile popup modal */
@@ -1469,7 +1496,7 @@ Return ONLY the JSON object, no additional text.`;
       tempDiv.innerHTML = contentToCopy;
       
       // Apply inline styles to preserve formatting better
-      tempDiv.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+      tempDiv.style.fontFamily = "'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
       tempDiv.style.lineHeight = '1.6';
       tempDiv.style.color = '#374151';
       
@@ -1690,7 +1717,7 @@ Return ONLY the JSON object, no additional text.`;
     <title>Raw HTML Source - ${metaSeoTitle || `Content for ${post.title}`}</title>
     <style>
         body {
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-family: 'FoundersGroteskMono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             line-height: 1.6;
             margin: 0;
             padding: 20px;
@@ -3990,7 +4017,7 @@ Return ONLY the JSON object, no additional text.`;
               <div 
                 style={{ 
                   display: 'block',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                  fontFamily: "'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                   lineHeight: '1.6',
                   color: '#374151'
                 }}

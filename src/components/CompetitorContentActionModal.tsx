@@ -314,6 +314,10 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
   const [vocKitReadyDismissed, setVocKitReadyDismissed] = useState(false);
   const [painPointsCount, setPainPointsCount] = useState(0);
 
+  // Edit history functionality for CTA insertion (copied from BlogContentActionModal)
+  const [editHistory, setEditHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
   // Refs
   const systemRef = useRef<HTMLTextAreaElement | null>(null);
   const userRef = useRef<HTMLTextAreaElement | null>(null);
@@ -1153,12 +1157,18 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       }
       
       .competitor-content-display {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-family: 'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         line-height: 1.6;
         color: #374151;
       }
 
+      .content-modal-btn,
+      button {
+        font-family: 'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+      }
+
       .competitor-content-display h1 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
         font-size: 2rem;
         font-weight: 700;
         color: #111827;
@@ -1169,6 +1179,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       }
 
       .competitor-content-display h2 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
         font-size: 1.5rem;
         font-weight: 600;
         color: #1f2937;
@@ -1177,11 +1188,34 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       }
 
       .competitor-content-display h3 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
         font-size: 1.25rem;
         font-weight: 600;
         color: #374151;
         margin: 1.5rem 0 0.75rem 0;
         line-height: 1.4;
+      }
+
+      .competitor-content-display h4,
+      .competitor-content-display h5,
+      .competitor-content-display h6 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
+        font-weight: 600;
+        color: #374151;
+        margin: 1rem 0 0.5rem 0;
+        line-height: 1.4;
+      }
+
+      .competitor-content-display h4 {
+        font-size: 1.125rem;
+      }
+
+      .competitor-content-display h5 {
+        font-size: 1rem;
+      }
+
+      .competitor-content-display h6 {
+        font-size: 0.875rem;
       }
 
       .competitor-content-display p {
@@ -1277,7 +1311,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
         background-color: #f3f4f6;
         padding: 0.125rem 0.25rem;
         border-radius: 0.25rem;
-        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-family: 'FoundersGroteskMono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
         font-size: 0.875em;
       }
 
@@ -1309,6 +1343,11 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
   const cleanAIContent = (content: string): string => {
     let cleaned = content;
     
+    // First pass: Remove any JSON wrapper artifacts at the very beginning
+    cleaned = cleaned.replace(/^\s*```json\s*\n?/i, ''); // Remove opening ```json
+    cleaned = cleaned.replace(/^\s*json\s*\n?/i, ''); // Remove standalone "json" at start
+    cleaned = cleaned.replace(/^\s*\{\s*\n?\s*"content"\s*:\s*"\s*\n?/i, ''); // Remove { "content": "
+    
     // Remove JSON metadata that might be mixed in with content
     cleaned = cleaned.replace(/\{\s*"metaSeoTitle"\s*:\s*"[^"]*"\s*,[\s\S]*?\}/g, '');
     cleaned = cleaned.replace(/\{\s*"content"\s*:\s*"[\s\S]*?"metaSeoTitle"[\s\S]*?\}/g, '');
@@ -1325,6 +1364,19 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     // Handle trailing patterns
     cleaned = cleaned.replace(/\s*"\s*,?\s*"metaSeoTitle"[\s\S]*$/i, '');
     cleaned = cleaned.replace(/\s*"\s*\}\s*$/i, '');
+    
+    // Remove additional JSON artifacts that can appear in output
+    cleaned = cleaned.replace(/^\s*"?json\s*$/gmi, ''); // Remove standalone "json" lines
+    cleaned = cleaned.replace(/^\s*```json\s*$/gmi, ''); // Remove ```json markers
+    cleaned = cleaned.replace(/^\s*```\s*$/gmi, ''); // Remove standalone ``` markers
+    cleaned = cleaned.replace(/^\s*"content":\s*"?\s*$/gmi, ''); // Remove standalone "content": lines
+    cleaned = cleaned.replace(/^\s*\{\s*"content":\s*"?\s*$/gmi, ''); // Remove { "content": lines
+    cleaned = cleaned.replace(/^\s*"?\s*$/gm, ''); // Remove lines with just quotes
+    
+    // Remove JSON field names that appear as standalone text
+    cleaned = cleaned.replace(/^\s*"metaSeoTitle"\s*:\s*/gmi, '');
+    cleaned = cleaned.replace(/^\s*"metaDescription"\s*:\s*/gmi, '');
+    cleaned = cleaned.replace(/^\s*"content"\s*:\s*/gmi, '');
     
     // Clean up literal escape sequences that appear as text
     cleaned = cleaned.replace(/^\s*\\n\\n\s*/, '');
@@ -1510,6 +1562,18 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     // Remove any leftover unmatched ** that weren't part of a valid pair
     cleaned = cleaned.replace(/\*\*/g, '');
     
+    // Final pass: Remove any remaining JSON artifacts that might have survived
+    cleaned = cleaned.replace(/^\s*"?\s*$/gm, ''); // Remove lines with just quotes or whitespace
+    cleaned = cleaned.replace(/^\s*json\s*$/gmi, ''); // Remove any remaining "json" lines
+    cleaned = cleaned.replace(/^\s*"content"\s*:\s*"?\s*$/gmi, ''); // Remove any remaining "content": lines
+    cleaned = cleaned.replace(/^\s*\{\s*$/gm, ''); // Remove standalone opening braces
+    cleaned = cleaned.replace(/^\s*\}\s*$/gm, ''); // Remove standalone closing braces
+    cleaned = cleaned.replace(/^\s*```\s*$/gm, ''); // Remove any remaining code block markers
+    
+    // Remove empty lines created by the cleaning process
+    cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n'); // Reduce multiple empty lines to double
+    cleaned = cleaned.trim(); // Remove leading/trailing whitespace
+    
     return cleaned;
   };
 
@@ -1593,7 +1657,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     <title>Raw HTML Source - ${metaSeoTitle || `${row.keyword} Content`}</title>
     <style>
         body {
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-family: 'FoundersGroteskMono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             line-height: 1.6;
             margin: 0;
             padding: 20px;
@@ -1762,17 +1826,38 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
   };
 
   /**
-   * toggleEditMode
-   * Why this matters: Enables inline edits before publishing or copying, consistent with Blog modal.
+   * toggleEditMode (updated to match BlogContentActionModal)
+   * Why this matters: Enables inline edits before publishing or copying, with proper HTML formatting.
    */
   const toggleEditMode = () => {
     if (isEditingContent) {
-      setGeneratedContent(editableContent);
-      onContentUpdate?.(row.id, editableContent);
+      console.log('💾 [toggleEditMode] Saving content from edit mode...');
+      console.log('📝 [toggleEditMode] Raw editable content length:', editableContent.length);
+      
+      // Compact the HTML for saving (CTAs are already styled, no conversion needed)
+      const compactedContent = compactHTMLForSaving(editableContent);
+      console.log('🗜️ [toggleEditMode] Compacted content length:', compactedContent.length);
+      console.log('📋 [toggleEditMode] Final content preview (first 200 chars):', compactedContent.substring(0, 200));
+      
+      setGeneratedContent(compactedContent);
+      console.log('✅ [toggleEditMode] Generated content updated');
+      
+      // Update the original row if callback provided
+      if (onContentUpdate) {
+        onContentUpdate(row.id, compactedContent);
+      }
     } else {
-      setEditableContent(generatedContent || row.output || '');
+      console.log('✏️ [toggleEditMode] Entering edit mode...');
+      // Enter edit mode - sync editable content with current content and format for readability
+      const contentToEdit = generatedContent || row.output || '';
+      const formattedContent = formatHTMLForEditing(contentToEdit);
+      setEditableContent(formattedContent);
+      console.log('📝 [toggleEditMode] Editable content set, length:', formattedContent.length);
+      // Initialize edit history for undo/redo functionality
+      initializeEditHistory(formattedContent);
     }
     setIsEditingContent(!isEditingContent);
+    console.log('🔄 [toggleEditMode] Edit mode toggled to:', !isEditingContent);
   };
 
   /**
@@ -2237,6 +2322,458 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
   };
 
   /**
+   * Save current state to edit history (copied from BlogContentActionModal)
+   * Why this matters: Enables undo/redo functionality by tracking content changes.
+   */
+  const saveToHistory = (content: string) => {
+    const newHistory = editHistory.slice(0, historyIndex + 1);
+    newHistory.push(content);
+    setEditHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  /**
+   * Initialize edit history when entering edit mode (copied from BlogContentActionModal)
+   * Why this matters: Sets up the baseline for undo/redo operations.
+   */
+  const initializeEditHistory = (content: string) => {
+    setEditHistory([content]);
+    setHistoryIndex(0);
+  };
+
+  /**
+   * Count inserted CTAs in current content (copied from BlogContentActionModal)
+   * Why this matters: Provides feedback on how many CTAs have been inserted.
+   */
+  const countInsertedCTAs = (): number => {
+    if (!editableContent || !generatedCTAs) return 0;
+    
+    let count = 0;
+    
+    // Count both shortcodes (backwards compatibility) and full HTML CTAs
+    Object.values(generatedCTAs.cta_variants).forEach((ctaData: any) => {
+      const shortcodePattern = new RegExp(ctaData.shortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      const matches = editableContent.match(shortcodePattern);
+      count += matches ? matches.length : 0;
+    });
+    
+    // Count Apollo CTA HTML blocks (background-color: #192307 is the unique identifier)
+    const htmlCtaMatches = editableContent.match(/<div style="background-color: #192307;[^>]*>/g);
+    count += htmlCtaMatches ? htmlCtaMatches.length : 0;
+    
+    return count;
+  };
+
+  /**
+   * Insert CTA at cursor position in edit mode (copied from BlogContentActionModal)
+   * Why this matters: Allows users to insert CTAs exactly where they want them in the content.
+   */
+  const insertCTAAtCursor = (position: 'beginning' | 'middle' | 'end') => {
+    if (!generatedCTAs || !editableContentRef.current) return;
+
+    const textarea = editableContentRef.current;
+    const cursorPosition = textarea.selectionStart;
+    const ctaData = generatedCTAs.cta_variants[position];
+    
+    // Capture scroll position before making changes to preserve user's view
+    const scrollTop = textarea.scrollTop;
+    const scrollLeft = textarea.scrollLeft;
+    
+    // Generate the Apollo sign-up URL with UTM tracking
+    const signUpUrl = generateApolloSignUpUrl(row.keyword, position);
+    
+    // Create the full styled CTA HTML (matching BlogContentActionModal exactly)
+    const fullStyledCTA = `<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem; margin: 2rem 0; position: relative;">
+  <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
+    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0; background-color: #EBF212; display: flex; align-items: center; justify-content: center;">
+      <svg width="48" height="48" viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
+        <path d="M57.0805 0.247752L57.0972 38.0858C57.0995 44.0636 50.7395 47.8962 45.4553 45.1012L7.52197 25.0385C10.415 20.2771 14.0531 16.0198 18.2708 12.4222L48.0217 39.918C49.5981 41.3746 52.0832 39.7953 51.4338 37.7499L39.8963 1.41795C43.7798 0.492622 47.8304 0 51.9962 0C53.7121 0 55.4072 0.085273 57.0805 0.247752Z" fill="#000000"/>
+        <path d="M46.7872 103.741L46.7705 66.0934C46.7682 60.1156 53.1282 56.2829 58.4124 59.0779L96.3596 79.1482C93.4469 83.8969 89.7922 88.1404 85.5578 91.7213L55.846 64.2611C54.2696 62.8046 51.7845 64.3839 52.4338 66.4293L63.9277 102.624C60.0983 103.523 56.1059 104 52.0017 104C50.242 104 48.5019 103.912 46.7872 103.741Z" fill="#000000"/>
+        <path d="M64.1047 48.1799L91.6575 18.3702C88.0626 14.1359 83.8046 10.483 79.0401 7.57684L58.9208 45.6137C56.1257 50.8977 59.9591 57.258 65.937 57.2552L103.738 57.2384C103.911 55.5157 104 53.7682 104 51.9999C104 47.8878 103.521 43.8881 102.618 40.0514L66.2729 51.592C64.2275 52.2413 62.6481 49.7563 64.1047 48.1799Z" fill="#000000"/>
+        <path d="M0.245458 46.9406L37.9322 46.9239C43.9107 46.9216 47.7435 53.2814 44.9484 58.5654L24.9328 96.4064C20.1868 93.5071 15.9431 89.8674 12.3592 85.6499L39.7651 55.9991C41.2217 54.4228 39.6418 51.9377 37.5963 52.5871L1.41281 64.0764C0.490912 60.2011 0 56.1582 0 52C0 50.2928 0.0847011 48.6052 0.245458 46.9406Z" fill="#000000"/>
+      </svg>
+    </div>
+    <div style="flex: 1;">
+      <div style="font-size: 1rem; font-weight: 600; font-family: FoundersGroteskMono, 'Courier New', monospace; color: #ffffff; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;">
+        ${ctaData.cta.category_header}
+      </div>
+      <h4 style="font-size: 1.625rem; font-weight: 700; font-family: FoundersGrotesk, Arial, sans-serif; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
+        ${ctaData.cta.headline}
+      </h4>
+      <p style="font-size: 1.125rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
+        ${ctaData.cta.description}
+      </p>
+      <a href="${signUpUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1.125rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; font-weight: 700; cursor: pointer; transition: all 0.3s ease; text-decoration: none;">
+        ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
+        <span style="font-size: 1.1rem;">→</span>
+      </a>
+    </div>
+  </div>
+</div>`;
+    
+    const beforeCursor = editableContent.substring(0, cursorPosition);
+    const afterCursor = editableContent.substring(cursorPosition);
+    
+    // Add some spacing and a readable comment around the CTA for better readability
+    const ctaWithComment = `\n\n<!-- Apollo CTA: ${position.toUpperCase()} - ${ctaData.cta.headline} -->\n${fullStyledCTA}\n<!-- End Apollo CTA -->\n\n`;
+    
+    const newContent = beforeCursor + ctaWithComment + afterCursor;
+    
+    // Save to history and update content
+    saveToHistory(newContent);
+    setEditableContent(newContent);
+    
+    // Focus back to textarea and position cursor after the inserted CTA
+    // Preserve scroll position to prevent auto-scrolling to top
+    setTimeout(() => {
+      const newCursorPosition = cursorPosition + ctaWithComment.length;
+      
+      // Store scroll position again right before setting cursor (in case it changed)
+      const currentScrollTop = textarea.scrollTop;
+      const currentScrollLeft = textarea.scrollLeft;
+      
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+      
+      // Restore scroll position to keep user's view exactly where they were
+      // Use the original position, not the current one (which might have auto-scrolled)
+      textarea.scrollTop = scrollTop;
+      textarea.scrollLeft = scrollLeft;
+      
+      console.log(`📍 Cursor positioned at ${newCursorPosition}, scroll restored to ${scrollTop} (was ${currentScrollTop})`);
+      
+      // Additional restoration attempts to combat aggressive browser auto-scrolling
+      setTimeout(() => {
+        if (textarea.scrollTop !== scrollTop) {
+          console.log(`🔄 Correcting scroll drift: ${textarea.scrollTop} → ${scrollTop}`);
+          textarea.scrollTop = scrollTop;
+          textarea.scrollLeft = scrollLeft;
+        }
+      }, 100);
+      
+      setTimeout(() => {
+        if (textarea.scrollTop !== scrollTop) {
+          console.log(`🔄 Final scroll correction: ${textarea.scrollTop} → ${scrollTop}`);
+          textarea.scrollTop = scrollTop;
+          textarea.scrollLeft = scrollLeft;
+        }
+      }, 200);
+    }, 50);
+
+    // Show success feedback
+    setCtaCopySuccess(`${position}_inserted`);
+    setTimeout(() => setCtaCopySuccess(''), 2000);
+
+    console.log(`🎯 Inserted ${position} CTA at cursor position ${cursorPosition}`);
+  };
+
+  /**
+   * Undo last change in edit mode (copied from BlogContentActionModal)
+   * Why this matters: Allows users to revert unwanted changes without losing all their work.
+   */
+  const undoChange = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setEditableContent(editHistory[newIndex]);
+      
+      // Focus back to textarea
+      setTimeout(() => {
+        if (editableContentRef.current) {
+          editableContentRef.current.focus();
+        }
+      }, 50);
+
+      console.log(`↶ Undo: Reverted to history state ${newIndex}`);
+    }
+  };
+
+  /**
+   * Redo last undone change in edit mode (copied from BlogContentActionModal)
+   * Why this matters: Allows users to restore changes they accidentally undid.
+   */
+  const redoChange = () => {
+    if (historyIndex < editHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setEditableContent(editHistory[newIndex]);
+      
+      // Focus back to textarea
+      setTimeout(() => {
+        if (editableContentRef.current) {
+          editableContentRef.current.focus();
+        }
+      }, 50);
+
+      console.log(`↷ Redo: Advanced to history state ${newIndex}`);
+    }
+  };
+
+  /**
+   * Clear all CTAs from the current content (copied from BlogContentActionModal)
+   * Why this matters: Provides a quick way to remove all inserted CTAs and start fresh.
+   */
+  const clearAllCTAs = () => {
+    if (!generatedCTAs) return;
+
+    console.log('🧹 Starting CTA clearing process...');
+    console.log('📄 Original content length:', editableContent.length);
+    
+    let clearedContent = editableContent;
+    
+    // Remove all Apollo CTA sections (both shortcodes and full HTML)
+    Object.values(generatedCTAs.cta_variants).forEach((ctaData: any) => {
+      // Remove shortcodes (for backwards compatibility)
+      const shortcodePattern = new RegExp(ctaData.shortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      const beforeShortcode = clearedContent.length;
+      clearedContent = clearedContent.replace(shortcodePattern, '');
+      const afterShortcode = clearedContent.length;
+      if (beforeShortcode !== afterShortcode) {
+        console.log(`✅ Removed shortcode: ${beforeShortcode - afterShortcode} chars`);
+      }
+    });
+    
+    // Use the HTML comments to reliably identify and remove complete CTA blocks
+    // This is the most reliable method since we control these exact markers
+    const beforeHTML = clearedContent.length;
+    
+    // Remove everything between Apollo CTA comment markers (including the markers)
+    // This pattern captures everything from the opening comment to the closing comment
+    clearedContent = clearedContent.replace(/<!-- Apollo CTA:.*?-->[\s\S]*?<!-- End Apollo CTA -->/g, '');
+    
+    const afterHTML = clearedContent.length;
+    if (beforeHTML !== afterHTML) {
+      console.log(`✅ Removed complete CTA blocks: ${beforeHTML - afterHTML} chars`);
+    } else {
+      console.log('⚠️ No CTA blocks found using comment markers, trying fallback...');
+      
+      // Fallback: Remove any remaining Apollo divs (for CTAs without proper comments)
+      clearedContent = clearedContent.replace(/<div style="background-color: #192307[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/g, '');
+    }
+    
+    // Clean up extra newlines (replace 3+ consecutive newlines with 2)
+    clearedContent = clearedContent.replace(/\n{3,}/g, '\n\n');
+    
+    // Trim leading/trailing whitespace
+    clearedContent = clearedContent.trim();
+    
+    // Save to history and update content
+    saveToHistory(clearedContent);
+    setEditableContent(clearedContent);
+    
+    // Focus back to textarea
+    setTimeout(() => {
+      if (editableContentRef.current) {
+        editableContentRef.current.focus();
+      }
+    }, 50);
+
+    console.log(`🧹 Cleared all CTAs from content`);
+    console.log(`📄 Final content length: ${clearedContent.length} (removed ${editableContent.length - clearedContent.length} chars total)`);
+  };
+
+  /**
+   * Decode HTML entities to fix display issues
+   * Why this matters: Content might be HTML-encoded, causing raw HTML to display as text.
+   */
+  const decodeHtmlEntities = (text: string): string => {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  };
+
+  /**
+   * Get display content with CTA styling applied (copied from BlogContentActionModal)
+   * Why this matters: Shows styled CTAs in the preview while maintaining shortcodes in edit mode.
+   */
+  const getDisplayContent = (): string => {
+    if (isEditingContent) {
+      // In edit mode, show the editable content directly (now contains full HTML CTAs)
+      return editableContent;
+    } else {
+      // In display mode, return the saved content directly (already styled during save)
+      // Decode HTML entities in case content is encoded
+      const content = generatedContent || '';
+      return decodeHtmlEntities(content);
+    }
+  };
+
+  /**
+   * Format HTML content for better readability in edit mode (copied from BlogContentActionModal)
+   * Why this matters: Breaks up condensed HTML into readable lines for easier editing.
+   */
+  const formatHTMLForEditing = (content: string): string => {
+    if (!content) return content;
+
+    let formatted = content
+      // Add line breaks after closing tags
+      .replace(/(<\/h[1-6]>)/g, '$1\n\n')
+      .replace(/(<\/p>)/g, '$1\n\n')
+      .replace(/(<\/div>)/g, '$1\n')
+      .replace(/(<\/li>)/g, '$1\n')
+      .replace(/(<\/ul>)/g, '$1\n\n')
+      .replace(/(<\/ol>)/g, '$1\n\n')
+      .replace(/(<\/table>)/g, '$1\n\n')
+      .replace(/(<\/thead>)/g, '$1\n')
+      .replace(/(<\/tbody>)/g, '$1\n')
+      .replace(/(<\/tr>)/g, '$1\n')
+      .replace(/(<\/blockquote>)/g, '$1\n\n')
+      .replace(/(<\/section>)/g, '$1\n\n')
+      .replace(/(<\/article>)/g, '$1\n\n')
+      
+      // Add line breaks before opening tags
+      .replace(/(<h[1-6][^>]*>)/g, '\n$1')
+      .replace(/(<p[^>]*>)/g, '\n$1')
+      .replace(/(<ul[^>]*>)/g, '\n$1')
+      .replace(/(<ol[^>]*>)/g, '\n$1')
+      .replace(/(<li[^>]*>)/g, '\n  $1')
+      .replace(/(<table[^>]*>)/g, '\n$1')
+      .replace(/(<thead[^>]*>)/g, '\n  $1')
+      .replace(/(<tbody[^>]*>)/g, '\n  $1')
+      .replace(/(<tr[^>]*>)/g, '\n    $1')
+      .replace(/(<th[^>]*>)/g, '$1')
+      .replace(/(<td[^>]*>)/g, '$1')
+      .replace(/(<blockquote[^>]*>)/g, '\n$1')
+      .replace(/(<div[^>]*>)/g, '\n$1')
+      
+      // Clean up multiple consecutive newlines
+      .replace(/\n{3,}/g, '\n\n')
+      
+      // Trim leading/trailing whitespace
+      .trim();
+
+    return formatted;
+  };
+
+  /**
+   * Convert formatted HTML back to compact format for saving (copied from BlogContentActionModal)
+   * Why this matters: Removes extra whitespace and formatting added for editing readability.
+   */
+  const compactHTMLForSaving = (content: string): string => {
+    if (!content) return content;
+
+    return content
+      // Remove extra newlines and indentation
+      .replace(/\n\s+/g, '\n')
+      .replace(/\n{2,}/g, '\n')
+      .replace(/>\s+</g, '><')
+      .trim();
+  };
+
+  /**
+   * Generate full styled HTML for a specific CTA variant (EXACTLY matching generated CTA display)
+   * Why this matters: Creates the complete Apollo-styled CTA HTML that matches the preview exactly.
+   */
+  const getStyledCtaHtml = (position: 'beginning' | 'middle' | 'end'): string => {
+    if (!generatedCTAs) return '';
+    
+    const ctaData = generatedCTAs.cta_variants[position];
+    const signUpUrl = generateApolloSignUpUrl(row.keyword, position);
+    
+    // Match EXACT styling from BlogContentActionModal
+    return `<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem; margin: 2rem 0; position: relative;">
+  <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
+    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0; background-color: #EBF212; display: flex; align-items: center; justify-content: center;">
+      <svg width="48" height="48" viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
+        <path d="M57.0805 0.247752L57.0972 38.0858C57.0995 44.0636 50.7395 47.8962 45.4553 45.1012L7.52197 25.0385C10.415 20.2771 14.0531 16.0198 18.2708 12.4222L48.0217 39.918C49.5981 41.3746 52.0832 39.7953 51.4338 37.7499L39.8963 1.41795C43.7798 0.492622 47.8304 0 51.9962 0C53.7121 0 55.4072 0.085273 57.0805 0.247752Z" fill="#000000"/>
+        <path d="M46.7872 103.741L46.7705 66.0934C46.7682 60.1156 53.1282 56.2829 58.4124 59.0779L96.3596 79.1482C93.4469 83.8969 89.7922 88.1404 85.5578 91.7213L55.846 64.2611C54.2696 62.8046 51.7845 64.3839 52.4338 66.4293L63.9277 102.624C60.0983 103.523 56.1059 104 52.0017 104C50.242 104 48.5019 103.912 46.7872 103.741Z" fill="#000000"/>
+        <path d="M64.1047 48.1799L91.6575 18.3702C88.0626 14.1359 83.8046 10.483 79.0401 7.57684L58.9208 45.6137C56.1257 50.8977 59.9591 57.258 65.937 57.2552L103.738 57.2384C103.911 55.5157 104 53.7682 104 51.9999C104 47.8878 103.521 43.8881 102.618 40.0514L66.2729 51.592C64.2275 52.2413 62.6481 49.7563 64.1047 48.1799Z" fill="#000000"/>
+        <path d="M0.245458 46.9406L37.9322 46.9239C43.9107 46.9216 47.7435 53.2814 44.9484 58.5654L24.9328 96.4064C20.1868 93.5071 15.9431 89.8674 12.3592 85.6499L39.7651 55.9991C41.2217 54.4228 39.6418 51.9377 37.5963 52.5871L1.41281 64.0764C0.490912 60.2011 0 56.1582 0 52C0 50.2928 0.0847011 48.6052 0.245458 46.9406Z" fill="#000000"/>
+      </svg>
+    </div>
+    <div style="flex: 1;">
+      <div style="font-size: 1rem; font-weight: 600; font-family: FoundersGroteskMono, 'Courier New', monospace; color: #ffffff; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;">
+        ${ctaData.cta.category_header}
+      </div>
+      <h4 style="font-size: 1.625rem; font-weight: 700; font-family: FoundersGrotesk, Arial, sans-serif; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
+        ${ctaData.cta.headline}
+      </h4>
+      <p style="font-size: 1.125rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
+        ${ctaData.cta.description}
+      </p>
+      <a href="${signUpUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1.125rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; font-weight: 700; cursor: pointer; transition: all 0.3s ease; text-decoration: none;">
+        ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
+        <span style="font-size: 1.1rem;">→</span>
+      </a>
+    </div>
+  </div>
+</div>`;
+  };
+
+  /**
+   * Convert shortcodes to full HTML styling (copied from BlogContentActionModal)
+   * Why this matters: Converts shortcodes to full HTML styling when content is saved or displayed.
+   */
+  const convertShortcodesToFullStyling = (content: string): string => {
+    if (!content || !generatedCTAs) {
+      console.log('🔍 [convertShortcodesToFullStyling] No content or CTAs:', { content: !!content, generatedCTAs: !!generatedCTAs });
+      return content;
+    }
+
+    console.log('🔄 [convertShortcodesToFullStyling] Starting conversion...');
+    let processedContent = content;
+
+    // Process each CTA variant
+    Object.entries(generatedCTAs.cta_variants).forEach(([position, ctaData]: [string, any]) => {
+      const shortcodePattern = new RegExp(ctaData.shortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      console.log(`🎯 [convertShortcodesToFullStyling] Looking for ${position} shortcode:`, ctaData.shortcode);
+      
+      // Check if shortcode exists in content
+      const matches = content.match(shortcodePattern);
+      if (matches) {
+        console.log(`✅ [convertShortcodesToFullStyling] Found ${matches.length} ${position} shortcode(s)`);
+      } else {
+        console.log(`❌ [convertShortcodesToFullStyling] No ${position} shortcode found in content`);
+        return;
+      }
+      
+      // Generate the Apollo sign-up URL with UTM tracking
+      const signUpUrl = generateApolloSignUpUrl(row.keyword, position);
+      
+      const fullStyledCTA = `<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem; margin: 2rem 0; position: relative;">
+  <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
+    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0; background-color: #EBF212; display: flex; align-items: center; justify-content: center;">
+      <svg width="48" height="48" viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
+        <path d="M57.0805 0.247752L57.0972 38.0858C57.0995 44.0636 50.7395 47.8962 45.4553 45.1012L7.52197 25.0385C10.415 20.2771 14.0531 16.0198 18.2708 12.4222L48.0217 39.918C49.5981 41.3746 52.0832 39.7953 51.4338 37.7499L39.8963 1.41795C43.7798 0.492622 47.8304 0 51.9962 0C53.7121 0 55.4072 0.085273 57.0805 0.247752Z" fill="#000000"/>
+        <path d="M46.7872 103.741L46.7705 66.0934C46.7682 60.1156 53.1282 56.2829 58.4124 59.0779L96.3596 79.1482C93.4469 83.8969 89.7922 88.1404 85.5578 91.7213L55.846 64.2611C54.2696 62.8046 51.7845 64.3839 52.4338 66.4293L63.9277 102.624C60.0983 103.523 56.1059 104 52.0017 104C50.242 104 48.5019 103.912 46.7872 103.741Z" fill="#000000"/>
+        <path d="M64.1047 48.1799L91.6575 18.3702C88.0626 14.1359 83.8046 10.483 79.0401 7.57684L58.9208 45.6137C56.1257 50.8977 59.9591 57.258 65.937 57.2552L103.738 57.2384C103.911 55.5157 104 53.7682 104 51.9999C104 47.8878 103.521 43.8881 102.618 40.0514L66.2729 51.592C64.2275 52.2413 62.6481 49.7563 64.1047 48.1799Z" fill="#000000"/>
+        <path d="M0.245458 46.9406L37.9322 46.9239C43.9107 46.9216 47.7435 53.2814 44.9484 58.5654L24.9328 96.4064C20.1868 93.5071 15.9431 89.8674 12.3592 85.6499L39.7651 55.9991C41.2217 54.4228 39.6418 51.9377 37.5963 52.5871L1.41281 64.0764C0.490912 60.2011 0 56.1582 0 52C0 50.2928 0.0847011 48.6052 0.245458 46.9406Z" fill="#000000"/>
+      </svg>
+    </div>
+    <div style="flex: 1;">
+      <div style="font-size: 1rem; font-weight: 600; font-family: FoundersGroteskMono, 'Courier New', monospace; color: #ffffff; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;">
+        ${ctaData.cta.category_header}
+      </div>
+      <h4 style="font-size: 1.625rem; font-weight: 700; font-family: FoundersGrotesk, Arial, sans-serif; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
+        ${ctaData.cta.headline}
+      </h4>
+      <p style="font-size: 1.125rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
+        ${ctaData.cta.description}
+      </p>
+      <a href="${signUpUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1.125rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; font-weight: 700; cursor: pointer; transition: all 0.3s ease; text-decoration: none;">
+        ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
+        <span style="font-size: 1.1rem;">→</span>
+      </a>
+    </div>
+  </div>
+</div>`;
+
+      const beforeLength = processedContent.length;
+      processedContent = processedContent.replace(shortcodePattern, fullStyledCTA);
+      const afterLength = processedContent.length;
+      
+      if (afterLength !== beforeLength) {
+        console.log(`🎨 [convertShortcodesToFullStyling] Successfully converted ${position} CTA (${beforeLength} → ${afterLength} chars)`);
+      } else {
+        console.log(`⚠️ [convertShortcodesToFullStyling] No replacement made for ${position} CTA`);
+      }
+    });
+
+    console.log('✅ [convertShortcodesToFullStyling] Conversion complete');
+    return processedContent;
+  };
+
+  /**
    * generateApolloSignUpUrl (copied from BlogContentActionModal)
    * Why this matters: Creates UTM-tracked signup URLs for CTAs.
    */
@@ -2320,6 +2857,9 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     const isRegeneration = !!generatedCTAs;
     setCtaGenerationStage(isRegeneration ? 'Preparing new CTA variations...' : 'Analyzing voice of customer insights...');
 
+    // Store timeout references so we can clear them in finally block
+    let stage1: NodeJS.Timeout | undefined, stage2: NodeJS.Timeout | undefined, stage3: NodeJS.Timeout | undefined;
+
     try {
       // Get VoC Kit data to send with request
       let vocKitData = null;
@@ -2337,6 +2877,12 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       }
 
       const endpoint = buildApiUrl('/api/cta-generation/generate-from-text');
+
+      // Simulate stage updates for better UX (copied from BlogContentActionModal)
+      stage1 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 10000);
+      stage2 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 20000);
+      stage3 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Creating unique CTAs...' : 'Generating CTAs...'), 30000);
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2376,48 +2922,16 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
       setCtaError(error instanceof Error ? error.message : 'Failed to generate CTAs');
       setShowCtaSkeletons(false);
     } finally {
+      // Clear any pending stage timeouts
+      if (stage1) clearTimeout(stage1);
+      if (stage2) clearTimeout(stage2);
+      if (stage3) clearTimeout(stage3);
+      
       setIsGeneratingCTAs(false);
+      setCtaGenerationStage('');
     }
   };
 
-  /**
-   * getStyledCtaHtml (copied from BlogContentActionModal)
-   * Why this matters: Generates the full styled HTML for CTAs that can be copied and pasted.
-   */
-  const getStyledCtaHtml = (position: 'beginning' | 'middle' | 'end'): string => {
-    if (!generatedCTAs) return '';
-    
-    const ctaData = generatedCTAs.cta_variants[position];
-    const signUpUrl = generateApolloSignUpUrl(row.keyword, position);
-    
-    return `<div style="background-color: #192307; padding: 2rem; border-radius: 0.875rem; margin: 2rem 0; position: relative;">
-  <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
-    <div style="width: 4rem; height: 4rem; border-radius: 0.75rem; overflow: hidden; flex-shrink: 0; background-color: #EBF212; display: flex; align-items: center; justify-content: center;">
-      <svg width="48" height="48" viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
-        <path d="M57.0805 0.247752L57.0972 38.0858C57.0995 44.0636 50.7395 47.8962 45.4553 45.1012L7.52197 25.0385C10.415 20.2771 14.0531 16.0198 18.2708 12.4222L48.0217 39.918C49.5981 41.3746 52.0832 39.7953 51.4338 37.7499L39.8963 1.41795C43.7798 0.492622 47.8304 0 51.9962 0C53.7121 0 55.4072 0.085273 57.0805 0.247752Z" fill="#000000"/>
-        <path d="M46.7872 103.741L46.7705 66.0934C46.7682 60.1156 53.1282 56.2829 58.4124 59.0779L96.3596 79.1482C93.4469 83.8969 89.7922 88.1404 85.5578 91.7213L55.846 64.2611C54.2696 62.8046 51.7845 64.3839 52.4338 66.4293L63.9277 102.624C60.0983 103.523 56.1059 104 52.0017 104C50.242 104 48.5019 103.912 46.7872 103.741Z" fill="#000000"/>
-        <path d="M64.1047 48.1799L91.6575 18.3702C88.0626 14.1359 83.8046 10.483 79.0401 7.57684L58.9208 45.6137C56.1257 50.8977 59.9591 57.258 65.937 57.2552L103.738 57.2384C103.911 55.5157 104 53.7682 104 51.9999C104 47.8878 103.521 43.8881 102.618 40.0514L66.2729 51.592C64.2275 52.2413 62.6481 49.7563 64.1047 48.1799Z" fill="#000000"/>
-        <path d="M0.245458 46.9406L37.9322 46.9239C43.9107 46.9216 47.7435 53.2814 44.9484 58.5654L24.9328 96.4064C20.1868 93.5071 15.9431 89.8674 12.3592 85.6499L39.7651 55.9991C41.2217 54.4228 39.6418 51.9377 37.5963 52.5871L1.41281 64.0764C0.490912 60.2011 0 56.1582 0 52C0 50.2928 0.0847011 48.6052 0.245458 46.9406Z" fill="#000000"/>
-      </svg>
-    </div>
-    <div style="flex: 1;">
-      <div style="font-size: 1rem; font-weight: 600; font-family: FoundersGroteskMono, 'Courier New', monospace; color: #ffffff; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;">
-        ${ctaData.cta.category_header}
-      </div>
-      <h4 style="font-size: 1.625rem; font-weight: 700; font-family: FoundersGrotesk, Arial, sans-serif; color: #ffffff; margin: 0 0 1rem 0; line-height: 1.3;">
-        ${ctaData.cta.headline}
-      </h4>
-      <p style="font-size: 1rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; color: #ffffff; line-height: 1.6; margin: 0 0 1.5rem 0; opacity: 0.9;">
-        ${ctaData.cta.description}
-      </p>
-      <a href="${signUpUrl}" style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.75rem 1.5rem; background-color: #BDF548; color: #192307; border-radius: 0.625rem; font-size: 1rem; font-family: ABCDiatype, Inter, -apple-system, sans-serif; font-weight: 700; text-decoration: none; transition: all 0.3s ease;">
-        ${ctaData.cta.action_button.replace(/\s*→\s*$/, '')}
-        <span style="font-size: 1rem;">→</span>
-      </a>
-    </div>
-  </div>
-</div>`;
-  };
 
   /**
    * copyCtaToClipboard (copied from BlogContentActionModal)
@@ -3374,6 +3888,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
                     fontWeight: '500',
+                    fontFamily: "'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                     color: '#dc2626',
                     transition: 'all 0.2s ease',
                     gap: '0.5rem',
@@ -3412,6 +3927,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                     fontWeight: '500',
+                    fontFamily: "'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                     minHeight: '2.75rem',
                     minWidth: '7.5rem',
                     justifyContent: 'center',
@@ -3436,6 +3952,7 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
                   cursor: 'pointer',
                   fontSize: '0.875rem',
                   fontWeight: '500',
+                  fontFamily: "'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                   minHeight: '2.75rem',
                   minWidth: '7.5rem',
                   justifyContent: 'center',
@@ -3647,14 +4164,515 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
                   </div>
                 )}
                 {isEditingContent ? (
-                  <textarea
-                    ref={editableContentRef}
-                    value={editableContent}
-                    onChange={(e) => setEditableContent(e.target.value)}
-                    style={{ width: '100%', minHeight: '37.5rem', padding: '1rem 1.25rem', border: '2px solid #f59e0b', borderRadius: '0.5rem', backgroundColor: '#fffbf5', resize: 'vertical', fontFamily: 'inherit', color: '#374151' }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    {/* EDITING MODE Header */}
+                    <div style={{
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#fef3c7',
+                      border: '1px solid #f59e0b',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                      <span style={{ 
+                        fontSize: '0.875rem', 
+                        fontWeight: '600', 
+                        color: '#92400e' 
+                      }}>
+                        🛠️ EDITING MODE - Click "Save Changes" when done
+                      </span>
+                    </div>
+
+                    {/* CTA Insertion Toolbar */}
+                    {generatedCTAs && (
+                      <div style={{
+                        marginBottom: '1rem',
+                        padding: '1rem',
+                        backgroundColor: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: '0.5rem'
+                      }}>
+                        <div style={{ 
+                          fontSize: '0.875rem', 
+                          fontWeight: '600', 
+                          color: '#16a34a',
+                          marginBottom: '0.75rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}>
+                          <Target size={16} />
+                          Insert CTA at Cursor Position
+                        </div>
+                        
+                        <div style={{ 
+                          fontSize: '0.75rem', 
+                          color: '#374151',
+                          marginBottom: '0.75rem',
+                          fontStyle: 'italic'
+                        }}>
+                          Click in the text editor where you want to insert a CTA, then click one of the buttons below:
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                          {Object.entries(generatedCTAs.cta_variants).map(([position, ctaData]) => (
+                            <button
+                              key={position}
+                              onClick={() => insertCTAAtCursor(position as 'beginning' | 'middle' | 'end')}
+                              style={{
+                                padding: '0.5rem 1rem',
+                                backgroundColor: ctaCopySuccess === `${position}_inserted` ? '#dcfce7' : (position === 'beginning' ? '#dbeafe' : position === 'middle' ? '#fef3c7' : '#dcfce7'),
+                                color: ctaCopySuccess === `${position}_inserted` ? '#16a34a' : (position === 'beginning' ? '#1e40af' : position === 'middle' ? '#b45309' : '#16a34a'),
+                                border: `1px solid ${ctaCopySuccess === `${position}_inserted` ? '#bbf7d0' : (position === 'beginning' ? '#93c5fd' : position === 'middle' ? '#fcd34d' : '#bbf7d0')}`,
+                                borderRadius: '0.375rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                textTransform: 'uppercase',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = 'none';
+                              }}
+                              title={`Insert ${position} CTA: ${(ctaData as any).cta.headline}`}
+                            >
+                              {ctaCopySuccess === `${position}_inserted` ? (
+                                <>
+                                  <CheckCircle size={12} />
+                                  Inserted!
+                                </>
+                              ) : (
+                                <>
+                                  <Target size={12} />
+                                  Insert {position === 'end' ? 'ending' : position} CTA
+                                </>
+                              )}
+                            </button>
+                          ))}
+                          
+                          {/* CTA Count Display */}
+                          {countInsertedCTAs() > 0 && (
+                            <div style={{
+                              padding: '0.5rem 0.75rem',
+                              backgroundColor: '#f0fdf4',
+                              border: '1px solid #bbf7d0',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              color: '#16a34a',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem'
+                            }}>
+                              <CheckCircle size={12} />
+                              {countInsertedCTAs()} CTA{countInsertedCTAs() !== 1 ? 's' : ''} inserted
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Content Management Controls */}
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '0.5rem', 
+                          marginTop: '0.75rem', 
+                          paddingTop: '0.75rem',
+                          borderTop: '1px solid #e5e7eb',
+                          flexWrap: 'wrap',
+                          alignItems: 'center'
+                        }}>
+                          {/* Clear All CTAs Button */}
+                          <button
+                            onClick={clearAllCTAs}
+                            disabled={countInsertedCTAs() === 0}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: countInsertedCTAs() > 0 ? '#fee2e2' : '#f3f4f6',
+                              color: countInsertedCTAs() > 0 ? '#dc2626' : '#9ca3af',
+                              border: `1px solid ${countInsertedCTAs() > 0 ? '#fecaca' : '#d1d5db'}`,
+                              borderRadius: '0.375rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              cursor: countInsertedCTAs() > 0 ? 'pointer' : 'not-allowed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => {
+                              if (countInsertedCTAs() > 0) {
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.backgroundColor = '#fecaca';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              if (countInsertedCTAs() > 0) {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.backgroundColor = '#fee2e2';
+                              }
+                            }}
+                            title={countInsertedCTAs() > 0 ? 'Remove all inserted CTAs' : 'No CTAs to clear'}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c0-1 1-2 2-2v2"/>
+                              <line x1="10" y1="11" x2="10" y2="17"/>
+                              <line x1="14" y1="11" x2="14" y2="17"/>
+                            </svg>
+                            Clear All CTAs
+                          </button>
+
+                          {/* Undo Button */}
+                          <button
+                            onClick={undoChange}
+                            disabled={historyIndex <= 0}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: historyIndex > 0 ? '#eff6ff' : '#f3f4f6',
+                              color: historyIndex > 0 ? '#2563eb' : '#9ca3af',
+                              border: `1px solid ${historyIndex > 0 ? '#bfdbfe' : '#d1d5db'}`,
+                              borderRadius: '0.375rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              cursor: historyIndex > 0 ? 'pointer' : 'not-allowed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => {
+                              if (historyIndex > 0) {
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.backgroundColor = '#dbeafe';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              if (historyIndex > 0) {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.backgroundColor = '#eff6ff';
+                              }
+                            }}
+                            title={historyIndex > 0 ? 'Undo last change' : 'Nothing to undo'}
+                          >
+                            <RotateCcw size={12} />
+                            Undo
+                          </button>
+
+                          {/* Redo Button */}
+                          <button
+                            onClick={redoChange}
+                            disabled={historyIndex >= editHistory.length - 1}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: historyIndex < editHistory.length - 1 ? '#f0f9ff' : '#f3f4f6',
+                              color: historyIndex < editHistory.length - 1 ? '#0ea5e9' : '#9ca3af',
+                              border: `1px solid ${historyIndex < editHistory.length - 1 ? '#bae6fd' : '#d1d5db'}`,
+                              borderRadius: '0.375rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              cursor: historyIndex < editHistory.length - 1 ? 'pointer' : 'not-allowed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => {
+                              if (historyIndex < editHistory.length - 1) {
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.backgroundColor = '#e0f2fe';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              if (historyIndex < editHistory.length - 1) {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.backgroundColor = '#f0f9ff';
+                              }
+                            }}
+                            title={historyIndex < editHistory.length - 1 ? 'Redo last undone change' : 'Nothing to redo'}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" transform="scale(-1, 1)">
+                              <path d="M1 4v6h6"/>
+                              <path d="m1 10 18-5v12"/>
+                            </svg>
+                            Redo
+                          </button>
+                        </div>
+
+                        <div style={{ 
+                          fontSize: '0.625rem', 
+                          color: '#6b7280',
+                          marginTop: '0.5rem',
+                          fontStyle: 'italic'
+                        }}>
+                          💡 CTAs will be inserted as fully styled Apollo components with immediate visual feedback.
+                          <br />
+                          🔗 Links will point to: apollo.io/sign-up with UTM tracking
+                        </div>
+                      </div>
+                    )}
+                    
+                    <textarea
+                      ref={editableContentRef}
+                      value={editableContent}
+                      onChange={(e) => setEditableContent(e.target.value)}
+                      style={{ width: '100%', minHeight: '37.5rem', padding: '1rem 1.25rem', border: '2px solid #f59e0b', borderRadius: '0.5rem', backgroundColor: '#fffbf5', resize: 'vertical', fontFamily: 'inherit', color: '#374151' }}
+                    />
+                    
+                    {/* Bottom CTA Controls - Duplicate of Top Controls */}
+                    {generatedCTAs && (
+                        <div style={{ 
+                          padding: '1rem',
+                          marginTop: '1rem',
+                          backgroundColor: '#f0fdf4',
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '0.5rem'
+                        }}>
+                          <div style={{ 
+                            fontSize: '0.875rem', 
+                            fontWeight: '600', 
+                            color: '#16a34a',
+                            marginBottom: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}>
+                            <Target size={16} />
+                            Insert CTA at Cursor Position
+                          </div>
+                          
+                          <div style={{ 
+                            fontSize: '0.75rem', 
+                            color: '#374151',
+                            marginBottom: '0.75rem',
+                            fontStyle: 'italic'
+                          }}>
+                            Click in the text editor where you want to insert a CTA, then click one of the buttons below:
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            {Object.entries(generatedCTAs.cta_variants).map(([position, ctaData]) => (
+                              <button
+                                key={position}
+                                onClick={() => insertCTAAtCursor(position as 'beginning' | 'middle' | 'end')}
+                                style={{
+                                  padding: '0.5rem 1rem',
+                                  backgroundColor: ctaCopySuccess === `${position}_inserted` ? '#dcfce7' : (position === 'beginning' ? '#dbeafe' : position === 'middle' ? '#fef3c7' : '#dcfce7'),
+                                  color: ctaCopySuccess === `${position}_inserted` ? '#16a34a' : (position === 'beginning' ? '#1e40af' : position === 'middle' ? '#b45309' : '#16a34a'),
+                                  border: `1px solid ${ctaCopySuccess === `${position}_inserted` ? '#bbf7d0' : (position === 'beginning' ? '#93c5fd' : position === 'middle' ? '#fcd34d' : '#bbf7d0')}`,
+                                  borderRadius: '0.375rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.375rem',
+                                  textTransform: 'uppercase',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => {
+                                  e.currentTarget.style.transform = 'translateY(-1px)';
+                                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.transform = 'translateY(0)';
+                                  e.currentTarget.style.boxShadow = 'none';
+                                }}
+                                title={`Insert ${position} CTA: ${(ctaData as any).cta.headline}`}
+                              >
+                                {ctaCopySuccess === `${position}_inserted` ? (
+                                  <>
+                                    <CheckCircle size={12} />
+                                    Inserted!
+                                  </>
+                                ) : (
+                                  <>
+                                    <Target size={12} />
+                                    Insert {position === 'end' ? 'ending' : position} CTA
+                                  </>
+                                )}
+                              </button>
+                            ))}
+                            
+                            {/* CTA Count Display */}
+                            {countInsertedCTAs() > 0 && (
+                              <div style={{
+                                padding: '0.5rem 0.75rem',
+                                backgroundColor: '#f0fdf4',
+                                border: '1px solid #bbf7d0',
+                                borderRadius: '0.375rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                color: '#16a34a',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem'
+                              }}>
+                                <CheckCircle size={12} />
+                                {countInsertedCTAs()} CTA{countInsertedCTAs() !== 1 ? 's' : ''} inserted
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Content Management Controls */}
+                          <div style={{ 
+                            display: 'flex', 
+                            gap: '0.5rem', 
+                            marginTop: '0.75rem', 
+                            paddingTop: '0.75rem',
+                            borderTop: '1px solid #e5e7eb',
+                            flexWrap: 'wrap',
+                            alignItems: 'center'
+                          }}>
+                            {/* Clear All CTAs Button */}
+                            <button
+                              onClick={clearAllCTAs}
+                              disabled={countInsertedCTAs() === 0}
+                              style={{
+                                padding: '0.5rem 1rem',
+                                backgroundColor: countInsertedCTAs() > 0 ? '#fee2e2' : '#f3f4f6',
+                                color: countInsertedCTAs() > 0 ? '#dc2626' : '#9ca3af',
+                                border: `1px solid ${countInsertedCTAs() > 0 ? '#fecaca' : '#d1d5db'}`,
+                                borderRadius: '0.375rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                cursor: countInsertedCTAs() > 0 ? 'pointer' : 'not-allowed',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => {
+                                if (countInsertedCTAs() > 0) {
+                                  e.currentTarget.style.transform = 'translateY(-1px)';
+                                  e.currentTarget.style.backgroundColor = '#fecaca';
+                                }
+                              }}
+                              onMouseOut={(e) => {
+                                if (countInsertedCTAs() > 0) {
+                                  e.currentTarget.style.transform = 'translateY(0)';
+                                  e.currentTarget.style.backgroundColor = '#fee2e2';
+                                }
+                              }}
+                              title={countInsertedCTAs() > 0 ? 'Remove all inserted CTAs' : 'No CTAs to clear'}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c0-1 1-2 2-2v2"/>
+                                <line x1="10" y1="11" x2="10" y2="17"/>
+                                <line x1="14" y1="11" x2="14" y2="17"/>
+                              </svg>
+                              Clear All CTAs
+                            </button>
+
+                            {/* Undo Button */}
+                            <button
+                              onClick={undoChange}
+                              disabled={historyIndex <= 0}
+                              style={{
+                                padding: '0.5rem 1rem',
+                                backgroundColor: historyIndex > 0 ? '#eff6ff' : '#f3f4f6',
+                                color: historyIndex > 0 ? '#2563eb' : '#9ca3af',
+                                border: `1px solid ${historyIndex > 0 ? '#bfdbfe' : '#d1d5db'}`,
+                                borderRadius: '0.375rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                cursor: historyIndex > 0 ? 'pointer' : 'not-allowed',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => {
+                                if (historyIndex > 0) {
+                                  e.currentTarget.style.transform = 'translateY(-1px)';
+                                  e.currentTarget.style.backgroundColor = '#dbeafe';
+                                }
+                              }}
+                              onMouseOut={(e) => {
+                                if (historyIndex > 0) {
+                                  e.currentTarget.style.transform = 'translateY(0)';
+                                  e.currentTarget.style.backgroundColor = '#eff6ff';
+                                }
+                              }}
+                              title={historyIndex > 0 ? 'Undo last change' : 'Nothing to undo'}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M1 4v6h6"/>
+                                <path d="m1 10 18-5v12"/>
+                              </svg>
+                              Undo
+                            </button>
+
+                            {/* Redo Button */}
+                            <button
+                              onClick={redoChange}
+                              disabled={historyIndex >= editHistory.length - 1}
+                              style={{
+                                padding: '0.5rem 1rem',
+                                backgroundColor: historyIndex < editHistory.length - 1 ? '#eff6ff' : '#f3f4f6',
+                                color: historyIndex < editHistory.length - 1 ? '#2563eb' : '#9ca3af',
+                                border: `1px solid ${historyIndex < editHistory.length - 1 ? '#bfdbfe' : '#d1d5db'}`,
+                                borderRadius: '0.375rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                cursor: historyIndex < editHistory.length - 1 ? 'pointer' : 'not-allowed',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => {
+                                if (historyIndex < editHistory.length - 1) {
+                                  e.currentTarget.style.transform = 'translateY(-1px)';
+                                  e.currentTarget.style.backgroundColor = '#dbeafe';
+                                }
+                              }}
+                              onMouseOut={(e) => {
+                                if (historyIndex < editHistory.length - 1) {
+                                  e.currentTarget.style.transform = 'translateY(0)';
+                                  e.currentTarget.style.backgroundColor = '#eff6ff';
+                                }
+                              }}
+                              title={historyIndex < editHistory.length - 1 ? 'Redo last undone change' : 'Nothing to redo'}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" transform="scale(-1, 1)">
+                                <path d="M1 4v6h6"/>
+                                <path d="m1 10 18-5v12"/>
+                              </svg>
+                              Redo
+                            </button>
+                          </div>
+
+                          <div style={{ 
+                            fontSize: '0.625rem', 
+                            color: '#6b7280',
+                            marginTop: '0.5rem',
+                            fontStyle: 'italic'
+                          }}>
+                            💡 CTAs will be inserted as fully styled Apollo components with immediate visual feedback.
+                            <br />
+                            🔗 Links will point to: apollo.io/sign-up with UTM tracking
+                          </div>
+                        </div>
+                      )}
+                  </div>
                 ) : (
-                  <div className="competitor-content-display" dangerouslySetInnerHTML={{ __html: generatedContent }} />
+                  <div 
+                    className="competitor-content-display" 
+                    dangerouslySetInnerHTML={{ __html: getDisplayContent() }}
+                    key={`display-${isEditingContent}-${editableContent.length}`}
+                  />
                 )}
               </div>
             ) : (

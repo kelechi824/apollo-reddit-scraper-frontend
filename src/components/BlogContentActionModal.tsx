@@ -215,7 +215,7 @@ const VariablesMenu: React.FC<{
               backgroundColor: 'white',
               outline: 'none',
               transition: 'border-color 0.2s ease',
-              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+              fontFamily: "'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
               cursor: 'text',
               color: '#374151'
             }}
@@ -265,7 +265,7 @@ const VariablesMenu: React.FC<{
                   {variable.label}
                 </div>
                 <div style={{ 
-                  fontFamily: 'monospace', 
+                  fontFamily: 'FoundersGroteskMono, monospace', 
                   fontSize: '0.75rem', 
                   color: '#7c3aed',
                   backgroundColor: '#f3f4f6',
@@ -434,12 +434,18 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       }
 
       .generated-content-display {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-family: 'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         line-height: 1.6;
         color: #374151;
       }
 
+      .content-modal-btn,
+      button {
+        font-family: 'ABCDiatype', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+      }
+
       .generated-content-display h1 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
         font-size: 2rem;
         font-weight: 700;
         color: #111827;
@@ -450,6 +456,7 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       }
 
       .generated-content-display h2 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
         font-size: 1.5rem;
         font-weight: 600;
         color: #1f2937;
@@ -458,6 +465,7 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
       }
 
       .generated-content-display h3 {
+        font-family: 'FoundersGrotesk', Arial, sans-serif;
         font-size: 1.25rem;
         font-weight: 600;
         color: #374151;
@@ -1713,7 +1721,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
     <title>Raw HTML Source - ${metaSeoTitle || `${keywordRow.keyword} Content`}</title>
     <style>
         body {
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-family: 'FoundersGroteskMono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             line-height: 1.6;
             margin: 0;
             padding: 20px;
@@ -3199,9 +3207,9 @@ Return ONLY the JSON object with the three required fields. No additional text o
 
       // Simulate stage updates for better UX
       const isRegeneration = !!generatedCTAs;
-      const stage1 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 3000);
-      const stage2 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 6000);
-      const stage3 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Creating unique CTAs...' : 'Generating CTAs...'), 9000);
+      const stage1 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 10000);
+      const stage2 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 20000);
+      const stage3 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Creating unique CTAs...' : 'Generating CTAs...'), 30000);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -3965,7 +3973,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
                           padding: '0.5rem',
                           borderRadius: '0.375rem',
                           fontSize: '0.625rem',
-                          fontFamily: 'monospace',
+                          fontFamily: 'FoundersGroteskMono, monospace',
                           color: '#374151',
                           whiteSpace: 'pre-wrap',
                           border: '1px solid #e5e7eb',
@@ -3993,7 +4001,7 @@ Return ONLY the JSON object with the three required fields. No additional text o
                             padding: '0.5rem',
                             borderRadius: '0.375rem',
                             fontSize: '0.625rem',
-                            fontFamily: 'monospace',
+                            fontFamily: 'FoundersGroteskMono, monospace',
                             color: '#1e40af',
                             border: '1px solid #bfdbfe',
                             wordBreak: 'break-all'

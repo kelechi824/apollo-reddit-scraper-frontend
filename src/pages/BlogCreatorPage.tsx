@@ -352,6 +352,9 @@ const BlogCreatorPage: React.FC = () => {
   const [sequentialRemaining, setSequentialRemaining] = useState<string[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Job persistence for page reload recovery
+  const [runningJobs, setRunningJobs] = useState<Map<string, string>>(new Map()); // keywordId -> jobId mapping
+
   // Auto-save state and refs
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saving' | 'saved' | ''>('');
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -506,6 +509,13 @@ const BlogCreatorPage: React.FC = () => {
           setSequentialRemaining(progress.sequentialRemaining);
         }
         
+        // Restore running jobs mapping
+        if (progress.runningJobs && typeof progress.runningJobs === 'object') {
+          const jobsMap = new Map(Object.entries(progress.runningJobs) as [string, string][]);
+          setRunningJobs(jobsMap);
+          console.log(`🔄 [BlogCreator] Restored ${jobsMap.size} running jobs for recovery`);
+        }
+        
         console.log('Blog Agents progress restored from localStorage');
       } catch (error) {
         console.error('Error loading saved Blog Agents progress:', error);
@@ -519,6 +529,202 @@ const BlogCreatorPage: React.FC = () => {
       isInitialLoadRef.current = false;
     }, 100);
   }, []);
+
+  /**
+   * resumeRunningJobs
+   * Why this matters: After page reload, resume polling for any jobs that were running
+   * when the user left the page, ensuring content generation continues seamlessly.
+   */
+  useEffect(() => {
+    if (runningJobs.size === 0 || keywords.length === 0) return;
+
+    console.log(`🔄 [BlogCreator] Resuming polling for ${runningJobs.size} running jobs`);
+    
+    // Resume polling for each running job
+    runningJobs.forEach(async (jobId, keywordId) => {
+      const keyword = keywords.find(k => k.id === keywordId);
+      if (!keyword) {
+        console.warn(`⚠️ [BlogCreator] Keyword ${keywordId} not found for job ${jobId}, removing from running jobs`);
+        setRunningJobs(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(keywordId);
+          return newMap;
+        });
+        return;
+      }
+
+      // Only resume if keyword is still in running state
+      if (keyword.status !== 'running') {
+        console.log(`📋 [BlogCreator] Keyword ${keywordId} no longer running (${keyword.status}), removing job ${jobId}`);
+        setRunningJobs(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(keywordId);
+          return newMap;
+        });
+        return;
+      }
+
+      console.log(`🔄 [BlogCreator] Resuming job ${jobId} for keyword ${keywordId} (${keyword.keyword})`);
+      
+      // Resume polling for this job
+      resumeJobPolling(jobId, keywordId);
+    });
+  }, [runningJobs, keywords]); // Depend on both runningJobs and keywords being loaded
+
+  /**
+   * resumeJobPolling
+   * Why this matters: Resumes polling for a specific job after page reload,
+   * using the same polling logic as executeKeyword but without starting a new job.
+   */
+  const resumeJobPolling = async (jobId: string, keywordId: string) => {
+    const keyword = keywords.find(k => k.id === keywordId);
+    if (!keyword) return;
+
+    try {
+      // Poll for job completion using the same logic as executeKeyword
+      let attempts = 0;
+      let transientErrorStreak = 0;
+      const maxTransientErrorStreak = 8;
+      const maxAttempts = 900; // 15 minutes max polling
+      const pollInterval = 1000; // Poll every 1 second
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        
+        try {
+          const statusResp = await fetch(API_ENDPOINTS.blogCreatorJobStatus(jobId));
+          
+          transientErrorStreak = 0; // reset on success
+          const jobData = await statusResp.json();
+          
+          // Update progress in UI with pipeline stage information
+          if (jobData.data?.progress !== undefined) {
+            const stage = jobData.data.stage || '';
+            const message = jobData.data.message || '';
+            
+            // Map stages to user-friendly descriptions
+            let stageDescription = '';
+            if (stage.includes('firecrawl') || stage.includes('serp')) {
+              stageDescription = '🔍 Analyzing Top 3 SERP Results with Firecrawl';
+            } else if (stage.includes('research')) {
+              stageDescription = '🔬 Deep Research';
+            } else if (stage.includes('gap')) {
+              stageDescription = '📊 Gap Analysis';
+            } else if (stage.includes('content') || stage.includes('generation')) {
+              stageDescription = '✍️ Content Generation';
+            } else {
+              stageDescription = '⚙️ Processing';
+            }
+            
+            console.log(`📊 Resumed job ${jobId} [${stageDescription}] ${jobData.data.progress}% - ${message}`);
+            
+            const progressText = `${stageDescription}: ${jobData.data.progress}% - ${message}`;
+            setKeywords(prev => prev.map(k => 
+              k.id === keywordId 
+                ? { ...k, status: 'running' as const, progress: progressText }
+                : k
+            ));
+          }
+          
+          if (jobData.data?.status === 'completed') {
+            console.log(`🎯 [BlogCreator] Resumed job ${jobId} completed`);
+            
+            const resultPayload = jobData.data.result || jobData.data;
+            const rawContent = String(
+              resultPayload?.content ?? resultPayload?.raw_content ?? ''
+            );
+            
+            if (rawContent.length > 0) {
+              const parsed = parseAIResponse(rawContent);
+              const finalWorkflowDetails = extractWorkflowDetailsFromResult(resultPayload);
+              
+              const enhancedMetadata = {
+                ...(resultPayload?.metadata || {}),
+                metaSeoTitle: parsed.metaSeoTitle || resultPayload?.metadata?.metaSeoTitle || undefined,
+                metaDescription: parsed.metaDescription || resultPayload?.metadata?.metaDescription || undefined,
+                title: resultPayload?.metadata?.title || `${keyword.keyword} - Apollo Blog`,
+                description: resultPayload?.metadata?.description || `Comprehensive guide to ${keyword.keyword}`,
+                word_count: resultPayload?.metadata?.word_count || parsed.content.length,
+                seo_optimized: resultPayload?.metadata?.seo_optimized ?? true,
+                citations_included: resultPayload?.metadata?.citations_included ?? false,
+                brand_variables_processed: resultPayload?.metadata?.brand_variables_processed || 0,
+                aeo_optimized: resultPayload?.metadata?.aeo_optimized ?? true
+              };
+              
+              const updatedKeywordRow: KeywordRow = { 
+                ...keyword, 
+                status: 'completed' as const,
+                progress: '✅ 4-step workflow complete!',
+                output: parsed.content,
+                metadata: enhancedMetadata,
+                generationResult: resultPayload,
+                ...(finalWorkflowDetails && { workflowDetails: finalWorkflowDetails })
+              };
+              
+              setKeywords(prev => prev.map(k => 
+                k.id === keywordId ? updatedKeywordRow : k
+              ));
+
+              // Remove from running jobs
+              setRunningJobs(prev => {
+                const newMap = new Map(prev);
+                newMap.delete(keywordId);
+                return newMap;
+              });
+
+              // Auto-save to blog history
+              autoSaveBlogIfReady(updatedKeywordRow);
+              return; // Success - exit the function
+            }
+          } else if (jobData.data?.status === 'error') {
+            throw new Error(jobData.data.error || 'Content generation failed');
+          }
+        } catch (pollErr: any) {
+          const status = pollErr?.response?.status;
+          const message = pollErr?.message || '';
+          const isNetworkFlap = message.includes('Network Error') || message.includes('net::ERR_NETWORK_CHANGED');
+          const isTransientStatus = status === 404 || status === 425 || status === 429 || status === 502 || status === 503 || status === 504;
+          const withinWarmup = attempts < 10 && status === 404;
+          
+          if (isNetworkFlap || isTransientStatus || withinWarmup) {
+            transientErrorStreak++;
+            console.warn(`[resume-poll] transient issue (attempt ${attempts}, streak ${transientErrorStreak}) — ${status || ''} ${message || ''}`);
+            if (transientErrorStreak <= maxTransientErrorStreak) {
+              attempts++;
+              continue;
+            }
+          }
+          throw pollErr;
+        }
+        
+        attempts++;
+      }
+      
+      // Polling timed out
+      throw new Error('Job polling timed out after 15 minutes');
+      
+    } catch (error) {
+      console.error(`❌ Failed to resume job ${jobId} for keyword ${keywordId}:`, error);
+      
+      // Mark as error and remove from running jobs
+      setKeywords(prev => prev.map(k => 
+        k.id === keywordId 
+          ? { 
+              ...k, 
+              status: 'error',
+              progress: `❌ Generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              output: ''
+            }
+          : k
+      ));
+      
+      setRunningJobs(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(keywordId);
+        return newMap;
+      });
+    }
+  };
 
   /**
    * Auto-save progress to localStorage with debouncing
@@ -552,6 +758,7 @@ const BlogCreatorPage: React.FC = () => {
           sortField,
           sortDirection,
           sequentialRemaining,
+          runningJobs: Object.fromEntries(runningJobs), // Convert Map to Object for JSON serialization
           timestamp: new Date().toISOString()
         };
         
@@ -628,7 +835,7 @@ const BlogCreatorPage: React.FC = () => {
         clearTimeout(timeout);
       }
     };
-  }, [keywords, selectedRows, sortField, sortDirection, sequentialRemaining]);
+  }, [keywords, selectedRows, sortField, sortDirection, sequentialRemaining, runningJobs]);
 
 
 
@@ -1638,6 +1845,13 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
       const jobId = asyncData.jobId;
       console.log(`📋 Started async blog creator job ${jobId} for ${keyword.keyword}`);
       
+      // Track this job for persistence across page reloads
+      setRunningJobs(prev => {
+        const newMap = new Map(prev);
+        newMap.set(keywordId, jobId);
+        return newMap;
+      });
+      
       // Poll for job completion
       // Why this matters: With Firecrawl, deep research, gap analysis, and content generation,
       // the full pipeline can take 5-8 minutes or more depending on content complexity
@@ -1740,6 +1954,13 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
                 k.id === keywordId ? updatedKeywordRow : k
               ));
 
+              // Remove from running jobs
+              setRunningJobs(prev => {
+                const newMap = new Map(prev);
+                newMap.delete(keywordId);
+                return newMap;
+              });
+
               // Auto-save to blog history
               autoSaveBlogIfReady(updatedKeywordRow);
               return; // Success - exit the function
@@ -1789,6 +2010,13 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
             }
           : k
       ));
+      
+      // Remove from running jobs on error
+      setRunningJobs(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(keywordId);
+        return newMap;
+      });
     } finally {
       // Track concurrent execution completion
       setConcurrentExecutions(prev => {
