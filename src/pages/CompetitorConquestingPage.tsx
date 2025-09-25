@@ -111,6 +111,9 @@ const CompetitorConquestingPage: React.FC = () => {
   const [sequentialRemaining, setSequentialRemaining] = React.useState<string[]>([]);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
+  // Job persistence for page reload recovery
+  const [runningJobs, setRunningJobs] = React.useState<Map<string, string>>(new Map()); // rowId -> jobId mapping
+
   // Dedup set to prevent duplicate keywords
   const loadedKeywordsRef = React.useRef<Set<string>>(new Set());
   // Used to batch updates for performance during streaming parse
@@ -279,7 +282,7 @@ const CompetitorConquestingPage: React.FC = () => {
   /**
    * loadSavedProgress
    * Why this matters: Restores table state after refresh/navigation so work isn't lost.
-   * Now loads competitor-specific data to preserve generated content.
+   * Now loads competitor-specific data to preserve generated content and resumes running jobs.
    */
   React.useEffect(() => {
     try {
@@ -294,6 +297,13 @@ const CompetitorConquestingPage: React.FC = () => {
       if (parsed.sortField) setSortField(parsed.sortField);
       if (parsed.sortDirection) setSortDirection(parsed.sortDirection);
       if (Array.isArray(parsed.sequentialRemaining)) setSequentialRemaining(parsed.sequentialRemaining);
+      
+      // Restore running jobs mapping
+      if (parsed.runningJobs && typeof parsed.runningJobs === 'object') {
+        const jobsMap = new Map(Object.entries(parsed.runningJobs) as [string, string][]);
+        setRunningJobs(jobsMap);
+        console.log(`🔄 [CompetitorConquesting] Restored ${jobsMap.size} running jobs for recovery`);
+      }
       
       // Restore selected competitor and its data
       if (parsed.selectedCompetitor) {
@@ -391,6 +401,242 @@ const CompetitorConquestingPage: React.FC = () => {
   }, [selectedCompetitor, rows.length]); // Need rows.length but with protection
 
   /**
+   * resumeRunningJobs
+   * Why this matters: After page reload, resume polling for any jobs that were running
+   * when the user left the page, ensuring content generation continues seamlessly.
+   */
+  React.useEffect(() => {
+    if (runningJobs.size === 0 || rows.length === 0) return;
+
+    console.log(`🔄 [CompetitorConquesting] Resuming polling for ${runningJobs.size} running jobs`);
+    
+    // Resume polling for each running job
+    runningJobs.forEach(async (jobId, rowId) => {
+      const row = rows.find(r => r.id === rowId);
+      if (!row) {
+        console.warn(`⚠️ [CompetitorConquesting] Row ${rowId} not found for job ${jobId}, removing from running jobs`);
+        setRunningJobs(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(rowId);
+          return newMap;
+        });
+        return;
+      }
+
+      // Only resume if row is still in running state
+      if (row.status !== 'running') {
+        console.log(`📋 [CompetitorConquesting] Row ${rowId} no longer running (${row.status}), removing job ${jobId}`);
+        setRunningJobs(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(rowId);
+          return newMap;
+        });
+        return;
+      }
+
+      console.log(`🔄 [CompetitorConquesting] Resuming job ${jobId} for row ${rowId} (${row.keyword})`);
+      
+      // Resume polling for this job
+      resumeJobPolling(jobId, rowId);
+    });
+  }, [runningJobs, rows]); // Depend on both runningJobs and rows being loaded
+
+  /**
+   * resumeJobPolling
+   * Why this matters: Resumes polling for a specific job after page reload,
+   * using the same polling logic as executeRow but without starting a new job.
+   */
+  const resumeJobPolling = async (jobId: string, rowId: string) => {
+    const row = rows.find(r => r.id === rowId);
+    if (!row) return;
+
+    try {
+      // Poll for job completion using the same logic as executeRow
+      let attempts = 0;
+      let transientErrorStreak = 0;
+      const maxTransientErrorStreak = 8;
+      const maxAttempts = 600; // 10 minutes max polling
+      const pollInterval = 1000; // Poll every 1 second
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        
+        try {
+          const statusResp = await fetch(API_ENDPOINTS.competitorJobStatus(jobId));
+          
+          if (!statusResp.ok) {
+            throw new Error(`HTTP ${statusResp.status}`);
+          }
+          
+          const statusData = await statusResp.json();
+          transientErrorStreak = 0; // reset on success
+          const jobData = statusData.data;
+          
+          // Update progress in UI with pipeline stage information
+          if (jobData.progress !== undefined && jobData.status !== 'completed') {
+            const stage = jobData.stage || '';
+            const message = jobData.message || '';
+            
+            // Check if this is actually completion
+            const isActuallyCompleted = jobData.progress >= 100 && (
+              message.toLowerCase().includes('completed') || 
+              message.toLowerCase().includes('complete') ||
+              message.toLowerCase().includes('finished') ||
+              message.toLowerCase().includes('done') ||
+              message.includes('✅') ||
+              message.toLowerCase().includes('generation complete') ||
+              stage.toLowerCase().includes('completed') ||
+              stage.toLowerCase().includes('complete')
+            );
+            
+            if (!isActuallyCompleted) {
+              // Map stages to user-friendly descriptions
+              let stageDescription = '';
+              if (stage.includes('research')) {
+                stageDescription = '🔬 Deep Research';
+              } else if (stage.includes('firecrawl') || stage.includes('competitor')) {
+                stageDescription = '🔍 Analyzing Competitor Content';
+              } else if (stage.includes('gap')) {
+                stageDescription = '📊 Gap Analysis';
+              } else if (stage.includes('content') || stage.includes('generation')) {
+                stageDescription = '✍️ Content Generation';
+              } else {
+                stageDescription = '⚙️ Processing';
+              }
+              
+              console.log(`📊 Resumed job ${jobId} [${stageDescription}] ${jobData.progress}% - ${message}`);
+              
+              const progressText = `${stageDescription}: ${jobData.progress}% - ${message}`;
+              setRows(prev => prev.map(r => 
+                r.id === rowId 
+                  ? { ...r, status: 'running' as const, progressInfo: progressText, output: progressText }
+                  : r
+              ));
+            }
+          }
+          
+          // Check for completion
+          const isCompleted = jobData.status === 'completed';
+          
+          if (isCompleted) {
+            console.log(`🎯 [CompetitorConquesting] Resumed job ${jobId} completed`);
+            
+            const resultPayload = jobData.result || jobData.data || jobData;
+            const possibleContent = 
+              resultPayload?.content ||
+              resultPayload?.raw_content ||
+              resultPayload?.generated_content ||
+              resultPayload?.output ||
+              resultPayload?.text ||
+              resultPayload?.markdown ||
+              jobData?.content ||
+              jobData?.output ||
+              '';
+              
+            const completedContent = String(possibleContent);
+            
+            // Parse content if it's JSON string
+            let finalContent = completedContent;
+            if (completedContent.length > 0) {
+              try {
+                if (completedContent.startsWith('{') && completedContent.includes('"content"')) {
+                  const parsed = JSON.parse(completedContent);
+                  if (parsed.content && typeof parsed.content === 'string') {
+                    finalContent = parsed.content;
+                  }
+                }
+              } catch (parseError) {
+                // Use original content if parsing fails
+              }
+            }
+            
+            const workflowDetails = buildWorkflowDetailsFromResult(resultPayload) || row.workflowDetails || {};
+            const metadata = resultPayload?.metadata || {};
+            
+            const updatedRow = {
+              ...row,
+              status: 'completed' as const,
+              output: finalContent.length > 0 ? finalContent : 'Content generation completed but no content was returned. Please try regenerating.',
+              workflowDetails,
+              metadata: {
+                title: metadata.title || `${row.keyword} - Outrank Competitors`,
+                description: metadata.description || `Outranking competitor for ${row.keyword}`,
+                metaSeoTitle: metadata.metaSeoTitle || undefined,
+                metaDescription: metadata.metaDescription || undefined,
+                word_count: metadata.word_count || 0,
+                seo_optimized: metadata.seo_optimized || true,
+                citations_included: metadata.citations_included || false,
+                brand_variables_processed: metadata.brand_variables_processed || 0,
+                aeo_optimized: metadata.aeo_optimized || true
+              }
+            };
+            
+            setRows(prev => prev.map(r => (r.id === rowId ? updatedRow : r)));
+            
+            // Remove from running jobs and uncheck from selection
+            setRunningJobs(prev => {
+              const newMap = new Map(prev);
+              newMap.delete(rowId);
+              return newMap;
+            });
+            
+            setSelectedRows(prev => {
+              const newSelection = new Set(prev);
+              newSelection.delete(rowId);
+              return newSelection;
+            });
+            
+            return; // Success - exit the function
+          } else if (jobData.status === 'error') {
+            throw new Error(jobData.error || 'Content generation failed');
+          }
+        } catch (pollErr: any) {
+          const status = pollErr.message?.includes('HTTP ') ? parseInt(pollErr.message.match(/HTTP (\d+)/)?.[1] || '') : undefined;
+          const message = pollErr?.message || '';
+          const isNetworkFlap = message.includes('Network Error') || message.includes('net::ERR_NETWORK_CHANGED') || message.includes('fetch');
+          const isTransientStatus = status === 404 || status === 425 || status === 429 || status === 502 || status === 503 || status === 504;
+          const withinWarmup = attempts < 10 && status === 404;
+          
+          if (isNetworkFlap || isTransientStatus || withinWarmup) {
+            transientErrorStreak++;
+            console.warn(`[resume-poll] transient issue (attempt ${attempts}, streak ${transientErrorStreak}) — ${status || ''} ${message || ''}`);
+            if (transientErrorStreak <= maxTransientErrorStreak) {
+              attempts++;
+              continue;
+            }
+          }
+          throw pollErr;
+        }
+        
+        attempts++;
+      }
+      
+      // Polling timed out
+      throw new Error('Job polling timed out after 10 minutes');
+      
+    } catch (error) {
+      console.error(`❌ Failed to resume job ${jobId} for row ${rowId}:`, error);
+      
+      // Mark as error and remove from running jobs
+      setRows(prev => prev.map(r => 
+        r.id === rowId 
+          ? { 
+              ...r, 
+              status: 'error' as const,
+              output: `Error resuming job: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            }
+          : r
+      ));
+      
+      setRunningJobs(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(rowId);
+        return newMap;
+      });
+    }
+  };
+
+  /**
    * autoSaveProgress (debounced with quota-aware storage)
    * Why this matters: Persists state changes so reloads return to the same table view,
    * but excludes heavy content to avoid localStorage quota issues.
@@ -475,6 +721,7 @@ const CompetitorConquestingPage: React.FC = () => {
             sortField,
             sortDirection,
             sequentialRemaining,
+            runningJobs: Object.fromEntries(runningJobs), // Convert Map to Object for JSON serialization
             rowCount: rows.length,
             completedCount: rows.filter(r => r.status === 'completed').length,
             timestamp: new Date().toISOString()
@@ -509,7 +756,7 @@ const CompetitorConquestingPage: React.FC = () => {
     return () => {
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     };
-  }, [selectedCompetitor, rows, selectedRows, sortField, sortDirection]);
+  }, [selectedCompetitor, rows, selectedRows, sortField, sortDirection, runningJobs]);
 
   /**
    * clearPersistedData
@@ -1059,6 +1306,13 @@ const CompetitorConquestingPage: React.FC = () => {
       const jobId = asyncData.jobId;
       console.log(`📋 Started async job ${jobId} for ${row.keyword}`);
       
+      // Track this job for persistence across page reloads
+      setRunningJobs(prev => {
+        const newMap = new Map(prev);
+        newMap.set(rowId, jobId);
+        return newMap;
+      });
+      
       // Poll for job completion
       // Why this matters: With deep research, firecrawl, gap analysis, and content generation,
       // the full pipeline can take 3-5 minutes or more depending on content complexity
@@ -1237,7 +1491,13 @@ const CompetitorConquestingPage: React.FC = () => {
             
             setRows(prev => prev.map(r => (r.id === rowId ? updatedRow : r)));
             
-            // Uncheck completed row from selection since it no longer needs processing
+            // Remove from running jobs and uncheck from selection
+            setRunningJobs(prev => {
+              const newMap = new Map(prev);
+              newMap.delete(rowId);
+              return newMap;
+            });
+            
             setSelectedRows(prev => {
               const newSelection = new Set(prev);
               newSelection.delete(rowId);
@@ -1312,6 +1572,13 @@ const CompetitorConquestingPage: React.FC = () => {
         };
         
         setRows(prev => prev.map(r => (r.id === rowId ? errorRow : r)));
+        
+        // Remove from running jobs on error
+        setRunningJobs(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(rowId);
+          return newMap;
+        });
       }
     } finally {
       // Clear the abort controller reference
