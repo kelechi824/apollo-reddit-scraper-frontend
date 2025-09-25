@@ -95,21 +95,39 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
  * with proper error handling for production environments
  */
 export async function makeApiRequest<T = any>(
-  url: string, 
+  url: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
+    // Set appropriate timeout based on endpoint
+    const isVocAgent = url.includes('/api/voc-agent/') || url.includes('/api/voc-extraction/');
+    const timeout = isVocAgent ? 90000 : 30000; // 90s for VoC analysis (takes 30-60s), 30s for others
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers
       },
+      signal: controller.signal,
       ...options
     });
-    
+
+    clearTimeout(timeoutId);
     return await safeJsonParse<T>(response);
   } catch (error) {
     console.error('API request failed:', error);
+
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        success: false,
+        error: 'Request timeout',
+        message: 'The request took too long and was cancelled'
+      };
+    }
+
     return {
       success: false,
       error: 'Request failed',

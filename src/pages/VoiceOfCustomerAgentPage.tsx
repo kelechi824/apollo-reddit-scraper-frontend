@@ -138,20 +138,19 @@ const VoiceOfCustomerAgentPage: React.FC = () => {
    */
   const extractEnhancedPainPoints = async () => {
     setIsExtracting(true);
-    setMessage('Analyzing Gong customer calls with enhanced AI insights (parallel processing). This may take 15-30 seconds...');
+    setMessage('Analyzing Gong customer calls with enhanced AI insights. This may take 30-60 seconds...');
 
     try {
       console.log('🚀 Starting enhanced VoC extraction...');
 
+      // Use the working VoC extraction endpoint instead of the problematic VoC agent endpoint
       const apiResult = await makeApiRequest(
-        buildApiUrl('/api/voc-agent/analyze-enhanced'),
+        buildApiUrl('/api/voc-extraction/analyze-synchronous'),
         {
           method: 'POST',
           body: JSON.stringify({
             daysBack: 90,
-            maxCalls: 300,
-            includeApolloMapping: true,
-            includeCustomerStruggles: true
+            maxCalls: 300
           }),
         }
       );
