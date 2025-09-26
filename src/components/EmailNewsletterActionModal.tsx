@@ -1,7 +1,914 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Wand2, ExternalLink, Copy, Check, RefreshCw, FileText, Table, ChevronLeft, ChevronRight, Mail, Bold, Italic, Underline, List, ListOrdered, Undo, Redo } from 'lucide-react';
+import { X, Wand2, ExternalLink, Copy, Check, RefreshCw, FileText, Table, ChevronLeft, ChevronRight, Mail, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Monitor, Smartphone } from 'lucide-react';
 import googleDocsService from '../services/googleDocsService';
 import { API_ENDPOINTS } from '../config/api';
+
+// Apollo Logo SVG Component from Figma
+const ApolloLogo = () => (
+  <svg width="139" height="38" viewBox="0 0 139 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M76.9365 11.002C79.5376 11.002 81.7387 11.9957 83.2842 13.7461C84.8249 15.4911 85.6826 17.9521 85.6826 20.8428C85.6825 23.7333 84.8248 26.1935 83.2842 27.9385C81.7387 29.689 79.5377 30.6826 76.9365 30.6826C74.7117 30.6826 72.9183 29.8379 71.6543 28.6514V36.9004H67.4121V11.4678H71.6543V13.0547C72.9192 11.8564 74.7134 11.002 76.9365 11.002ZM14.8984 21.3594C14.8976 19.1417 17.2556 17.7186 19.2158 18.7559L30.8984 24.9385L31.3691 25.1875L31.0908 25.6416C30.1661 27.1501 29.006 28.4985 27.6621 29.6357L27.3242 29.9209L27 29.6211L17.8525 21.1621C17.8167 21.1289 17.7882 21.1213 17.7676 21.1201C17.7421 21.1187 17.7091 21.1256 17.6777 21.1455C17.6465 21.1654 17.6268 21.192 17.6172 21.2158C17.6094 21.2352 17.6033 21.2646 17.6182 21.3115L21.1562 32.4609L21.3203 32.9756L20.7939 33.0986C19.5782 33.3842 18.311 33.5361 17.0088 33.5361C16.4503 33.5361 15.8978 33.5084 15.3535 33.4541L14.9033 33.4092V32.9561L14.8984 21.3594ZM12.6777 14.9541C14.8953 14.9535 16.3156 17.3141 15.2793 19.2744L9.11816 30.9307L8.86914 31.4014L8.41504 31.124C6.90827 30.203 5.56128 29.0464 4.42383 27.707L4.13672 27.3701L4.4375 27.0439L12.875 17.9102C12.9078 17.8745 12.9148 17.846 12.916 17.8252C12.9174 17.7995 12.9105 17.7668 12.8906 17.7354C12.8706 17.7039 12.844 17.6834 12.8203 17.6738C12.801 17.6661 12.7721 17.661 12.7256 17.6758L1.58594 21.2148L1.07324 21.3779L0.948242 20.8535C0.655579 19.6224 0.5 18.3379 0.5 17.0176C0.500012 16.4753 0.527154 15.9392 0.578125 15.4111L0.621094 14.96L1.0752 14.959L12.6777 14.9541ZM95.958 11.002C101.417 11.002 105.366 15.177 105.366 20.8428C105.366 26.5084 101.417 30.6836 95.958 30.6836C90.5191 30.6834 86.59 26.5062 86.5898 20.8428C86.5898 15.1792 90.519 11.0022 95.958 11.002ZM128.421 11.002C133.86 11.002 137.79 15.1791 137.79 20.8428C137.79 26.5063 133.86 30.6836 128.421 30.6836C122.962 30.6834 119.014 26.5083 119.014 20.8428C119.014 15.1771 122.962 11.0021 128.421 11.002ZM55.6836 3.84668L55.8125 4.15234L66.5176 29.5215L66.8105 30.2158H62.1709L62.043 29.9053L58.8672 22.1445H48.5674L45.5254 29.8984L45.4014 30.2158H40.959L41.2422 29.5264L51.666 4.15723L51.793 3.84668H55.6836ZM111.075 3.84668V30.2158H106.833V3.84668H111.075ZM117.547 3.84668V30.2158H113.305V3.84668H117.547ZM95.958 14.7412C94.3928 14.7413 93.1614 15.3179 92.3125 16.335C91.4549 17.3625 90.9482 18.8883 90.9482 20.8428C90.9483 22.7973 91.4549 24.3231 92.3125 25.3506C93.1614 26.3676 94.3929 26.9442 95.958 26.9443C97.5365 26.9443 98.7786 26.3661 99.6338 25.3486C100.497 24.3211 101.007 22.7963 101.007 20.8428C101.007 18.889 100.497 17.3635 99.6338 16.3359C98.7786 15.3185 97.5365 14.7412 95.958 14.7412ZM128.421 14.7412C126.843 14.7413 125.601 15.3187 124.746 16.3359C123.882 17.3635 123.372 18.889 123.372 20.8428C123.372 22.7964 123.883 24.3211 124.746 25.3486C125.601 26.3661 126.842 26.9443 128.421 26.9443C129.986 26.9443 131.218 26.3677 132.067 25.3506C132.925 24.3231 133.432 22.7973 133.432 20.8428C133.432 18.8884 132.925 17.3625 132.067 16.335C131.218 15.3178 129.986 14.7412 128.421 14.7412ZM76.625 14.8184C75.0959 14.8185 73.8278 15.385 72.9395 16.3398C72.0485 17.2977 71.5107 18.678 71.5107 20.3467V21.3389C71.5108 23.0073 72.0485 24.3871 72.9395 25.3447C73.8278 26.2995 75.0959 26.8661 76.625 26.8662C78.1157 26.8662 79.2659 26.3149 80.0547 25.3252C80.855 24.3209 81.3242 22.813 81.3242 20.8428C81.3242 18.8725 80.8549 17.3647 80.0547 16.3604C79.2659 15.3705 78.1158 14.8184 76.625 14.8184ZM25.5938 2.90723C27.1063 3.83042 28.4578 4.99046 29.5986 6.33496L29.8857 6.67285L29.585 6.99805L21.1025 16.1807C21.0693 16.2167 21.0627 16.2457 21.0615 16.2666C21.0601 16.2923 21.067 16.3251 21.0869 16.3564C21.1069 16.3877 21.1336 16.4075 21.1572 16.417C21.1765 16.4247 21.2054 16.4308 21.252 16.416L32.4404 12.8613L32.9551 12.6973L33.0791 13.2227C33.3656 14.4416 33.5176 15.7129 33.5176 17.0186C33.5176 17.58 33.4892 18.1348 33.4346 18.6816L33.3896 19.1318H32.9375L21.2998 19.1367C19.0824 19.1377 17.6612 16.7777 18.6973 14.8174L24.8916 3.09961L25.1396 2.62988L25.5938 2.90723ZM50.208 18.1582H57.1807L53.6377 9.70215L50.208 18.1582ZM19.0791 12.7324C19.0797 14.9499 16.7209 16.3724 14.7607 15.335L3.08301 9.15527L2.61426 8.90723L2.88965 8.45312C3.80806 6.94075 4.96246 5.58859 6.30078 4.44629L6.63867 4.1582L6.96484 4.45996L16.124 12.9297C16.1601 12.963 16.1893 12.9695 16.21 12.9707C16.2354 12.9721 16.2676 12.9652 16.2988 12.9453C16.3301 12.9254 16.3498 12.8988 16.3594 12.875C16.3671 12.8556 16.3732 12.8269 16.3584 12.7803L12.8066 1.58789L12.6436 1.0752L13.167 0.950195C14.4 0.656219 15.6867 0.5 17.0088 0.5C17.5535 0.500014 18.0915 0.527547 18.6221 0.579102L19.0732 0.62207V1.07617L19.0791 12.7324Z" fill="#1A1A1A" stroke="#EDEBE8"/>
+  </svg>
+);
+
+// Image assets from Figma design
+const emailIcon = "/c2fdd2e5c44671599a6d5754d56aa83f1bc2715c.svg";
+const historyIcon = "/c708de996d9e4cf18d37bb601d5bd1da65f16d7e.svg";
+const growthIcon = "/4d0140f9b77f2fb8acbdaabcc7edbc9b111b4027.svg";
+const chartIcon = "/ed2e8182b80ed48c3df4b704af804cf2b58518a3.svg";
+const youtubeIcon = "/82ba8b6a6cc6391d98b878ae7b016d778ec508e3.svg";
+const instagramIcon = "/862c5e1b0ceb03183d078b5b878d4cf8d5a50aae.svg";
+const tiktokIcon = "/fda0106804e9b31bf7ee8f257fe5ea3fd9a72e24.svg";
+
+/**
+ * Generate desktop HTML email template
+ * 
+ * Why this matters: Creates a complete HTML email template with table-based layout
+ * and inline styles for maximum email client compatibility. Uses the standard
+ * 600px width for desktop email clients.
+ */
+const generateDesktopHTMLTemplate = (
+    subject: string, 
+    body: string, 
+    mainSection: string, 
+    pricingSection: string, 
+    heroCTA: string, 
+    mainCTA: string
+  ): string => {
+    // Parse content for structured generation
+    const parseMainSectionContent = (content: string) => {
+    const lines = content.split('\n').filter((line: string) => line.trim());
+      const title = lines[0] || 'With Apollo Email Warmup, you can:';
+      const features = lines.slice(1).filter((line: string) => line.trim().startsWith('•')).map((line: string) => line.replace('•', '').trim());
+      return { title, features };
+    };
+
+    const parsePricingContent = (content: string) => {
+    const lines = content.split('\n').filter((line: string) => line.trim());
+      const title = lines[0] || 'All paid users can warm up one mailbox at no additional cost.';
+      const description = lines.slice(1).join(' ') || 'Need more? Additional mailboxes can be warmed using credits.';
+      return { title, description };
+    };
+
+  const mainContent = parseMainSectionContent(mainSection);
+  const pricingContent = parsePricingContent(pricingSection);
+
+  // Format body content into paragraphs
+  const formatBodyContent = (bodyText: string) => {
+    return bodyText.split('\n')
+      .filter(line => line.trim())
+      .map(line => `<p style="color: #47423D; font: 16px/24px Helvetica Neue, sans-serif; margin: 0 0 24px;">${line.trim()}</p>`)
+      .join('');
+  };
+
+  // Generate feature list HTML
+  const generateFeatureList = () => {
+    const icons = [
+      "/c2fdd2e5c44671599a6d5754d56aa83f1bc2715c.svg",
+      "/c708de996d9e4cf18d37bb601d5bd1da65f16d7e.svg", 
+      "/4d0140f9b77f2fb8acbdaabcc7edbc9b111b4027.svg",
+      "/ed2e8182b80ed48c3df4b704af804cf2b58518a3.svg"
+    ];
+
+    return mainContent.features.map((feature, index) => {
+      const iconSrc = icons[index % icons.length];
+      const isLast = index === mainContent.features.length - 1;
+      
+      return `
+                        <table style="width: 100%;" border="0" cellpadding="0" cellspacing="0" role="presentation">
+                            <tr>
+                                <td${isLast ? ' style="padding: 20px 0 32px;"' : ' style="padding: 20px 0 0;"'} valign="middle" width="60">
+                                    <div style="width: 40px; height: 40px; background-color: #d4caf7; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+                                        <img src="${iconSrc}" alt="Feature icon" style="display: block; width: 20px; height: 20px;">
+                                    </div>
+                                </td>
+                                <td${isLast ? ' style="padding: 20px 0 32px;"' : ' style="padding: 20px 0 0;"'} valign="top">
+                                    <p style="color: #1A1A1A; font: 14px/20px Helvetica Neue, sans-serif; margin: 0;">${feature}</p>
+                                </td>
+                            </tr>
+                        </table>
+
+                        ${!isLast ? '<div style="height: 16px;"></div>' : ''}`;
+    }).join('');
+  };
+
+  return `<!DOCTYPE html>
+<html lang="en" dir="ltr" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>${subject}</title>
+  </head>
+
+  <body style="background-color: #edebe8; margin: 0 !important; padding: 0 !important; -webkit-text-size-adjust: none; text-size-adjust: none; font-family: 'Helvetica Neue', Arial, sans-serif;">
+    <div style="background-color: #edebe8; padding: 32px; display: flex; flex-direction: column; align-items: center; min-height: 100vh;">
+      
+      <!-- Container -->
+      <div style="width: 600px; max-width: 100%;">
+        
+        <!-- Header -->
+        <div style="display: flex; align-items: center; justify-content: flex-start; padding: 32px 0; width: 100%;">
+  <svg width="139" height="38" viewBox="0 0 139 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M76.9365 11.002C79.5376 11.002 81.7387 11.9957 83.2842 13.7461C84.8249 15.4911 85.6826 17.9521 85.6826 20.8428C85.6825 23.7333 84.8248 26.1935 83.2842 27.9385C81.7387 29.689 79.5377 30.6826 76.9365 30.6826C74.7117 30.6826 72.9183 29.8379 71.6543 28.6514V36.9004H67.4121V11.4678H71.6543V13.0547C72.9192 11.8564 74.7134 11.002 76.9365 11.002ZM14.8984 21.3594C14.8976 19.1417 17.2556 17.7186 19.2158 18.7559L30.8984 24.9385L31.3691 25.1875L31.0908 25.6416C30.1661 27.1501 29.006 28.4985 27.6621 29.6357L27.3242 29.9209L27 29.6211L17.8525 21.1621C17.8167 21.1289 17.7882 21.1213 17.7676 21.1201C17.7421 21.1187 17.7091 21.1256 17.6777 21.1455C17.6465 21.1654 17.6268 21.192 17.6172 21.2158C17.6094 21.2352 17.6033 21.2646 17.6182 21.3115L21.1562 32.4609L21.3203 32.9756L20.7939 33.0986C19.5782 33.3842 18.311 33.5361 17.0088 33.5361C16.4503 33.5361 15.8978 33.5084 15.3535 33.4541L14.9033 33.4092V32.9561L14.8984 21.3594ZM12.6777 14.9541C14.8953 14.9535 16.3156 17.3141 15.2793 19.2744L9.11816 30.9307L8.86914 31.4014L8.41504 31.124C6.90827 30.203 5.56128 29.0464 4.42383 27.707L4.13672 27.3701L4.4375 27.0439L12.875 17.9102C12.9078 17.8745 12.9148 17.846 12.916 17.8252C12.9174 17.7995 12.9105 17.7668 12.8906 17.7354C12.8706 17.7039 12.844 17.6834 12.8203 17.6738C12.801 17.6661 12.7721 17.661 12.7256 17.6758L1.58594 21.2148L1.07324 21.3779L0.948242 20.8535C0.655579 19.6224 0.5 18.3379 0.5 17.0176C0.500012 16.4753 0.527154 15.9392 0.578125 15.4111L0.621094 14.96L1.0752 14.959L12.6777 14.9541ZM95.958 11.002C101.417 11.002 105.366 15.177 105.366 20.8428C105.366 26.5084 101.417 30.6836 95.958 30.6836C90.5191 30.6834 86.59 26.5062 86.5898 20.8428C86.5898 15.1792 90.519 11.0022 95.958 11.002ZM128.421 11.002C133.86 11.002 137.79 15.1791 137.79 20.8428C137.79 26.5063 133.86 30.6836 128.421 30.6836C122.962 30.6834 119.014 26.5083 119.014 20.8428C119.014 15.1771 122.962 11.0021 128.421 11.002ZM55.6836 3.84668L55.8125 4.15234L66.5176 29.5215L66.8105 30.2158H62.1709L62.043 29.9053L58.8672 22.1445H48.5674L45.5254 29.8984L45.4014 30.2158H40.959L41.2422 29.5264L51.666 4.15723L51.793 3.84668H55.6836ZM111.075 3.84668V30.2158H106.833V3.84668H111.075ZM117.547 3.84668V30.2158H113.305V3.84668H117.547ZM95.958 14.7412C94.3928 14.7413 93.1614 15.3179 92.3125 16.335C91.4549 17.3625 90.9482 18.8883 90.9482 20.8428C90.9483 22.7973 91.4549 24.3231 92.3125 25.3506C93.1614 26.3676 94.3929 26.9442 95.958 26.9443C97.5365 26.9443 98.7786 26.3661 99.6338 25.3486C100.497 24.3211 101.007 22.7963 101.007 20.8428C101.007 18.889 100.497 17.3635 99.6338 16.3359C98.7786 15.3185 97.5365 14.7412 95.958 14.7412ZM128.421 14.7412C126.843 14.7413 125.601 15.3187 124.746 16.3359C123.882 17.3635 123.372 18.889 123.372 20.8428C123.372 22.7964 123.883 24.3211 124.746 25.3486C125.601 26.3661 126.842 26.9443 128.421 26.9443C129.986 26.9443 131.218 26.3677 132.067 25.3506C132.925 24.3231 133.432 22.7973 133.432 20.8428C133.432 18.8884 132.925 17.3625 132.067 16.335C131.218 15.3178 129.986 14.7412 128.421 14.7412ZM76.625 14.8184C75.0959 14.8185 73.8278 15.385 72.9395 16.3398C72.0485 17.2977 71.5107 18.678 71.5107 20.3467V21.3389C71.5108 23.0073 72.0485 24.3871 72.9395 25.3447C73.8278 26.2995 75.0959 26.8661 76.625 26.8662C78.1157 26.8662 79.2659 26.3149 80.0547 25.3252C80.855 24.3209 81.3242 22.813 81.3242 20.8428C81.3242 18.8725 80.8549 17.3647 80.0547 16.3604C79.2659 15.3705 78.1158 14.8184 76.625 14.8184ZM25.5938 2.90723C27.1063 3.83042 28.4578 4.99046 29.5986 6.33496L29.8857 6.67285L29.585 6.99805L21.1025 16.1807C21.0693 16.2167 21.0627 16.2457 21.0615 16.2666C21.0601 16.2923 21.067 16.3251 21.0869 16.3564C21.1069 16.3877 21.1336 16.4075 21.1572 16.417C21.1765 16.4247 21.2054 16.4308 21.252 16.416L32.4404 12.8613L32.9551 12.6973L33.0791 13.2227C33.3656 14.4416 33.5176 15.7129 33.5176 17.0186C33.5176 17.58 33.4892 18.1348 33.4346 18.6816L33.3896 19.1318H32.9375L21.2998 19.1367C19.0824 19.1377 17.6612 16.7777 18.6973 14.8174L24.8916 3.09961L25.1396 2.62988L25.5938 2.90723ZM50.208 18.1582H57.1807L53.6377 9.70215L50.208 18.1582ZM19.0791 12.7324C19.0797 14.9499 16.7209 16.3724 14.7607 15.335L3.08301 9.15527L2.61426 8.90723L2.88965 8.45312C3.80806 6.94075 4.96246 5.58859 6.30078 4.44629L6.63867 4.1582L6.96484 4.45996L16.124 12.9297C16.1601 12.963 16.1893 12.9695 16.21 12.9707C16.2354 12.9721 16.2676 12.9652 16.2988 12.9453C16.3301 12.9254 16.3498 12.8988 16.3594 12.875C16.3671 12.8556 16.3732 12.8269 16.3584 12.7803L12.8066 1.58789L12.6436 1.0752L13.167 0.950195C14.4 0.656219 15.6867 0.5 17.0088 0.5C17.5535 0.500014 18.0915 0.527547 18.6221 0.579102L19.0732 0.62207V1.07617L19.0791 12.7324Z" fill="#1A1A1A" stroke="#EDEBE8"/>
+  </svg>
+        </div>
+
+        <!-- Hero Section -->
+        <div style="background-color: #fdffa8; border-radius: 12px; padding: 32px; margin-bottom: 32px;">
+          <h1 style="color: #1a1a1a; font: 34px/38px 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.34px; margin: 0 0 16px;">${subject}</h1>
+          ${formatBodyContent(body)}
+          <a href="https://app.apollo.io/#/people" style="background-color: #243031; color: #ffffff; padding: 16px 24px; border-radius: 8px; font: 500 18px/24px 'Helvetica Neue', Arial, sans-serif; text-decoration: none; display: inline-block; margin-top: 20px;">${heroCTA}</a>
+        </div>
+
+        <!-- Main Features Section -->
+        <div style="background-color: #ffffff; border-radius: 12px; padding: 32px; margin-bottom: 32px;">
+          <h2 style="color: #1a1a1a; font: 28px/32px 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.28px; margin: 0 0 32px;">${mainContent.title}</h2>
+          
+          ${generateFeatureList()}
+
+          <!-- Pricing Callout -->
+          <div style="border: 2px solid #243031; border-radius: 12px; padding: 32px; margin: 32px 0;">
+            <p style="color: #47423d; font: 500 14px/16px 'Helvetica Neue', Arial, sans-serif; letter-spacing: 0.28px; text-transform: uppercase; margin: 0 0 16px;">PRICING</p>
+            <h3 style="color: #1a1a1a; font: 28px/32px 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.28px; margin: 0 0 16px;">${pricingContent.title}</h3>
+            <p style="color: #47423d; font: 16px/24px 'Helvetica Neue', Arial, sans-serif; margin: 0;">${pricingContent.description}</p>
+          </div>
+
+          <a href="https://app.apollo.io/#/people" style="border: 1px solid #243031; border-radius: 8px; color: #1a1a1a; display: inline-block; font: 500 18px/18px 'Helvetica Neue', Arial, sans-serif; padding: 19px 23px; text-decoration: none;">${mainCTA}</a>
+        </div>
+
+        <!-- Footer -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 40px 32px; width: 100%;">
+          <!-- Social Icons -->
+          <div style="display: flex; gap: 8px; align-items: center; justify-content: center;">
+            <img src="/82ba8b6a6cc6391d98b878ae7b016d778ec508e3.svg" alt="YouTube" style="width: 40px; height: 40px;">
+            <img src="/862c5e1b0ceb03183d078b5b878d4cf8d5a50aae.svg" alt="Instagram" style="width: 40px; height: 40px;">
+            <img src="/fda0106804e9b31bf7ee8f257fe5ea3fd9a72e24.svg" alt="TikTok" style="width: 40px; height: 40px;">
+          </div>
+
+          <!-- Footer Links -->
+          <div style="display: flex; gap: 16px; align-items: center; justify-content: center;">
+            <a href="#" style="color: #603fab; font: 14px/22px 'Helvetica Neue', Arial, sans-serif; text-decoration: underline;">Manage preferences</a>
+            <a href="#" style="color: #603fab; font: 14px/22px 'Helvetica Neue', Arial, sans-serif; text-decoration: underline;">Unsubscribe</a>
+          </div>
+
+          <p style="color: #47423d; font: 14px/22px 'Helvetica Neue', Arial, sans-serif; text-align: center; margin: 0;">
+            ©2025 Apollo. All rights reserved.<br>
+            535 Mission St. San Francisco, CA 94115
+          </p>
+          
+          <svg width="139" height="38" viewBox="0 0 139 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M76.9365 11.002C79.5376 11.002 81.7387 11.9957 83.2842 13.7461C84.8249 15.4911 85.6826 17.9521 85.6826 20.8428C85.6825 23.7333 84.8248 26.1935 83.2842 27.9385C81.7387 29.689 79.5377 30.6826 76.9365 30.6826C74.7117 30.6826 72.9183 29.8379 71.6543 28.6514V36.9004H67.4121V11.4678H71.6543V13.0547C72.9192 11.8564 74.7134 11.002 76.9365 11.002ZM14.8984 21.3594C14.8976 19.1417 17.2556 17.7186 19.2158 18.7559L30.8984 24.9385L31.3691 25.1875L31.0908 25.6416C30.1661 27.1501 29.006 28.4985 27.6621 29.6357L27.3242 29.9209L27 29.6211L17.8525 21.1621C17.8167 21.1289 17.7882 21.1213 17.7676 21.1201C17.7421 21.1187 17.7091 21.1256 17.6777 21.1455C17.6465 21.1654 17.6268 21.192 17.6172 21.2158C17.6094 21.2352 17.6033 21.2646 17.6182 21.3115L21.1562 32.4609L21.3203 32.9756L20.7939 33.0986C19.5782 33.3842 18.311 33.5361 17.0088 33.5361C16.4503 33.5361 15.8978 33.5084 15.3535 33.4541L14.9033 33.4092V32.9561L14.8984 21.3594ZM12.6777 14.9541C14.8953 14.9535 16.3156 17.3141 15.2793 19.2744L9.11816 30.9307L8.86914 31.4014L8.41504 31.124C6.90827 30.203 5.56128 29.0464 4.42383 27.707L4.13672 27.3701L4.4375 27.0439L12.875 17.9102C12.9078 17.8745 12.9148 17.846 12.916 17.8252C12.9174 17.7995 12.9105 17.7668 12.8906 17.7354C12.8706 17.7039 12.844 17.6834 12.8203 17.6738C12.801 17.6661 12.7721 17.661 12.7256 17.6758L1.58594 21.2148L1.07324 21.3779L0.948242 20.8535C0.655579 19.6224 0.5 18.3379 0.5 17.0176C0.500012 16.4753 0.527154 15.9392 0.578125 15.4111L0.621094 14.96L1.0752 14.959L12.6777 14.9541ZM95.958 11.002C101.417 11.002 105.366 15.177 105.366 20.8428C105.366 26.5084 101.417 30.6836 95.958 30.6836C90.5191 30.6834 86.59 26.5062 86.5898 20.8428C86.5898 15.1792 90.519 11.0022 95.958 11.002ZM128.421 11.002C133.86 11.002 137.79 15.1791 137.79 20.8428C137.79 26.5063 133.86 30.6836 128.421 30.6836C122.962 30.6834 119.014 26.5083 119.014 20.8428C119.014 15.1771 122.962 11.0021 128.421 11.002ZM55.6836 3.84668L55.8125 4.15234L66.5176 29.5215L66.8105 30.2158H62.1709L62.043 29.9053L58.8672 22.1445H48.5674L45.5254 29.8984L45.4014 30.2158H40.959L41.2422 29.5264L51.666 4.15723L51.793 3.84668H55.6836ZM111.075 3.84668V30.2158H106.833V3.84668H111.075ZM117.547 3.84668V30.2158H113.305V3.84668H117.547ZM95.958 14.7412C94.3928 14.7413 93.1614 15.3179 92.3125 16.335C91.4549 17.3625 90.9482 18.8883 90.9482 20.8428C90.9483 22.7973 91.4549 24.3231 92.3125 25.3506C93.1614 26.3676 94.3929 26.9442 95.958 26.9443C97.5365 26.9443 98.7786 26.3661 99.6338 25.3486C100.497 24.3211 101.007 22.7963 101.007 20.8428C101.007 18.889 100.497 17.3635 99.6338 16.3359C98.7786 15.3185 97.5365 14.7412 95.958 14.7412ZM128.421 14.7412C126.843 14.7413 125.601 15.3187 124.746 16.3359C123.882 17.3635 123.372 18.889 123.372 20.8428C123.372 22.7964 123.883 24.3211 124.746 25.3486C125.601 26.3661 126.842 26.9443 128.421 26.9443C129.986 26.9443 131.218 26.3677 132.067 25.3506C132.925 24.3231 133.432 22.7973 133.432 20.8428C133.432 18.8884 132.925 17.3625 132.067 16.335C131.218 15.3178 129.986 14.7412 128.421 14.7412ZM76.625 14.8184C75.0959 14.8185 73.8278 15.385 72.9395 16.3398C72.0485 17.2977 71.5107 18.678 71.5107 20.3467V21.3389C71.5108 23.0073 72.0485 24.3871 72.9395 25.3447C73.8278 26.2995 75.0959 26.8661 76.625 26.8662C78.1157 26.8662 79.2659 26.3149 80.0547 25.3252C80.855 24.3209 81.3242 22.813 81.3242 20.8428C81.3242 18.8725 80.8549 17.3647 80.0547 16.3604C79.2659 15.3705 78.1158 14.8184 76.625 14.8184ZM25.5938 2.90723C27.1063 3.83042 28.4578 4.99046 29.5986 6.33496L29.8857 6.67285L29.585 6.99805L21.1025 16.1807C21.0693 16.2167 21.0627 16.2457 21.0615 16.2666C21.0601 16.2923 21.067 16.3251 21.0869 16.3564C21.1069 16.3877 21.1336 16.4075 21.1572 16.417C21.1765 16.4247 21.2054 16.4308 21.252 16.416L32.4404 12.8613L32.9551 12.6973L33.0791 13.2227C33.3656 14.4416 33.5176 15.7129 33.5176 17.0186C33.5176 17.58 33.4892 18.1348 33.4346 18.6816L33.3896 19.1318H32.9375L21.2998 19.1367C19.0824 19.1377 17.6612 16.7777 18.6973 14.8174L24.8916 3.09961L25.1396 2.62988L25.5938 2.90723ZM50.208 18.1582H57.1807L53.6377 9.70215L50.208 18.1582ZM19.0791 12.7324C19.0797 14.9499 16.7209 16.3724 14.7607 15.335L3.08301 9.15527L2.61426 8.90723L2.88965 8.45312C3.80806 6.94075 4.96246 5.58859 6.30078 4.44629L6.63867 4.1582L6.96484 4.45996L16.124 12.9297C16.1601 12.963 16.1893 12.9695 16.21 12.9707C16.2354 12.9721 16.2676 12.9652 16.2988 12.9453C16.3301 12.9254 16.3498 12.8988 16.3594 12.875C16.3671 12.8556 16.3732 12.8269 16.3584 12.7803L12.8066 1.58789L12.6436 1.0752L13.167 0.950195C14.4 0.656219 15.6867 0.5 17.0088 0.5C17.5535 0.500014 18.0915 0.527547 18.6221 0.579102L19.0732 0.62207V1.07617L19.0791 12.7324Z" fill="#1A1A1A" stroke="#EDEBE8"/>
+          </svg>
+        </div>
+
+      </div>
+    </div>
+  </body>
+</html>`;
+};
+
+/**
+ * Generate mobile HTML email template
+ * 
+ * Why this matters: Creates a mobile-optimized HTML email template with
+ * responsive design and smaller dimensions suitable for mobile email clients.
+ * Uses media queries and smaller font sizes for mobile viewing.
+ */
+const generateMobileHTMLTemplate = (
+  subject: string, 
+  body: string, 
+  mainSection: string, 
+  pricingSection: string, 
+  heroCTA: string, 
+  mainCTA: string
+): string => {
+  // Parse content for structured generation
+  const parseMainSectionContent = (content: string) => {
+    const lines = content.split('\n').filter((line: string) => line.trim());
+    const title = lines[0] || 'With Apollo Email Warmup, you can:';
+    const features = lines.slice(1).filter((line: string) => line.trim().startsWith('•')).map((line: string) => line.replace('•', '').trim());
+    return { title, features };
+  };
+
+  const parsePricingContent = (content: string) => {
+    const lines = content.split('\n').filter((line: string) => line.trim());
+    const title = lines[0] || 'All paid users can warm up one mailbox at no additional cost.';
+    const description = lines.slice(1).join(' ') || 'Need more? Additional mailboxes can be warmed using credits.';
+    return { title, description };
+  };
+
+  const mainContent = parseMainSectionContent(mainSection);
+  const pricingContent = parsePricingContent(pricingSection);
+
+  // Format body content into paragraphs for mobile
+  const formatBodyContent = (bodyText: string) => {
+    return bodyText.split('\n')
+      .filter(line => line.trim())
+      .map(line => `<p style="color: #47423D; font: 14px/20px Helvetica Neue, sans-serif; margin: 0 0 16px;">${line.trim()}</p>`)
+      .join('');
+  };
+
+  // Generate feature list HTML for mobile
+  const generateFeatureList = () => {
+    const icons = [
+      "/c2fdd2e5c44671599a6d5754d56aa83f1bc2715c.svg",
+      "/c708de996d9e4cf18d37bb601d5bd1da65f16d7e.svg", 
+      "/4d0140f9b77f2fb8acbdaabcc7edbc9b111b4027.svg",
+      "/ed2e8182b80ed48c3df4b704af804cf2b58518a3.svg"
+    ];
+
+    return mainContent.features.map((feature, index) => {
+      const iconSrc = icons[index % icons.length];
+      const isLast = index === mainContent.features.length - 1;
+      
+      return `
+          <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: ${isLast ? '32px' : '16px'};">
+            <div style="width: 32px; height: 32px; background-color: #d4caf7; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <img src="${iconSrc}" alt="Feature icon" style="display: block; width: 16px; height: 16px;">
+              </div>
+            <div style="color: #1a1a1a; font: 12px/16px 'Helvetica Neue', Arial, sans-serif;">
+              ${feature}
+              </div>
+          </div>`;
+    }).join('');
+  };
+
+  return `<!DOCTYPE html>
+<html lang="en" dir="ltr" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>${subject}</title>
+    <style type="text/css">
+      @media only screen and (max-width: 600px) {
+        .responsive { width: 100% !important; max-width: 100% !important; }
+        .mobile-padding { padding: 16px !important; }
+        .mobile-text { font-size: 14px !important; line-height: 18px !important; }
+        .mobile-header { font-size: 24px !important; line-height: 28px !important; }
+        .mobile-button { padding: 12px 16px !important; font-size: 16px !important; }
+      }
+    </style>
+  </head>
+
+  <body style="background-color: #edebe8; margin: 0 !important; padding: 0 !important; -webkit-text-size-adjust: none; text-size-adjust: none; font-family: 'Helvetica Neue', Arial, sans-serif;">
+    <div style="background-color: #edebe8; padding: 16px; display: flex; flex-direction: column; align-items: center; min-height: 100vh;">
+      
+      <!-- Container -->
+      <div style="width: 100%; max-width: 340px;">
+        
+        <!-- Header -->
+        <div style="display: flex; align-items: center; justify-content: flex-start; padding: 12px 0; width: 100%;">
+          <svg width="104" height="28" viewBox="0 0 139 38" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: scale(0.75);">
+            <path d="M76.9365 11.002C79.5376 11.002 81.7387 11.9957 83.2842 13.7461C84.8249 15.4911 85.6826 17.9521 85.6826 20.8428C85.6825 23.7333 84.8248 26.1935 83.2842 27.9385C81.7387 29.689 79.5377 30.6826 76.9365 30.6826C74.7117 30.6826 72.9183 29.8379 71.6543 28.6514V36.9004H67.4121V11.4678H71.6543V13.0547C72.9192 11.8564 74.7134 11.002 76.9365 11.002ZM14.8984 21.3594C14.8976 19.1417 17.2556 17.7186 19.2158 18.7559L30.8984 24.9385L31.3691 25.1875L31.0908 25.6416C30.1661 27.1501 29.006 28.4985 27.6621 29.6357L27.3242 29.9209L27 29.6211L17.8525 21.1621C17.8167 21.1289 17.7882 21.1213 17.7676 21.1201C17.7421 21.1187 17.7091 21.1256 17.6777 21.1455C17.6465 21.1654 17.6268 21.192 17.6172 21.2158C17.6094 21.2352 17.6033 21.2646 17.6182 21.3115L21.1562 32.4609L21.3203 32.9756L20.7939 33.0986C19.5782 33.3842 18.311 33.5361 17.0088 33.5361C16.4503 33.5361 15.8978 33.5084 15.3535 33.4541L14.9033 33.4092V32.9561L14.8984 21.3594ZM12.6777 14.9541C14.8953 14.9535 16.3156 17.3141 15.2793 19.2744L9.11816 30.9307L8.86914 31.4014L8.41504 31.124C6.90827 30.203 5.56128 29.0464 4.42383 27.707L4.13672 27.3701L4.4375 27.0439L12.875 17.9102C12.9078 17.8745 12.9148 17.846 12.916 17.8252C12.9174 17.7995 12.9105 17.7668 12.8906 17.7354C12.8706 17.7039 12.844 17.6834 12.8203 17.6738C12.801 17.6661 12.7721 17.661 12.7256 17.6758L1.58594 21.2148L1.07324 21.3779L0.948242 20.8535C0.655579 19.6224 0.5 18.3379 0.5 17.0176C0.500012 16.4753 0.527154 15.9392 0.578125 15.4111L0.621094 14.96L1.0752 14.959L12.6777 14.9541ZM95.958 11.002C101.417 11.002 105.366 15.177 105.366 20.8428C105.366 26.5084 101.417 30.6836 95.958 30.6836C90.5191 30.6834 86.59 26.5062 86.5898 20.8428C86.5898 15.1792 90.519 11.0022 95.958 11.002ZM128.421 11.002C133.86 11.002 137.79 15.1791 137.79 20.8428C137.79 26.5063 133.86 30.6836 128.421 30.6836C122.962 30.6834 119.014 26.5083 119.014 20.8428C119.014 15.1771 122.962 11.0021 128.421 11.002ZM55.6836 3.84668L55.8125 4.15234L66.5176 29.5215L66.8105 30.2158H62.1709L62.043 29.9053L58.8672 22.1445H48.5674L45.5254 29.8984L45.4014 30.2158H40.959L41.2422 29.5264L51.666 4.15723L51.793 3.84668H55.6836ZM111.075 3.84668V30.2158H106.833V3.84668H111.075ZM117.547 3.84668V30.2158H113.305V3.84668H117.547ZM95.958 14.7412C94.3928 14.7413 93.1614 15.3179 92.3125 16.335C91.4549 17.3625 90.9482 18.8883 90.9482 20.8428C90.9483 22.7973 91.4549 24.3231 92.3125 25.3506C93.1614 26.3676 94.3929 26.9442 95.958 26.9443C97.5365 26.9443 98.7786 26.3661 99.6338 25.3486C100.497 24.3211 101.007 22.7963 101.007 20.8428C101.007 18.889 100.497 17.3635 99.6338 16.3359C98.7786 15.3185 97.5365 14.7412 95.958 14.7412ZM128.421 14.7412C126.843 14.7413 125.601 15.3187 124.746 16.3359C123.882 17.3635 123.372 18.889 123.372 20.8428C123.372 22.7964 123.883 24.3211 124.746 25.3486C125.601 26.3661 126.842 26.9443 128.421 26.9443C129.986 26.9443 131.218 26.3677 132.067 25.3506C132.925 24.3231 133.432 22.7973 133.432 20.8428C133.432 18.8884 132.925 17.3625 132.067 16.335C131.218 15.3178 129.986 14.7412 128.421 14.7412ZM76.625 14.8184C75.0959 14.8185 73.8278 15.385 72.9395 16.3398C72.0485 17.2977 71.5107 18.678 71.5107 20.3467V21.3389C71.5108 23.0073 72.0485 24.3871 72.9395 25.3447C73.8278 26.2995 75.0959 26.8661 76.625 26.8662C78.1157 26.8662 79.2659 26.3149 80.0547 25.3252C80.855 24.3209 81.3242 22.813 81.3242 20.8428C81.3242 18.8725 80.8549 17.3647 80.0547 16.3604C79.2659 15.3705 78.1158 14.8184 76.625 14.8184ZM25.5938 2.90723C27.1063 3.83042 28.4578 4.99046 29.5986 6.33496L29.8857 6.67285L29.585 6.99805L21.1025 16.1807C21.0693 16.2167 21.0627 16.2457 21.0615 16.2666C21.0601 16.2923 21.067 16.3251 21.0869 16.3564C21.1069 16.3877 21.1336 16.4075 21.1572 16.417C21.1765 16.4247 21.2054 16.4308 21.252 16.416L32.4404 12.8613L32.9551 12.6973L33.0791 13.2227C33.3656 14.4416 33.5176 15.7129 33.5176 17.0186C33.5176 17.58 33.4892 18.1348 33.4346 18.6816L33.3896 19.1318H32.9375L21.2998 19.1367C19.0824 19.1377 17.6612 16.7777 18.6973 14.8174L24.8916 3.09961L25.1396 2.62988L25.5938 2.90723ZM50.208 18.1582H57.1807L53.6377 9.70215L50.208 18.1582ZM19.0791 12.7324C19.0797 14.9499 16.7209 16.3724 14.7607 15.335L3.08301 9.15527L2.61426 8.90723L2.88965 8.45312C3.80806 6.94075 4.96246 5.58859 6.30078 4.44629L6.63867 4.1582L6.96484 4.45996L16.124 12.9297C16.1601 12.963 16.1893 12.9695 16.21 12.9707C16.2354 12.9721 16.2676 12.9652 16.2988 12.9453C16.3301 12.9254 16.3498 12.8988 16.3594 12.875C16.3671 12.8556 16.3732 12.8269 16.3584 12.7803L12.8066 1.58789L12.6436 1.0752L13.167 0.950195C14.4 0.656219 15.6867 0.5 17.0088 0.5C17.5535 0.500014 18.0915 0.527547 18.6221 0.579102L19.0732 0.62207V1.07617L19.0791 12.7324Z" fill="#1A1A1A" stroke="#EDEBE8"/>
+          </svg>
+            </div>
+
+        <!-- Hero Section -->
+        <div style="background-color: #fdffa8; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+          <h1 style="color: #1a1a1a; font: 24px/28px 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.24px; margin: 0 0 16px;">${subject}</h1>
+          ${formatBodyContent(body)}
+          <a href="https://app.apollo.io/#/people" style="background-color: #243031; color: #ffffff; padding: 14px 18px; border-radius: 6px; font: 500 14px/14px 'Helvetica Neue', Arial, sans-serif; text-decoration: none; display: inline-block; width: 100%; text-align: center; box-sizing: border-box; margin-top: 16px;">${heroCTA}</a>
+          </div>
+
+        <!-- Main Features Section -->
+        <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+          <h2 style="color: #1a1a1a; font: 20px/24px 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.20px; margin: 0 0 20px;">${mainContent.title}</h2>
+          
+          ${generateFeatureList()}
+
+          <!-- Pricing Callout -->
+          <div style="border: 1px solid #243031; border-radius: 8px; padding: 16px; margin: 20px 0;">
+            <p style="color: #47423d; font: 500 10px/12px 'Helvetica Neue', Arial, sans-serif; letter-spacing: 0.16px; text-transform: uppercase; margin: 0 0 8px;">PRICING</p>
+            <h3 style="color: #1a1a1a; font: 16px/20px 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.16px; margin: 0 0 8px;">${pricingContent.title}</h3>
+            <p style="color: #47423d; font: 12px/16px 'Helvetica Neue', Arial, sans-serif; margin: 0;">${pricingContent.description}</p>
+          </div>
+
+          <a href="https://app.apollo.io/#/people" style="border: 1px solid #243031; border-radius: 6px; color: #1a1a1a; display: inline-block; font: 500 14px/14px 'Helvetica Neue', Arial, sans-serif; padding: 14px 18px; text-decoration: none; width: 100%; text-align: center; box-sizing: border-box;">${mainCTA}</a>
+        </div>
+
+        <!-- Footer -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; width: 100%;">
+          <!-- Social Icons -->
+          <div style="display: flex; gap: 4px; align-items: center; justify-content: center;">
+            <img src="/82ba8b6a6cc6391d98b878ae7b016d778ec508e3.svg" alt="YouTube" style="width: 20px; height: 20px;">
+            <img src="/862c5e1b0ceb03183d078b5b878d4cf8d5a50aae.svg" alt="Instagram" style="width: 20px; height: 20px;">
+            <img src="/fda0106804e9b31bf7ee8f257fe5ea3fd9a72e24.svg" alt="TikTok" style="width: 20px; height: 20px;">
+          </div>
+
+          <!-- Footer Links -->
+          <div style="display: flex; gap: 8px; align-items: center; justify-content: center;">
+            <a href="#" style="color: #603fab; font: 8px/12px 'Helvetica Neue', Arial, sans-serif; text-decoration: underline;">Manage preferences</a>
+            <a href="#" style="color: #603fab; font: 8px/12px 'Helvetica Neue', Arial, sans-serif; text-decoration: underline;">Unsubscribe</a>
+          </div>
+
+          <p style="color: #47423d; font: 8px/12px 'Helvetica Neue', Arial, sans-serif; text-align: center; margin: 0;">
+            ©2025 Apollo. All rights reserved.<br>
+            535 Mission St. San Francisco, CA 94115
+          </p>
+          
+          <svg width="69" height="19" viewBox="0 0 139 38" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: scale(0.5);">
+            <path d="M76.9365 11.002C79.5376 11.002 81.7387 11.9957 83.2842 13.7461C84.8249 15.4911 85.6826 17.9521 85.6826 20.8428C85.6825 23.7333 84.8248 26.1935 83.2842 27.9385C81.7387 29.689 79.5377 30.6826 76.9365 30.6826C74.7117 30.6826 72.9183 29.8379 71.6543 28.6514V36.9004H67.4121V11.4678H71.6543V13.0547C72.9192 11.8564 74.7134 11.002 76.9365 11.002ZM14.8984 21.3594C14.8976 19.1417 17.2556 17.7186 19.2158 18.7559L30.8984 24.9385L31.3691 25.1875L31.0908 25.6416C30.1661 27.1501 29.006 28.4985 27.6621 29.6357L27.3242 29.9209L27 29.6211L17.8525 21.1621C17.8167 21.1289 17.7882 21.1213 17.7676 21.1201C17.7421 21.1187 17.7091 21.1256 17.6777 21.1455C17.6465 21.1654 17.6268 21.192 17.6172 21.2158C17.6094 21.2352 17.6033 21.2646 17.6182 21.3115L21.1562 32.4609L21.3203 32.9756L20.7939 33.0986C19.5782 33.3842 18.311 33.5361 17.0088 33.5361C16.4503 33.5361 15.8978 33.5084 15.3535 33.4541L14.9033 33.4092V32.9561L14.8984 21.3594ZM12.6777 14.9541C14.8953 14.9535 16.3156 17.3141 15.2793 19.2744L9.11816 30.9307L8.86914 31.4014L8.41504 31.124C6.90827 30.203 5.56128 29.0464 4.42383 27.707L4.13672 27.3701L4.4375 27.0439L12.875 17.9102C12.9078 17.8745 12.9148 17.846 12.916 17.8252C12.9174 17.7995 12.9105 17.7668 12.8906 17.7354C12.8706 17.7039 12.844 17.6834 12.8203 17.6738C12.801 17.6661 12.7721 17.661 12.7256 17.6758L1.58594 21.2148L1.07324 21.3779L0.948242 20.8535C0.655579 19.6224 0.5 18.3379 0.5 17.0176C0.500012 16.4753 0.527154 15.9392 0.578125 15.4111L0.621094 14.96L1.0752 14.959L12.6777 14.9541ZM95.958 11.002C101.417 11.002 105.366 15.177 105.366 20.8428C105.366 26.5084 101.417 30.6836 95.958 30.6836C90.5191 30.6834 86.59 26.5062 86.5898 20.8428C86.5898 15.1792 90.519 11.0022 95.958 11.002ZM128.421 11.002C133.86 11.002 137.79 15.1791 137.79 20.8428C137.79 26.5063 133.86 30.6836 128.421 30.6836C122.962 30.6834 119.014 26.5083 119.014 20.8428C119.014 15.1771 122.962 11.0021 128.421 11.002ZM55.6836 3.84668L55.8125 4.15234L66.5176 29.5215L66.8105 30.2158H62.1709L62.043 29.9053L58.8672 22.1445H48.5674L45.5254 29.8984L45.4014 30.2158H40.959L41.2422 29.5264L51.666 4.15723L51.793 3.84668H55.6836ZM111.075 3.84668V30.2158H106.833V3.84668H111.075ZM117.547 3.84668V30.2158H113.305V3.84668H117.547ZM95.958 14.7412C94.3928 14.7413 93.1614 15.3179 92.3125 16.335C91.4549 17.3625 90.9482 18.8883 90.9482 20.8428C90.9483 22.7973 91.4549 24.3231 92.3125 25.3506C93.1614 26.3676 94.3929 26.9442 95.958 26.9443C97.5365 26.9443 98.7786 26.3661 99.6338 25.3486C100.497 24.3211 101.007 22.7963 101.007 20.8428C101.007 18.889 100.497 17.3635 99.6338 16.3359C98.7786 15.3185 97.5365 14.7412 95.958 14.7412ZM128.421 14.7412C126.843 14.7413 125.601 15.3187 124.746 16.3359C123.882 17.3635 123.372 18.889 123.372 20.8428C123.372 22.7964 123.883 24.3211 124.746 25.3486C125.601 26.3661 126.842 26.9443 128.421 26.9443C129.986 26.9443 131.218 26.3677 132.067 25.3506C132.925 24.3231 133.432 22.7973 133.432 20.8428C133.432 18.8884 132.925 17.3625 132.067 16.335C131.218 15.3178 129.986 14.7412 128.421 14.7412ZM76.625 14.8184C75.0959 14.8185 73.8278 15.385 72.9395 16.3398C72.0485 17.2977 71.5107 18.678 71.5107 20.3467V21.3389C71.5108 23.0073 72.0485 24.3871 72.9395 25.3447C73.8278 26.2995 75.0959 26.8661 76.625 26.8662C78.1157 26.8662 79.2659 26.3149 80.0547 25.3252C80.855 24.3209 81.3242 22.813 81.3242 20.8428C81.3242 18.8725 80.8549 17.3647 80.0547 16.3604C79.2659 15.3705 78.1158 14.8184 76.625 14.8184ZM25.5938 2.90723C27.1063 3.83042 28.4578 4.99046 29.5986 6.33496L29.8857 6.67285L29.585 6.99805L21.1025 16.1807C21.0693 16.2167 21.0627 16.2457 21.0615 16.2666C21.0601 16.2923 21.067 16.3251 21.0869 16.3564C21.1069 16.3877 21.1336 16.4075 21.1572 16.417C21.1765 16.4247 21.2054 16.4308 21.252 16.416L32.4404 12.8613L32.9551 12.6973L33.0791 13.2227C33.3656 14.4416 33.5176 15.7129 33.5176 17.0186C33.5176 17.58 33.4892 18.1348 33.4346 18.6816L33.3896 19.1318H32.9375L21.2998 19.1367C19.0824 19.1377 17.6612 16.7777 18.6973 14.8174L24.8916 3.09961L25.1396 2.62988L25.5938 2.90723ZM50.208 18.1582H57.1807L53.6377 9.70215L50.208 18.1582ZM19.0791 12.7324C19.0797 14.9499 16.7209 16.3724 14.7607 15.335L3.08301 9.15527L2.61426 8.90723L2.88965 8.45312C3.80806 6.94075 4.96246 5.58859 6.30078 4.44629L6.63867 4.1582L6.96484 4.45996L16.124 12.9297C16.1601 12.963 16.1893 12.9695 16.21 12.9707C16.2354 12.9721 16.2676 12.9652 16.2988 12.9453C16.3301 12.9254 16.3498 12.8988 16.3594 12.875C16.3671 12.8556 16.3732 12.8269 16.3584 12.7803L12.8066 1.58789L12.6436 1.0752L13.167 0.950195C14.4 0.656219 15.6867 0.5 17.0088 0.5C17.5535 0.500014 18.0915 0.527547 18.6221 0.579102L19.0732 0.62207V1.07617L19.0791 12.7324Z" fill="#1A1A1A" stroke="#EDEBE8"/>
+          </svg>
+        </div>
+
+      </div>
+    </div>
+  </body>
+</html>`;
+};
+
+
+/**
+ * MDS Email Template Preview Component
+ * 
+ * Why this matters: Shows a live preview of how the newsletter content
+ * will look when rendered in the Customer.io email template format,
+ * allowing users to see the final result before copying the code.
+ */
+interface MDSEmailTemplatePreviewProps {
+  subject: string;
+  body: string;
+  mainSection: string;
+  pricingSection: string;
+  heroCTA: string;
+  mainCTA: string;
+}
+
+  const MDSEmailTemplatePreview: React.FC<MDSEmailTemplatePreviewProps> = ({ 
+    subject, 
+    body, 
+    mainSection, 
+    pricingSection, 
+    heroCTA, 
+    mainCTA 
+  }) => {
+    // Helper function to parse main section content
+    const parseMainSectionContent = (content: string) => {
+      const lines = content.split('\n').filter(line => line.trim());
+      const title = lines[0] || 'With Apollo\'s Email Warmup, you can:';
+      const features = lines.slice(1).filter(line => line.trim().startsWith('•')).map(line => line.replace('•', '').trim());
+      return { title, features };
+    };
+
+    // Helper function to parse pricing content
+    const parsePricingContent = (content: string) => {
+      const lines = content.split('\n').filter(line => line.trim());
+      const title = lines[0] || 'All paid users can warm up one mailbox at no additional cost.';
+      const description = lines.slice(1).join(' ') || 'Need more? Additional mailboxes can be warmed using credits.';
+      return { title, description };
+    };
+
+    const mainContent = parseMainSectionContent(mainSection);
+    const pricingContent = parsePricingContent(pricingSection);
+  // Main container for side-by-side layout
+  const mainContainerStyle: React.CSSProperties = {
+    backgroundColor: '#f5f5f5',
+    minHeight: '100%',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: '10px',
+    gap: '12px',
+  };
+
+  // Desktop version container
+  const desktopContainerStyle: React.CSSProperties = {
+    backgroundColor: '#edebe8',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '0 18px',
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    borderRadius: '8px',
+    flex: 1,
+    minWidth: '360px',
+    maxWidth: '520px',
+    maxHeight: '500px',
+    overflow: 'auto',
+  };
+
+  const desktopContentWrapperStyle: React.CSSProperties = {
+    width: '100%',
+    maxWidth: '480px',
+  };
+
+  // Mobile version container
+  const mobileContainerStyle: React.CSSProperties = {
+    backgroundColor: '#edebe8',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '0 16px',
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+    flex: 1,
+    minWidth: '240px',
+    maxWidth: '340px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    borderRadius: '8px',
+    maxHeight: '500px',
+    overflowY: 'auto',
+  };
+
+  const mobileContentWrapperStyle: React.CSSProperties = {
+    width: '100%',
+    maxWidth: '320px',
+  };
+
+  const headerStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    padding: '16px 0',
+    width: '100%',
+  };
+
+  const heroSectionStyle: React.CSSProperties = {
+    backgroundColor: '#fdffa8',
+    borderRadius: '8px',
+    padding: '16px',
+    marginBottom: '16px',
+  };
+
+  // Desktop styles
+  const desktopHeadlineStyle: React.CSSProperties = {
+    fontSize: '18px',
+    fontWeight: 500,
+    lineHeight: '22px',
+    letterSpacing: '-0.18px',
+    color: '#1a1a1a',
+    marginBottom: '8px',
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+  };
+
+  const desktopBodyTextStyle: React.CSSProperties = {
+    fontSize: '12px',
+    fontWeight: 400,
+    lineHeight: '16px',
+    color: '#47423d',
+    marginBottom: '8px',
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+  };
+
+  // Mobile styles
+  const mobileHeadlineStyle: React.CSSProperties = {
+    fontSize: '14px',
+    fontWeight: 500,
+    lineHeight: '18px',
+    letterSpacing: '-0.14px',
+    color: '#1a1a1a',
+    marginBottom: '6px',
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+  };
+
+  const mobileBodyTextStyle: React.CSSProperties = {
+    fontSize: '10px',
+    fontWeight: 400,
+    lineHeight: '14px',
+    color: '#47423d',
+    marginBottom: '6px',
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+  };
+
+  const desktopButtonStyle: React.CSSProperties = {
+    backgroundColor: '#243031',
+    color: '#ffffff',
+    padding: '8px 12px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: 500,
+    lineHeight: '16px',
+    letterSpacing: '-0.12px',
+    border: 'none',
+    cursor: 'pointer',
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+    marginTop: '8px',
+  };
+
+  const mobileButtonStyle: React.CSSProperties = {
+    backgroundColor: '#243031',
+    color: '#ffffff',
+    padding: '6px 10px',
+    borderRadius: '4px',
+    fontSize: '10px',
+    fontWeight: 500,
+    lineHeight: '14px',
+    letterSpacing: '-0.10px',
+    border: 'none',
+    cursor: 'pointer',
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+    marginTop: '6px',
+    width: '100%',
+  };
+
+  const footerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '16px',
+    width: '100%',
+  };
+
+  const copyrightStyle: React.CSSProperties = {
+    fontSize: '8px',
+    lineHeight: '12px',
+    color: '#47423d',
+    textAlign: 'center',
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+  };
+
+  // Label styles
+  const labelStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '-20px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    fontSize: '10px',
+    fontWeight: 600,
+    color: '#666',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  };
+
+  // Format body text for display
+  const formatBodyForDisplay = (bodyText: string, isMobile: boolean = false) => {
+    const lines = bodyText.split('\n').filter(line => line.trim());
+    const textStyle = isMobile ? mobileBodyTextStyle : desktopBodyTextStyle;
+    
+    return lines.map((line, index) => (
+      <div key={index} style={textStyle}>
+        {line.trim()}
+      </div>
+    ));
+  };
+
+  return (
+    <div style={mainContainerStyle}>
+      {/* Desktop Version */}
+      <div style={{ position: 'relative', marginTop: '2rem', marginBottom: '2rem' }}>
+        <span style={labelStyle}>
+          <Monitor style={{ width: '12px', height: '12px' }} />
+          Desktop
+        </span>
+        <div style={desktopContainerStyle}>
+          <div style={desktopContentWrapperStyle}>
+            {/* Header */}
+            <div style={headerStyle}>
+              <div style={{ transform: 'scale(0.5)', transformOrigin: 'left center' }}>
+                <ApolloLogo />
+              </div>
+            </div>
+
+            {/* Hero Section */}
+            <div style={heroSectionStyle}>
+              <h1 style={desktopHeadlineStyle}>
+                {subject || 'Enter subject line...'}
+              </h1>
+              <div>
+                {body ? formatBodyForDisplay(body, false) : (
+                  <div style={desktopBodyTextStyle}>Enter email body content...</div>
+                )}
+              </div>
+              <button style={desktopButtonStyle}>{heroCTA || 'Learn more'}</button>
+            </div>
+
+            {/* Main Features Section */}
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              padding: '24px',
+              marginBottom: '24px',
+            }}>
+              <h2 style={{
+                fontSize: '20px',
+                fontWeight: 500,
+                lineHeight: '24px',
+                letterSpacing: '-0.20px',
+                color: '#1a1a1a',
+                marginBottom: '24px',
+                fontFamily: '"Helvetica Neue", Arial, sans-serif',
+              }}>
+                {mainContent.title}
+              </h2>
+
+              {/* Feature List */}
+              <div>
+                {mainContent.features.map((feature, index) => {
+                  const icons = [emailIcon, historyIcon, growthIcon, chartIcon];
+                  const iconSrc = icons[index % icons.length];
+                  
+                  return (
+                    <div key={index} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                      marginBottom: '20px',
+                    }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        backgroundColor: '#d4caf7',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        <img src={iconSrc} alt="" style={{ width: '20px', height: '20px' }} />
+                      </div>
+                      <div style={{
+                        fontSize: '14px',
+                        lineHeight: '20px',
+                        color: '#1a1a1a',
+                        fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                      }}>
+                        {feature}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Pricing Callout */}
+              <div style={{
+                border: '2px solid #243031',
+                borderRadius: '8px',
+                padding: '20px',
+                marginTop: '20px',
+                marginBottom: '20px',
+              }}>
+                <p style={{
+                  fontSize: '10px',
+                  fontWeight: 500,
+                  lineHeight: '12px',
+                  letterSpacing: '0.20px',
+                  textTransform: 'uppercase',
+                  color: '#47423d',
+                  marginBottom: '12px',
+                  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                }}>PRICING</p>
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: 500,
+                  lineHeight: '20px',
+                  letterSpacing: '-0.16px',
+                  color: '#1a1a1a',
+                  marginBottom: '12px',
+                  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                }}>
+                  {pricingContent.title}
+                </h3>
+                <p style={{
+                  fontSize: '12px',
+                  fontWeight: 400,
+                  lineHeight: '16px',
+                  color: '#47423d',
+                  marginBottom: 0,
+                  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                }}>
+                  {pricingContent.description}
+                </p>
+              </div>
+
+              {/* CTA Button */}
+              <button style={desktopButtonStyle}>{mainCTA || 'Warm up your inbox'}</button>
+            </div>
+
+            {/* Footer */}
+            <div style={footerStyle}>
+              {/* Social Icons */}
+              <div style={{
+                display: 'flex',
+                gap: '6px',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <img src={youtubeIcon} alt="YouTube" style={{ width: '28px', height: '28px' }} />
+                <img src={instagramIcon} alt="Instagram" style={{ width: '28px', height: '28px' }} />
+                <img src={tiktokIcon} alt="TikTok" style={{ width: '28px', height: '28px' }} />
+              </div>
+
+              {/* Footer Links */}
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <a href="#" style={{
+                  fontSize: '10px',
+                  lineHeight: '16px',
+                  color: '#603fab',
+                  textDecoration: 'underline',
+                  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                }}>Manage preferences</a>
+                <a href="#" style={{
+                  fontSize: '10px',
+                  lineHeight: '16px',
+                  color: '#603fab',
+                  textDecoration: 'underline',
+                  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                }}>Unsubscribe</a>
+              </div>
+
+              <p style={copyrightStyle}>
+                ©2025 Apollo. All rights reserved.<br />
+                535 Mission St. San Francisco, CA 94115
+              </p>
+              <div style={{ transform: 'scale(0.4)', transformOrigin: 'center' }}>
+                <ApolloLogo />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Version */}
+      <div style={{ position: 'relative', marginTop: '2rem', marginBottom: '2rem' }}>
+        <span style={labelStyle}>
+          <Smartphone style={{ width: '12px', height: '12px' }} />
+          Mobile
+        </span>
+        <div style={mobileContainerStyle}>
+          <div style={mobileContentWrapperStyle}>
+            {/* Header */}
+            <div style={{ ...headerStyle, padding: '12px 0' }}>
+              <div style={{ transform: 'scale(0.3)', transformOrigin: 'left center' }}>
+                <ApolloLogo />
+              </div>
+            </div>
+
+            {/* Hero Section */}
+            <div style={{ ...heroSectionStyle, padding: '12px', marginBottom: '12px' }}>
+              <h1 style={mobileHeadlineStyle}>
+                {subject || 'Enter subject line...'}
+              </h1>
+              <div>
+                {body ? formatBodyForDisplay(body, true) : (
+                  <div style={mobileBodyTextStyle}>Enter email body content...</div>
+                )}
+              </div>
+              <button style={mobileButtonStyle}>{heroCTA || 'Learn more'}</button>
+            </div>
+
+            {/* Main Features Section */}
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '16px',
+            }}>
+              <h2 style={{
+                fontSize: '16px',
+                fontWeight: 500,
+                lineHeight: '20px',
+                letterSpacing: '-0.16px',
+                color: '#1a1a1a',
+                marginBottom: '16px',
+                fontFamily: '"Helvetica Neue", Arial, sans-serif',
+              }}>
+                {mainContent.title}
+              </h2>
+
+              {/* Feature List */}
+              <div>
+                {mainContent.features.map((feature, index) => {
+                  const icons = [emailIcon, historyIcon, growthIcon, chartIcon];
+                  const iconSrc = icons[index % icons.length];
+                  
+                  return (
+                    <div key={index} style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px',
+                      marginBottom: '16px',
+                    }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        backgroundColor: '#d4caf7',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        <img src={iconSrc} alt="" style={{ width: '16px', height: '16px' }} />
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        lineHeight: '16px',
+                        color: '#1a1a1a',
+                        fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                      }}>
+                        {feature}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Pricing Callout */}
+              <div style={{
+                border: '1px solid #243031',
+                borderRadius: '8px',
+                padding: '16px',
+                marginTop: '16px',
+                marginBottom: '16px',
+              }}>
+                <p style={{
+                  fontSize: '8px',
+                  fontWeight: 500,
+                  lineHeight: '10px',
+                  letterSpacing: '0.16px',
+                  textTransform: 'uppercase',
+                  color: '#47423d',
+                  marginBottom: '8px',
+                  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                }}>PRICING</p>
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  lineHeight: '18px',
+                  letterSpacing: '-0.14px',
+                  color: '#1a1a1a',
+                  marginBottom: '8px',
+                  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                }}>
+                  {pricingContent.title}
+                </h3>
+                <p style={{
+                  fontSize: '10px',
+                  fontWeight: 400,
+                  lineHeight: '14px',
+                  color: '#47423d',
+                  marginBottom: 0,
+                  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                }}>
+                  {pricingContent.description}
+                </p>
+              </div>
+
+              {/* CTA Button */}
+              <button style={mobileButtonStyle}>{mainCTA || 'Warm up your inbox'}</button>
+            </div>
+
+            {/* Footer */}
+            <div style={{ ...footerStyle, padding: '12px' }}>
+              {/* Social Icons */}
+              <div style={{
+                display: 'flex',
+                gap: '4px',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <img src={youtubeIcon} alt="YouTube" style={{ width: '20px', height: '20px' }} />
+                <img src={instagramIcon} alt="Instagram" style={{ width: '20px', height: '20px' }} />
+                <img src={tiktokIcon} alt="TikTok" style={{ width: '20px', height: '20px' }} />
+              </div>
+
+              {/* Footer Links */}
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <a href="#" style={{
+                  fontSize: '8px',
+                  lineHeight: '12px',
+                  color: '#603fab',
+                  textDecoration: 'underline',
+                  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                }}>Manage preferences</a>
+                <a href="#" style={{
+                  fontSize: '8px',
+                  lineHeight: '12px',
+                  color: '#603fab',
+                  textDecoration: 'underline',
+                  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                }}>Unsubscribe</a>
+              </div>
+
+              <p style={copyrightStyle}>
+                ©2025 Apollo. All rights reserved.<br />
+                535 Mission St. San Francisco, CA 94115
+              </p>
+              <div style={{ transform: 'scale(0.25)', transformOrigin: 'center' }}>
+                <ApolloLogo />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Interface for NewsletterRow
 interface NewsletterRow {
@@ -62,11 +969,17 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedSubject, setCopiedSubject] = useState<boolean>(false);
   const [copiedBody, setCopiedBody] = useState<boolean>(false);
+  const [copiedDesktopHTML, setCopiedDesktopHTML] = useState<boolean>(false);
+  const [copiedMobileHTML, setCopiedMobileHTML] = useState<boolean>(false);
   const [currentNewsletterIndex, setCurrentNewsletterIndex] = useState<number>(0);
 
-  // Separate editing states for subject and body
+  // Separate editing states for all sections
   const [editingSubject, setEditingSubject] = useState<string>('');
   const [editingBody, setEditingBody] = useState<string>('');
+  const [editingMainSection, setEditingMainSection] = useState<string>('With Apollo\'s Email Warmup, you can:\n\n• Reduce deliverability headaches with automated inbox activity\n• Ramp up new mailboxes faster to start prospecting sooner\n• Boost campaign results with more emails landing in inboxes\n• Monitor domain health and get real-time alerts before issues arise');
+  const [editingPricingSection, setEditingPricingSection] = useState<string>('All paid users can warm up one mailbox at no additional cost.\n\nNeed more? Additional mailboxes (for free or paid users) can be warmed using Unified Credits or Export Credits—on a per-mailbox, per-month basis.');
+  const [editingHeroCTA, setEditingHeroCTA] = useState<string>('Learn more');
+  const [editingMainCTA, setEditingMainCTA] = useState<string>('Warm up your inbox');
 
   // Initialize when modal opens or current newsletter changes
   useEffect(() => {
@@ -99,6 +1012,18 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
   const redoStack = useRef<string[]>([]);
   const [canUndo, setCanUndo] = useState<boolean>(false);
   const [canRedo, setCanRedo] = useState<boolean>(false);
+
+  // Separate undo/redo stacks for White Main Section
+  const mainSectionUndoStack = useRef<string[]>([]);
+  const mainSectionRedoStack = useRef<string[]>([]);
+  const [canUndoMainSection, setCanUndoMainSection] = useState<boolean>(false);
+  const [canRedoMainSection, setCanRedoMainSection] = useState<boolean>(false);
+
+  // Separate undo/redo stacks for Pricing Callout Box
+  const pricingUndoStack = useRef<string[]>([]);
+  const pricingRedoStack = useRef<string[]>([]);
+  const [canUndoPricing, setCanUndoPricing] = useState<boolean>(false);
+  const [canRedoPricing, setCanRedoPricing] = useState<boolean>(false);
 
   /**
    * Update newsletter content from separate subject and body parts
@@ -177,6 +1102,90 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
       setCanUndo(true);
     }
   }, [editingBody, editingSubject, updateNewsletterFromParts]);
+
+  /**
+   * Handle White Main Section change with undo/redo support
+   */
+  const handleMainSectionChange = useCallback((content: string) => {
+    // Add current content to undo stack before changing
+    mainSectionUndoStack.current.push(editingMainSection);
+    if (mainSectionUndoStack.current.length > 50) { // Limit stack size
+      mainSectionUndoStack.current.shift();
+    }
+    mainSectionRedoStack.current = []; // Clear redo stack when new changes are made
+    setCanUndoMainSection(true);
+    setCanRedoMainSection(false);
+
+    setEditingMainSection(content);
+  }, [editingMainSection]);
+
+  /**
+   * Undo last change in White Main Section
+   */
+  const handleUndoMainSection = useCallback(() => {
+    if (mainSectionUndoStack.current.length > 0) {
+      const previousContent = mainSectionUndoStack.current.pop()!;
+      mainSectionRedoStack.current.push(editingMainSection);
+      setEditingMainSection(previousContent);
+      setCanUndoMainSection(mainSectionUndoStack.current.length > 0);
+      setCanRedoMainSection(true);
+    }
+  }, [editingMainSection]);
+
+  /**
+   * Redo last undone change in White Main Section
+   */
+  const handleRedoMainSection = useCallback(() => {
+    if (mainSectionRedoStack.current.length > 0) {
+      const nextContent = mainSectionRedoStack.current.pop()!;
+      mainSectionUndoStack.current.push(editingMainSection);
+      setEditingMainSection(nextContent);
+      setCanRedoMainSection(mainSectionRedoStack.current.length > 0);
+      setCanUndoMainSection(true);
+    }
+  }, [editingMainSection]);
+
+  /**
+   * Handle Pricing Callout Box change with undo/redo support
+   */
+  const handlePricingChange = useCallback((content: string) => {
+    // Add current content to undo stack before changing
+    pricingUndoStack.current.push(editingPricingSection);
+    if (pricingUndoStack.current.length > 50) { // Limit stack size
+      pricingUndoStack.current.shift();
+    }
+    pricingRedoStack.current = []; // Clear redo stack when new changes are made
+    setCanUndoPricing(true);
+    setCanRedoPricing(false);
+
+    setEditingPricingSection(content);
+  }, [editingPricingSection]);
+
+  /**
+   * Undo last change in Pricing Callout Box
+   */
+  const handleUndoPricing = useCallback(() => {
+    if (pricingUndoStack.current.length > 0) {
+      const previousContent = pricingUndoStack.current.pop()!;
+      pricingRedoStack.current.push(editingPricingSection);
+      setEditingPricingSection(previousContent);
+      setCanUndoPricing(pricingUndoStack.current.length > 0);
+      setCanRedoPricing(true);
+    }
+  }, [editingPricingSection]);
+
+  /**
+   * Redo last undone change in Pricing Callout Box
+   */
+  const handleRedoPricing = useCallback(() => {
+    if (pricingRedoStack.current.length > 0) {
+      const nextContent = pricingRedoStack.current.pop()!;
+      pricingUndoStack.current.push(editingPricingSection);
+      setEditingPricingSection(nextContent);
+      setCanRedoPricing(pricingRedoStack.current.length > 0);
+      setCanUndoPricing(true);
+    }
+  }, [editingPricingSection]);
 
   /**
    * Handle keyboard shortcuts for undo/redo
@@ -267,6 +1276,49 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
       setTimeout(() => setCopiedBody(false), 2000);
     } catch (error) {
       console.error('Failed to copy body:', error);
+    }
+  };
+
+
+  /**
+   * Copy desktop HTML email template
+   */
+  const handleCopyDesktopHTML = async () => {
+    try {
+      const desktopHTML = generateDesktopHTMLTemplate(
+        editingSubject, 
+        editingBody, 
+        editingMainSection, 
+        editingPricingSection, 
+        editingHeroCTA, 
+        editingMainCTA
+      );
+      await navigator.clipboard.writeText(desktopHTML);
+      setCopiedDesktopHTML(true);
+      setTimeout(() => setCopiedDesktopHTML(false), 3000);
+    } catch (error) {
+      console.error('Failed to copy desktop HTML:', error);
+    }
+  };
+
+  /**
+   * Copy mobile HTML email template
+   */
+  const handleCopyMobileHTML = async () => {
+    try {
+      const mobileHTML = generateMobileHTMLTemplate(
+        editingSubject, 
+        editingBody, 
+        editingMainSection, 
+        editingPricingSection, 
+        editingHeroCTA, 
+        editingMainCTA
+      );
+      await navigator.clipboard.writeText(mobileHTML);
+      setCopiedMobileHTML(true);
+      setTimeout(() => setCopiedMobileHTML(false), 3000);
+    } catch (error) {
+      console.error('Failed to copy mobile HTML:', error);
     }
   };
 
@@ -489,7 +1541,7 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <>
+    <div>
       <style>
         {`
           @keyframes spin {
@@ -586,34 +1638,6 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
                 </button>
               )}
               
-              <button 
-                onClick={handleExportToSheets} 
-                disabled={isOpeningSheets}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.5rem 1rem',
-                  backgroundColor: isOpeningSheets ? '#e5e7eb' : '#f3f4f6',
-                  color: isOpeningSheets ? '#6b7280' : '#374151',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '0.375rem',
-                  cursor: isOpeningSheets ? 'not-allowed' : 'pointer',
-                  fontSize: '0.875rem'
-                }}
-              >
-                {isOpeningSheets ? (
-                  <>
-                    <RefreshCw style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Table style={{ width: '1rem', height: '1rem' }} />
-                    Export to Sheets
-                  </>
-                )}
-              </button>
               
               <button 
                 onClick={onClose}
@@ -654,10 +1678,10 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
                 <div style={{
-                  backgroundColor: '#EBF212',
+                  backgroundColor: '#ffffff',
                   padding: '0.75rem',
                   borderRadius: '0.375rem',
-                  border: '1px solid #e5e7eb'
+                  border: '1px solid #d1d5db'
                 }}>
                   <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>Total Delivered</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827' }}>
@@ -665,10 +1689,10 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
                   </div>
                 </div>
                 <div style={{
-                  backgroundColor: '#EBF212',
+                  backgroundColor: '#ffffff',
                   padding: '0.75rem',
                   borderRadius: '0.375rem',
-                  border: '1px solid #e5e7eb'
+                  border: '1px solid #d1d5db'
                 }}>
                   <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>Total Opened</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827' }}>
@@ -676,10 +1700,10 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
                   </div>
                 </div>
                 <div style={{
-                  backgroundColor: '#EBF212',
+                  backgroundColor: '#ffffff',
                   padding: '0.75rem',
                   borderRadius: '0.375rem',
-                  border: '1px solid #e5e7eb'
+                  border: '1px solid #d1d5db'
                 }}>
                   <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>Total Replied</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827' }}>
@@ -687,10 +1711,10 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
                   </div>
                 </div>
                 <div style={{
-                  backgroundColor: '#EBF212',
+                  backgroundColor: '#ffffff',
                   padding: '0.75rem',
                   borderRadius: '0.375rem',
-                  border: '1px solid #e5e7eb'
+                  border: '1px solid #d1d5db'
                 }}>
                   <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>Opening Rate</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827' }}>
@@ -698,10 +1722,10 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
                   </div>
                 </div>
                 <div style={{
-                  backgroundColor: '#EBF212',
+                  backgroundColor: '#ffffff',
                   padding: '0.75rem',
                   borderRadius: '0.375rem',
-                  border: '1px solid #e5e7eb'
+                  border: '1px solid #d1d5db'
                 }}>
                   <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>Reply Rate</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827' }}>
@@ -714,10 +1738,411 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
 
           {/* Newsletter Split View */}
           <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-            {/* Left Pane - Email Preview */}
+            {/* Left Pane - Newsletter Editor */}
             <div style={{
-              flex: 1,
+              flex: '0 0 40%',
               borderRight: '1px solid #e5e7eb',
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: 'white'
+            }}>
+              <div style={{
+                padding: '1.61em',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0, marginBottom: '0.5rem' }}>
+                      Newsletter Editor
+                  </h3>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                      {(editingSubject + ' ' + editingBody).split(' ').filter(word => word.length > 0).length} words • {(editingSubject + editingBody).length} characters
+                    </p>
+                </div>
+
+                </div>
+              </div>
+
+              {/* Structured Editor Sections */}
+              <div style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
+                {/* Subject Line Editor */}
+                <div style={{
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  padding: '1rem'
+                }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    📧 Subject Line
+                  </label>
+                  <input
+                    type="text"
+                    value={editingSubject}
+                    onChange={(e) => handleSubjectChange(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      backgroundColor: 'white'
+                    }}
+                    placeholder="Enter email subject line..."
+                  />
+                </div>
+
+                {/* Combined Email Template Editor Container */}
+                <div style={{
+                  backgroundColor: '#fdffa8',
+                  borderRadius: '0.5rem',
+                  padding: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.5rem'
+                }}>
+                  {/* Hero Section Content */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      ⭐ Hero Section Content
+                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      {/* Custom Undo/Redo Buttons */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        padding: '0.25rem',
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.375rem'
+                      }}>
+                    <button
+                          onClick={handleUndo}
+                          disabled={!canUndo}
+                      style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '1.75rem',
+                            height: '1.75rem',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '0.25rem',
+                            cursor: canUndo ? 'pointer' : 'not-allowed',
+                            color: canUndo ? '#6b7280' : '#d1d5db',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title="Undo (Ctrl+Z)"
+                        >
+                          <Undo style={{ width: '1rem', height: '1rem' }} />
+                        </button>
+
+                        <button
+                          onClick={handleRedo}
+                          disabled={!canRedo}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '1.75rem',
+                            height: '1.75rem',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '0.25rem',
+                            cursor: canRedo ? 'pointer' : 'not-allowed',
+                            color: canRedo ? '#6b7280' : '#d1d5db',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title="Redo (Ctrl+Y)"
+                        >
+                          <Redo style={{ width: '1rem', height: '1rem' }} />
+                        </button>
+                      </div>
+                    </div>
+
+
+                    <textarea
+                      ref={textareaRef}
+                      value={editingBody}
+                      onChange={(e) => handleEditorChange(e.target.value)}
+                      style={{
+                        width: '100%',
+                        minHeight: '180px',
+                        padding: '1rem',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem',
+                        lineHeight: '1.6',
+                        fontFamily: 'inherit',
+                        resize: 'vertical',
+                        outline: 'none',
+                        backgroundColor: 'white'
+                      }}
+                      placeholder="Enter your email body content here..."
+                    />
+
+                    {/* Hero CTA Button Editor */}
+                    <div style={{ marginTop: '1rem' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.5rem'
+                      }}>
+                        Hero CTA Button Text
+                      </label>
+                      <input
+                        type="text"
+                        value={editingHeroCTA}
+                        onChange={(e) => setEditingHeroCTA(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.75rem',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          backgroundColor: 'white'
+                        }}
+                        placeholder="Enter CTA button text..."
+              />
+              </div>
+            </div>
+
+                  {/* White Main Section Editor */}
+            <div style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '0.5rem',
+                    padding: '1rem'
+                  }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      🔲 White Main Section Content
+                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      {/* Custom Undo/Redo Buttons */}
+              <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        padding: '0.25rem',
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.375rem'
+                      }}>
+                        <button
+                          onClick={handleUndoMainSection}
+                          disabled={!canUndoMainSection}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '1.75rem',
+                            height: '1.75rem',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '0.25rem',
+                            cursor: canUndoMainSection ? 'pointer' : 'not-allowed',
+                            color: canUndoMainSection ? '#6b7280' : '#d1d5db',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title="Undo (Ctrl+Z)"
+                        >
+                          <Undo style={{ width: '1rem', height: '1rem' }} />
+                        </button>
+
+                    <button
+                          onClick={handleRedoMainSection}
+                          disabled={!canRedoMainSection}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '1.75rem',
+                            height: '1.75rem',
+                        backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '0.25rem',
+                            cursor: canRedoMainSection ? 'pointer' : 'not-allowed',
+                            color: canRedoMainSection ? '#6b7280' : '#d1d5db',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title="Redo (Ctrl+Y)"
+                        >
+                          <Redo style={{ width: '1rem', height: '1rem' }} />
+                    </button>
+                  </div>
+                </div>
+
+                    <textarea
+                      value={editingMainSection}
+                      onChange={(e) => handleMainSectionChange(e.target.value)}
+                      style={{
+                        width: '100%',
+                        minHeight: '150px',
+                        padding: '1rem',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem',
+                        lineHeight: '1.6',
+                        fontFamily: 'inherit',
+                        resize: 'vertical',
+                        outline: 'none',
+                        backgroundColor: 'white'
+                      }}
+                      placeholder="Enter main section content (use • for bullet points)..."
+                    />
+
+              </div>
+
+                  {/* Pricing Callout Section Editor */}
+                  <div style={{
+                    backgroundColor: '#f0f9ff',
+                    border: '2px solid #243031',
+                    borderRadius: '0.5rem',
+                    padding: '1rem'
+                  }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      💰 Pricing Callout Box
+                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      {/* Custom Undo/Redo Buttons */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        padding: '0.25rem',
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.375rem'
+                      }}>
+                        <button
+                          onClick={handleUndoPricing}
+                          disabled={!canUndoPricing}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '1.75rem',
+                            height: '1.75rem',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '0.25rem',
+                            cursor: canUndoPricing ? 'pointer' : 'not-allowed',
+                            color: canUndoPricing ? '#6b7280' : '#d1d5db',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title="Undo (Ctrl+Z)"
+                        >
+                          <Undo style={{ width: '1rem', height: '1rem' }} />
+                    </button>
+
+                    <button
+                          onClick={handleRedoPricing}
+                          disabled={!canRedoPricing}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '1.75rem',
+                            height: '1.75rem',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '0.25rem',
+                            cursor: canRedoPricing ? 'pointer' : 'not-allowed',
+                            color: canRedoPricing ? '#6b7280' : '#d1d5db',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title="Redo (Ctrl+Y)"
+                        >
+                          <Redo style={{ width: '1rem', height: '1rem' }} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <textarea
+                      value={editingPricingSection}
+                      onChange={(e) => handlePricingChange(e.target.value)}
+                      style={{
+                        width: '100%',
+                        minHeight: '120px',
+                        padding: '1rem',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem',
+                        lineHeight: '1.6',
+                        fontFamily: 'inherit',
+                        resize: 'vertical',
+                        outline: 'none',
+                        backgroundColor: 'white'
+                      }}
+                      placeholder="Enter pricing callout content..."
+                    />
+                  </div>
+
+                  {/* Main CTA Button Editor */}
+                  <div style={{ marginTop: '1rem' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      🎯 Main CTA Button Text
+                    </label>
+                    <input
+                      type="text"
+                      value={editingMainCTA}
+                      onChange={(e) => setEditingMainCTA(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        backgroundColor: 'white'
+                      }}
+                      placeholder="Enter CTA button text..."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Pane - MDS Email Template Preview */}
+            <div style={{
+              flex: '0 0 60%',
               display: 'flex',
               flexDirection: 'column',
               backgroundColor: '#f3f4f6'
@@ -730,7 +2155,7 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                   <Mail style={{ width: '1.25rem', height: '1.25rem', color: '#4b5563' }} />
                   <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 }}>
-                    Email Preview
+                    Customer.io Email Template Preview
                   </h3>
                 </div>
 
@@ -741,7 +2166,7 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
                   alignItems: 'center'
                 }}>
                   <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                    Newsletter {currentNewsletterIndex + 1} of {editableNewsletters.length}: {getNewsletterTheme(currentNewsletterIndex)}
+                    Newsletter {currentNewsletterIndex + 1} of {editableNewsletters.length}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -766,6 +2191,49 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
                     </button>
 
                     <button
+                      onClick={handleRegenerateNewsletter}
+                      disabled={isRegeneratingIndex === currentNewsletterIndex}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.75rem',
+                        background: isRegeneratingIndex === currentNewsletterIndex 
+                          ? '#f3f4f6' 
+                          : 'linear-gradient(135deg, #3b82f6 0%, #4f46e5 70%, #8b5cf6 100%)',
+                        color: isRegeneratingIndex === currentNewsletterIndex ? '#6b7280' : 'white',
+                        border: 'none',
+                        borderRadius: '0.375rem',
+                        cursor: isRegeneratingIndex === currentNewsletterIndex ? 'not-allowed' : 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: isRegeneratingIndex === currentNewsletterIndex 
+                          ? 'none' 
+                          : '0 0.125rem 0.1875rem -0.03125rem rgba(59, 130, 246, 0.2)'
+                      }}
+                      onMouseOver={(e) => {
+                        if (isRegeneratingIndex !== currentNewsletterIndex) {
+                          e.currentTarget.style.transform = 'translateY(-0.03125rem)';
+                          e.currentTarget.style.boxShadow = '0 0.25rem 0.375rem -0.0625rem rgba(59, 130, 246, 0.3)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (isRegeneratingIndex !== currentNewsletterIndex) {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 0.125rem 0.1875rem -0.03125rem rgba(59, 130, 246, 0.2)';
+                        }
+                      }}
+                    >
+                      {isRegeneratingIndex === currentNewsletterIndex ? (
+                        <RefreshCw style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} />
+                      ) : (
+                        <Wand2 style={{ width: '1rem', height: '1rem' }} />
+                      )}
+                      Regenerate
+                    </button>
+
+                    <button
                       onClick={goToNextNewsletter}
                       disabled={currentNewsletterIndex === editableNewsletters.length - 1}
                       style={{
@@ -784,516 +2252,95 @@ const EmailNewsletterActionModal: React.FC<EmailNewsletterActionModalProps> = ({
                       Next
                       <ChevronRight style={{ width: '1rem', height: '1rem' }} />
                     </button>
+
                   </div>
                 </div>
-              </div>
 
-              {/* Email Preview Content */}
-              <div style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                {/* Copy Buttons Section */}
                 <div style={{
-                  backgroundColor: 'white',
-                  borderRadius: '0.75rem',
-                  border: '1px solid #e5e7eb',
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  flex: 1,
                   display: 'flex',
-                  flexDirection: 'column',
-                  minHeight: 0
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginTop: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #e2e8f0'
                 }}>
-                  {/* Subject Line Section */}
-                  <div style={{
-                    padding: '1.5rem',
-                    borderBottom: '1px solid #e5e7eb',
-                    backgroundColor: '#E5E7EB',
-                    flexShrink: 0
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      marginBottom: '0.75rem'
-                    }}>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem', fontWeight: '600' }}>
-                        SUBJECT LINE
-                      </div>
-                      <button
-                        onClick={handleCopySubject}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          padding: '0.25rem 0.5rem',
-                          backgroundColor: copiedSubject ? '#d1fae5' : '#f3f4f6',
-                          border: `1px solid ${copiedSubject ? '#10b981' : '#d1d5db'}`,
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          color: copiedSubject ? '#065f46' : '#374151',
-                          fontSize: '0.75rem',
-                          fontWeight: '500'
-                        }}
-                        title="Copy subject line"
-                      >
-                        {copiedSubject ? (
-                          <>
-                            <Check style={{ width: '0.75rem', height: '0.75rem' }} />
-                            Copied
-                          </>
-                        ) : (
-                          <>
-                            <Copy style={{ width: '0.75rem', height: '0.75rem' }} />
-                            Copy
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    <div style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', lineHeight: '1.4' }}>
-                      {parseEmailContent(editableNewsletters[currentNewsletterIndex] || '').subject}
-                    </div>
-                  </div>
-
-                  {/* Email Body Section */}
-                  <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '1rem 1.5rem 0.5rem',
-                      backgroundColor: '#f8fafc',
-                      flexShrink: 0
-                    }}>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600' }}>
-                        EMAIL BODY
-                      </div>
-                      <button
-                        onClick={handleCopyBody}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          padding: '0.25rem 0.5rem',
-                          backgroundColor: copiedBody ? '#d1fae5' : '#f3f4f6',
-                          border: `1px solid ${copiedBody ? '#10b981' : '#d1d5db'}`,
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          color: copiedBody ? '#065f46' : '#374151',
-                          fontSize: '0.75rem',
-                          fontWeight: '500'
-                        }}
-                        title="Copy email body"
-                      >
-                        {copiedBody ? (
-                          <>
-                            <Check style={{ width: '0.75rem', height: '0.75rem' }} />
-                            Copied
-                          </>
-                        ) : (
-                          <>
-                            <Copy style={{ width: '0.75rem', height: '0.75rem' }} />
-                            Copy
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    <div style={{
-                      flex: 1,
-                      padding: '1rem 1.5rem 1.5rem',
-                      fontSize: '0.875rem',
-                      lineHeight: '1.6',
-                      color: '#374151',
-                      backgroundColor: 'white',
-                      overflowY: 'auto',
-                      minHeight: 0,
-                      fontFamily: 'inherit'
-                    }}>
-                      <div dangerouslySetInnerHTML={{
-                        __html: formatEmailContent(editingBody) || '<p>Enter email body content...</p>'
-                      }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Pane - Newsletter Editor */}
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              backgroundColor: 'white'
-            }}>
-              <div style={{
-                padding: '1.61em',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0, marginBottom: '0.5rem' }}>
-                      Newsletter Editor
-                    </h3>
-                    <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-                      {(editingSubject + ' ' + editingBody).split(' ').filter(word => word.length > 0).length} words • {(editingSubject + editingBody).length} characters
-                    </p>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <button
-                      onClick={handleRegenerateNewsletter}
-                      disabled={isRegeneratingIndex === currentNewsletterIndex}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 0.75rem',
-                        backgroundColor: 'transparent',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '0.375rem',
-                        cursor: isRegeneratingIndex === currentNewsletterIndex ? 'not-allowed' : 'pointer',
-                        color: '#6b7280',
-                        fontSize: '0.875rem'
-                      }}
-                      title="Regenerate this newsletter"
-                    >
-                      {isRegeneratingIndex === currentNewsletterIndex ? (
-                        <RefreshCw style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} />
-                      ) : (
-                        <Wand2 style={{ width: '1rem', height: '1rem' }} />
-                      )}
-                      Regenerate
-                    </button>
-
-                    <button
-                      onClick={handleExportToDocs}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 0.75rem',
-                        backgroundColor: 'transparent',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '0.375rem',
-                        cursor: 'pointer',
-                        color: '#6b7280',
-                        fontSize: '0.875rem'
-                      }}
-                      title="Export to Google Docs"
-                    >
-                      <ExternalLink style={{ width: '1rem', height: '1rem' }} />
-                      Export
-                    </button>
-
-                    <button
-                      onClick={handleCopyNewsletter}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 0.75rem',
-                        backgroundColor: copiedIndex === currentNewsletterIndex ? '#d1fae5' : 'transparent',
-                        border: `1px solid ${copiedIndex === currentNewsletterIndex ? '#10b981' : '#d1d5db'}`,
-                        borderRadius: '0.375rem',
-                        cursor: 'pointer',
-                        color: copiedIndex === currentNewsletterIndex ? '#10b981' : '#6b7280',
-                        fontSize: '0.875rem'
-                      }}
-                      title="Copy to clipboard"
-                    >
-                      {copiedIndex === currentNewsletterIndex ? (
-                        <>
-                          <Check style={{ width: '1rem', height: '1rem' }} />
-                          Copied
-                        </>
-                      ) : (
-                        <>
-                          <Copy style={{ width: '1rem', height: '1rem' }} />
-                          Copy
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Separate Editor Fields */}
-              <div style={{ flex: 1, padding: '1.61em', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {/* Subject Line Editor */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Subject Line
-                  </label>
-                  <input
-                    type="text"
-                    value={editingSubject}
-                    onChange={(e) => handleSubjectChange(e.target.value)}
+                  <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
+                    Copy Figma Code:
+                  </span>
+                  
+                  {/* Desktop HTML Copy Button */}
+                  <button
+                    onClick={handleCopyDesktopHTML}
                     style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.875rem',
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      backgroundColor: 'white'
-                    }}
-                    placeholder="Enter email subject line..."
-                  />
-                </div>
-
-                {/* Email Body Editor with ReactQuill */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151'
-                    }}>
-                      Email Body
-                    </label>
-
-                    {/* Custom Undo/Redo Buttons */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      padding: '0.25rem',
-                      backgroundColor: '#f9fafb',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.375rem'
-                    }}>
-                      <button
-                        onClick={handleUndo}
-                        disabled={!canUndo}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '1.75rem',
-                          height: '1.75rem',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          borderRadius: '0.25rem',
-                          cursor: canUndo ? 'pointer' : 'not-allowed',
-                          color: canUndo ? '#6b7280' : '#d1d5db',
-                          transition: 'all 0.15s ease'
-                        }}
-                        onMouseEnter={(e) => canUndo && (e.currentTarget.style.backgroundColor = '#e5e7eb')}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        title="Undo (Ctrl+Z)"
-                      >
-                        <Undo style={{ width: '1rem', height: '1rem' }} />
-                      </button>
-
-                      <button
-                        onClick={handleRedo}
-                        disabled={!canRedo}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '1.75rem',
-                          height: '1.75rem',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          borderRadius: '0.25rem',
-                          cursor: canRedo ? 'pointer' : 'not-allowed',
-                          color: canRedo ? '#6b7280' : '#d1d5db',
-                          transition: 'all 0.15s ease'
-                        }}
-                        onMouseEnter={(e) => canRedo && (e.currentTarget.style.backgroundColor = '#e5e7eb')}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        title="Redo (Ctrl+Y)"
-                      >
-                        <Redo style={{ width: '1rem', height: '1rem' }} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Simple Textarea Editor with Formatting Toolbar */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                    {/* Formatting Toolbar */}
-                    <div style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
-                      padding: '0.5rem',
-                      backgroundColor: '#f9fafb',
-                      border: '1px solid #e5e7eb',
-                      borderBottom: 'none',
-                      borderRadius: '0.5rem 0.5rem 0 0'
-                    }}>
-                      <button
-                        onClick={() => {
-                          const selection = textareaRef.current?.selectionStart || 0;
-                          const endSelection = textareaRef.current?.selectionEnd || 0;
-                          const selectedText = editingBody.substring(selection, endSelection);
-                          if (selectedText) {
-                            const newContent = editingBody.substring(0, selection) + `**${selectedText}**` + editingBody.substring(endSelection);
-                            handleEditorChange(newContent);
-                          }
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '2rem',
-                          height: '2rem',
-                          backgroundColor: 'white',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          color: '#374151'
-                        }}
-                        title="Bold"
-                      >
-                        <Bold style={{ width: '1rem', height: '1rem' }} />
-                      </button>
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: copiedDesktopHTML ? '#10b981' : '#fff',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                      color: copiedDesktopHTML ? '#fff' : '#374151',
+                      fontSize: '0.875rem',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {copiedDesktopHTML ? (
+                      <Check style={{ width: '1rem', height: '1rem' }} />
+                    ) : (
+                      <Monitor style={{ width: '1rem', height: '1rem' }} />
+                    )}
+                    {copiedDesktopHTML ? 'Copied!' : 'Desktop'}
+                  </button>
 
-                      <button
-                        onClick={() => {
-                          const selection = textareaRef.current?.selectionStart || 0;
-                          const endSelection = textareaRef.current?.selectionEnd || 0;
-                          const selectedText = editingBody.substring(selection, endSelection);
-                          if (selectedText) {
-                            const newContent = editingBody.substring(0, selection) + `*${selectedText}*` + editingBody.substring(endSelection);
-                            handleEditorChange(newContent);
-                          }
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '2rem',
-                          height: '2rem',
-                          backgroundColor: 'white',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          color: '#374151'
-                        }}
-                        title="Italic"
-                      >
-                        <Italic style={{ width: '1rem', height: '1rem' }} />
-                      </button>
+                  {/* Mobile HTML Copy Button */}
+                  <button
+                    onClick={handleCopyMobileHTML}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: copiedMobileHTML ? '#10b981' : '#fff',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                      color: copiedMobileHTML ? '#fff' : '#374151',
+                      fontSize: '0.875rem',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {copiedMobileHTML ? (
+                      <Check style={{ width: '1rem', height: '1rem' }} />
+                    ) : (
+                      <Smartphone style={{ width: '1rem', height: '1rem' }} />
+                    )}
+                    {copiedMobileHTML ? 'Copied!' : 'Mobile'}
+                  </button>
 
-                      <button
-                        onClick={() => {
-                          const selection = textareaRef.current?.selectionStart || 0;
-                          const endSelection = textareaRef.current?.selectionEnd || 0;
-                          const selectedText = editingBody.substring(selection, endSelection);
-                          if (selectedText) {
-                            const newContent = editingBody.substring(0, selection) + `__${selectedText}__` + editingBody.substring(endSelection);
-                            handleEditorChange(newContent);
-                          }
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '2rem',
-                          height: '2rem',
-                          backgroundColor: 'white',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          color: '#374151'
-                        }}
-                        title="Underline"
-                      >
-                        <Underline style={{ width: '1rem', height: '1rem' }} />
-                      </button>
-
-                      <div style={{ width: '1px', height: '1.5rem', backgroundColor: '#d1d5db' }} />
-
-                      <button
-                        onClick={() => {
-                          const selection = textareaRef.current?.selectionStart || 0;
-                          const currentLine = editingBody.substring(0, selection).split('\n').pop() || '';
-                          if (!currentLine.startsWith('• ')) {
-                            const newContent = editingBody.substring(0, selection - currentLine.length) + `• ${currentLine}` + editingBody.substring(selection);
-                            handleEditorChange(newContent);
-                          }
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '2rem',
-                          height: '2rem',
-                          backgroundColor: 'white',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          color: '#374151'
-                        }}
-                        title="Bullet List"
-                      >
-                        <List style={{ width: '1rem', height: '1rem' }} />
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          const selection = textareaRef.current?.selectionStart || 0;
-                          const currentLine = editingBody.substring(0, selection).split('\n').pop() || '';
-                          if (!/^\d+\. /.test(currentLine)) {
-                            const newContent = editingBody.substring(0, selection - currentLine.length) + `1. ${currentLine}` + editingBody.substring(selection);
-                            handleEditorChange(newContent);
-                          }
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '2rem',
-                          height: '2rem',
-                          backgroundColor: 'white',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          color: '#374151'
-                        }}
-                        title="Numbered List"
-                      >
-                        <ListOrdered style={{ width: '1rem', height: '1rem' }} />
-                      </button>
-                    </div>
-
-                    {/* Textarea */}
-                    <textarea
-                      ref={textareaRef}
-                      value={editingBody}
-                      onChange={(e) => handleEditorChange(e.target.value)}
-                      style={{
-                        flex: 1,
-                        minHeight: '300px',
-                        padding: '1rem',
-                        border: '1px solid #e5e7eb',
-                        borderTop: 'none',
-                        borderRadius: '0 0 0.5rem 0.5rem',
-                        fontSize: '0.875rem',
-                        lineHeight: '1.6',
-                        fontFamily: 'inherit',
-                        resize: 'none',
-                        outline: 'none',
-                        backgroundColor: 'white'
-                      }}
-                      placeholder="Enter email body content..."
-                    />
-                  </div>
                 </div>
+              </div>
+
+              {/* MDS Email Template Preview */}
+              <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+                <MDSEmailTemplatePreview
+                  subject={editingSubject}
+                  body={editingBody}
+                  mainSection={editingMainSection}
+                  pricingSection={editingPricingSection}
+                  heroCTA={editingHeroCTA}
+                  mainCTA={editingMainCTA}
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
