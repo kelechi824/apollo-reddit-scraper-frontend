@@ -55,6 +55,7 @@ const CTACreatorPage: React.FC = () => {
   const [showPreviewInterface, setShowPreviewInterface] = useState(false);
   const [articleStructure, setArticleStructure] = useState<any>(null);
   const [originalContent, setOriginalContent] = useState('');
+  const [lastTimeoutError, setLastTimeoutError] = useState(false);
 
   // Approved CTA button options for dynamic switching
   const approvedCTAButtons = [
@@ -78,7 +79,11 @@ const CTACreatorPage: React.FC = () => {
     // Check VoC Kit status
     const checkVocKit = () => {
       try {
-        const vocKit = localStorage.getItem('apollo_voc_kit');
+        // Check draft first, then fallback to saved version (same as VoCKitPage)
+        const draft = localStorage.getItem('apollo_voc_kit_draft');
+        const saved = localStorage.getItem('apollo_voc_kit');
+        const vocKit = draft || saved;
+        
         if (vocKit) {
           const parsedKit = JSON.parse(vocKit);
           const hasAnalysis = parsedKit.hasGeneratedAnalysis && parsedKit.extractedPainPoints?.length > 0;
@@ -280,6 +285,7 @@ const CTACreatorPage: React.FC = () => {
 
     setIsGenerating(true);
     setError('');
+    setLastTimeoutError(false); // Reset timeout error flag
     
     // If CTAs already exist, show skeletons instead of clearing
     if (generatedCTAs) {
@@ -344,10 +350,13 @@ const CTACreatorPage: React.FC = () => {
       }
 
       // Simulate stage updates for better UX while processing
+      // Why this matters: Longer timeouts reflect the actual processing time and keep users informed
       const isRegeneration = !!generatedCTAs;
-      const stage1 = setTimeout(() => setGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 3000);
-      const stage2 = setTimeout(() => setGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 6000);
-      const stage3 = setTimeout(() => setGenerationStage(isRegeneration ? 'Creating unique CTAs...' : 'Generating CTAs...'), 9000);
+      const stage1 = setTimeout(() => setGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 5000);
+      const stage2 = setTimeout(() => setGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 15000);
+      const stage3 = setTimeout(() => setGenerationStage(isRegeneration ? 'Creating unique CTAs...' : 'Generating CTAs...'), 30000);
+      const stage4 = setTimeout(() => setGenerationStage('Almost done - finalizing CTAs...'), 60000);
+      const stage5 = setTimeout(() => setGenerationStage('Processing complex content - please wait...'), 90000);
 
       // Make the API request with safe JSON parsing
       const apiResult = await makeApiRequest(endpoint, {
@@ -359,6 +368,8 @@ const CTACreatorPage: React.FC = () => {
       clearTimeout(stage1);
       clearTimeout(stage2);
       clearTimeout(stage3);
+      clearTimeout(stage4);
+      clearTimeout(stage5);
 
       // Enhanced response handling with specific error messages
       if (!apiResult.success) {
@@ -499,8 +510,12 @@ const CTACreatorPage: React.FC = () => {
         userErrorMessage = 'Network connection failed. Please check your internet connection and try again.';
       } else if (error.message.includes('JSON')) {
         userErrorMessage = 'Invalid response from server. Please try again.';
-      } else if (error.message.includes('timeout')) {
-        userErrorMessage = 'Request timed out. The content might be too large. Try with smaller content.';
+      } else if (error.message.includes('timeout') || error.message.includes('Request timeout')) {
+        userErrorMessage = 'CTA generation is taking longer than expected. This can happen with complex content. Please try again - the system has been optimized to handle longer operations.';
+        setLastTimeoutError(true); // Flag this as a timeout error for retry UI
+      } else if (error.message.includes('Request timed out')) {
+        userErrorMessage = 'The request timed out due to complex content analysis. Try breaking your content into smaller sections or try again as the system may be under heavy load.';
+        setLastTimeoutError(true); // Flag this as a timeout error for retry UI
       } else if (error.message) {
         userErrorMessage = error.message;
       }
@@ -1240,13 +1255,38 @@ Paste your markdown content here...
                 backgroundColor: '#fee2e2',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
-                color: '#dc2626',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
+                color: '#dc2626'
               }}>
-                <AlertCircle size={16} />
-                {error}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: lastTimeoutError ? '0.75rem' : '0' }}>
+                  <AlertCircle size={16} />
+                  {error}
+                </div>
+                
+                {/* Retry button for timeout errors */}
+                {lastTimeoutError && (
+                  <button
+                    onClick={generateCTAs}
+                    disabled={isGenerating}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#EBF212',
+                      color: 'black',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      cursor: isGenerating ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      opacity: isGenerating ? 0.6 : 1,
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <RotateCcw size={14} />
+                    {isGenerating ? 'Retrying...' : 'Retry Generation'}
+                  </button>
+                )}
               </div>
             )}
           </div>

@@ -1208,15 +1208,38 @@ const BlogContentActionModal: React.FC<BlogContentActionModalProps> = ({
   useEffect(() => {
     const checkVocKit = () => {
       try {
-        const vocKit = localStorage.getItem('apollo_voc_kit');
+        // Check draft first, then fallback to saved version (same as VoCKitPage)
+        const draft = localStorage.getItem('apollo_voc_kit_draft');
+        const saved = localStorage.getItem('apollo_voc_kit');
+        const vocKit = draft || saved;
+        
+        console.log('🔍 BlogContentActionModal VoC Kit Check:', {
+          hasDraft: !!draft,
+          hasSaved: !!saved,
+          usingData: vocKit ? 'found' : 'none'
+        });
+        
         if (vocKit) {
           const parsedKit = JSON.parse(vocKit);
           const hasAnalysis = parsedKit.hasGeneratedAnalysis && parsedKit.extractedPainPoints?.length > 0;
+          
+          console.log('📊 VoC Kit Data Analysis:', {
+            hasGeneratedAnalysis: parsedKit.hasGeneratedAnalysis,
+            painPointsCount: parsedKit.extractedPainPoints?.length || 0,
+            finalVocKitReady: hasAnalysis
+          });
+          
           setVocKitReady(hasAnalysis);
           setPainPointsCount(parsedKit.extractedPainPoints?.length || 0);
+        } else {
+          console.log('❌ No VoC Kit data found');
+          setVocKitReady(false);
+          setPainPointsCount(0);
         }
       } catch (error) {
-        console.error('Error checking VoC Kit status:', error);
+        console.error('❌ Error checking VoC Kit status:', error);
+        setVocKitReady(false);
+        setPainPointsCount(0);
       }
     };
 
@@ -3184,10 +3207,15 @@ Return ONLY the JSON object with the three required fields. No additional text o
       // Get VoC Kit data to send with request
       let vocKitData = null;
       try {
-        const storedVocKit = localStorage.getItem('apollo_voc_kit');
+        // Check draft first, then fallback to saved version (same as VoCKitPage)
+        const draft = localStorage.getItem('apollo_voc_kit_draft');
+        const saved = localStorage.getItem('apollo_voc_kit');
+        const storedVocKit = draft || saved;
+        
         if (storedVocKit) {
           vocKitData = JSON.parse(storedVocKit);
           console.log('🔍 VoC Kit data loaded for CTA generation:', {
+            source: draft ? 'draft' : 'saved',
             hasGeneratedAnalysis: vocKitData.hasGeneratedAnalysis,
             extractedPainPointsCount: vocKitData.extractedPainPoints?.length || 0
           });
@@ -3205,11 +3233,14 @@ Return ONLY the JSON object with the three required fields. No additional text o
         timestamp: Date.now() // Add timestamp for unique seed
       };
 
-      // Simulate stage updates for better UX
+      // Simulate stage updates for better UX while processing
+      // Why this matters: Longer timeouts reflect the actual processing time and keep users informed
       const isRegeneration = !!generatedCTAs;
-      const stage1 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 10000);
-      const stage2 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 20000);
+      const stage1 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 5000);
+      const stage2 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 15000);
       const stage3 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Creating unique CTAs...' : 'Generating CTAs...'), 30000);
+      const stage4 = setTimeout(() => setCtaGenerationStage('Almost done - finalizing CTAs...'), 60000);
+      const stage5 = setTimeout(() => setCtaGenerationStage('Processing complex content - please wait...'), 90000);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -3223,6 +3254,8 @@ Return ONLY the JSON object with the three required fields. No additional text o
       clearTimeout(stage1);
       clearTimeout(stage2);
       clearTimeout(stage3);
+      clearTimeout(stage4);
+      clearTimeout(stage5);
 
       if (!response.ok) {
         throw new Error(`Failed to generate CTAs: ${response.status}`);
@@ -3246,7 +3279,23 @@ Return ONLY the JSON object with the three required fields. No additional text o
       }
     } catch (error: any) {
       console.error('Error generating CTAs:', error);
-      setCtaError(error.message || 'Failed to generate CTAs');
+      
+      // Provide user-friendly error messages based on error type
+      let userErrorMessage = 'Failed to generate CTAs';
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        userErrorMessage = 'Network connection failed. Please check your internet connection and try again.';
+      } else if (error.message.includes('JSON')) {
+        userErrorMessage = 'Invalid response from server. Please try again.';
+      } else if (error.message.includes('timeout') || error.message.includes('Request timeout')) {
+        userErrorMessage = 'CTA generation is taking longer than expected. This can happen with complex content. Please try again - the system has been optimized to handle longer operations.';
+      } else if (error.message.includes('Request timed out')) {
+        userErrorMessage = 'The request timed out due to complex content analysis. Try breaking your content into smaller sections or try again as the system may be under heavy load.';
+      } else if (error.message) {
+        userErrorMessage = error.message;
+      }
+      
+      setCtaError(userErrorMessage);
       setShowCtaSkeletons(false);
     } finally {
       setIsGeneratingCTAs(false);

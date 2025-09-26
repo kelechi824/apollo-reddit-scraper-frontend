@@ -101,7 +101,18 @@ export async function makeApiRequest<T = any>(
   try {
     // Set appropriate timeout based on endpoint
     const isVocAgent = url.includes('/api/voc-agent/') || url.includes('/api/voc-extraction/');
-    const timeout = isVocAgent ? 90000 : 30000; // 90s for VoC analysis (takes 30-60s), 30s for others
+    const isCTAGeneration = url.includes('/api/cta-generation/');
+    const isBlogGeneration = url.includes('/api/blog-generation/');
+    
+    // Why this matters: Different endpoints need different timeouts based on processing complexity
+    let timeout = 30000; // Default 30s
+    if (isVocAgent) {
+      timeout = 90000; // 90s for VoC analysis (takes 30-60s)
+    } else if (isCTAGeneration) {
+      timeout = 120000; // 120s for CTA generation (involves complex AI processing)
+    } else if (isBlogGeneration) {
+      timeout = 180000; // 180s for blog generation (longest operations)
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);

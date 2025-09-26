@@ -92,7 +92,7 @@ const VoCKitPage: React.FC = () => {
     }
   }, [newVariableName]);
 
-  // Auto-save functionality
+  // Auto-save functionality with enhanced persistence
   useEffect(() => {
     if (isInitialLoadRef.current) {
       return;
@@ -106,12 +106,23 @@ const VoCKitPage: React.FC = () => {
 
     const timeout = setTimeout(() => {
       try {
-        localStorage.setItem('apollo_voc_kit_draft', JSON.stringify(vocKit));
+        // Only auto-save as draft if analysis is not complete
+        // Complete analysis should be saved permanently via handleAnalysisComplete
+        if (!vocKit.hasGeneratedAnalysis) {
+          localStorage.setItem('apollo_voc_kit_draft', JSON.stringify(vocKit));
+          console.log('💾 Auto-saved VoC Kit draft');
+        } else {
+          // If analysis is complete, ensure it's saved permanently
+          localStorage.setItem('apollo_voc_kit', JSON.stringify(vocKit));
+          localStorage.removeItem('apollo_voc_kit_draft');
+          console.log('💾 Auto-saved completed VoC Kit analysis');
+        }
+        
         window.dispatchEvent(new CustomEvent('apollo-voc-kit-updated'));
         setAutoSaveStatus('saved');
         setTimeout(() => setAutoSaveStatus(''), 2000);
       } catch (error) {
-        console.error('Auto-save failed:', error);
+        console.error('❌ Auto-save failed:', error);
         setAutoSaveStatus('');
       }
     }, 1000);
@@ -129,7 +140,8 @@ const VoCKitPage: React.FC = () => {
 
   /**
    * Handle analysis completion
-   * Why this matters: Centralizes the logic for when analysis finishes.
+   * Why this matters: Centralizes the logic for when analysis finishes and ensures persistent storage.
+   * Fixed to guarantee data persistence across page reloads.
    */
   const handleAnalysisComplete = (variables: Record<string, string>, painPoints: VoCPainPoint[], metadata: any) => {
     const updatedVoCKit = {
@@ -141,19 +153,47 @@ const VoCKitPage: React.FC = () => {
       analysisMetadata: metadata
     };
     
+    console.log('💾 Saving VoC analysis completion:', {
+      painPointsCount: painPoints.length,
+      hasGeneratedAnalysis: true,
+      metadata: metadata
+    });
+    
+    // Update all state synchronously
     setVoCKit(updatedVoCKit);
     setExtractedPainPoints(painPoints);
     setHasGeneratedAnalysis(true);
     setIsExtracting(false);
     
-    // Auto-save the completed analysis
+    // Auto-save the completed analysis with enhanced error handling
     try {
-      localStorage.setItem('apollo_voc_kit', JSON.stringify(updatedVoCKit));
+      const dataToSave = JSON.stringify(updatedVoCKit);
+      localStorage.setItem('apollo_voc_kit', dataToSave);
       localStorage.removeItem('apollo_voc_kit_draft');
+      
+      // Verify the save was successful
+      const verification = localStorage.getItem('apollo_voc_kit');
+      if (verification) {
+        const parsed = JSON.parse(verification);
+        if (parsed.hasGeneratedAnalysis && parsed.extractedPainPoints?.length > 0) {
+          console.log('✅ VoC analysis auto-saved and verified successfully');
+          console.log('💾 Verified VoC Kit Data:', {
+            hasGeneratedAnalysis: parsed.hasGeneratedAnalysis,
+            painPointsCount: parsed.extractedPainPoints?.length || 0,
+            metadata: parsed.analysisMetadata
+          });
+        } else {
+          throw new Error('Data verification failed - analysis state not properly saved');
+        }
+      } else {
+        throw new Error('localStorage save verification failed');
+      }
+      
       window.dispatchEvent(new CustomEvent('apollo-voc-kit-updated'));
-      console.log('✅ VoC analysis auto-saved successfully');
     } catch (error) {
-      console.error('Failed to auto-save VoC analysis:', error);
+      console.error('❌ Failed to auto-save VoC analysis:', error);
+      setMessage(`Warning: Analysis completed but save failed. Please manually save your results.`);
+      return;
     }
     
     setMessage(`Successfully extracted ${metadata.totalPainPoints} pain points from ${metadata.callsAnalyzed} customer calls`);
@@ -163,6 +203,7 @@ const VoCKitPage: React.FC = () => {
   /**
    * Load VoC Kit from localStorage
    * Why this matters: Persists VoC configuration and analysis results across sessions.
+   * Fixed to ensure all state is properly synchronized on load.
    */
   useEffect(() => {
     const draft = localStorage.getItem('apollo_voc_kit_draft');
@@ -173,20 +214,31 @@ const VoCKitPage: React.FC = () => {
     if (dataToLoad) {
       try {
         const loadedData = JSON.parse(dataToLoad);
+        console.log('🔄 Loading VoC Kit data:', {
+          hasGeneratedAnalysis: loadedData.hasGeneratedAnalysis,
+          painPointsCount: loadedData.extractedPainPoints?.length || 0,
+          dataSource: draft ? 'draft' : 'saved'
+        });
+        
+        // Set main VoC Kit state
         setVoCKit(loadedData);
         
-        // Set extracted pain points if they exist
-        if (loadedData.extractedPainPoints) {
+        // Synchronize extracted pain points state
+        if (loadedData.extractedPainPoints && loadedData.extractedPainPoints.length > 0) {
           setExtractedPainPoints(loadedData.extractedPainPoints);
+          console.log('✅ Restored extracted pain points:', loadedData.extractedPainPoints.length);
         }
         
-        // Set analysis state
+        // Synchronize analysis state
         if (loadedData.hasGeneratedAnalysis) {
           setHasGeneratedAnalysis(true);
+          console.log('✅ Restored analysis state: true');
         }
       } catch (error) {
-        console.error('Error loading VoC Kit:', error);
+        console.error('❌ Error loading VoC Kit:', error);
       }
+    } else {
+      console.log('ℹ️ No VoC Kit data found in localStorage');
     }
 
     setTimeout(() => {
@@ -359,6 +411,76 @@ const VoCKitPage: React.FC = () => {
     setShowExcerptModal({ painPoint });
   };
 
+  /**
+   * Debug localStorage function
+   * Why this matters: Helps troubleshoot persistence issues by showing current storage state.
+   */
+  const debugLocalStorage = () => {
+    const draft = localStorage.getItem('apollo_voc_kit_draft');
+    const saved = localStorage.getItem('apollo_voc_kit');
+    
+    console.log('🔍 VoC Kit localStorage Debug:');
+    console.log('Draft data:', draft ? JSON.parse(draft) : 'None');
+    console.log('Saved data:', saved ? JSON.parse(saved) : 'None');
+    console.log('Current state:', {
+      hasGeneratedAnalysis,
+      extractedPainPointsCount: extractedPainPoints.length,
+      vocKitState: vocKit
+    });
+    
+    alert(`VoC Kit Debug Info (check console for details):
+    
+Draft: ${draft ? 'Present' : 'None'}
+Saved: ${saved ? 'Present' : 'None'}
+Current Analysis: ${hasGeneratedAnalysis ? 'Complete' : 'Not Complete'}
+Pain Points: ${extractedPainPoints.length} loaded`);
+  };
+
+  /**
+   * Recovery function for corrupted or missing data
+   * Why this matters: Provides a way to recover from localStorage corruption or sync issues.
+   */
+  const recoverFromStorage = () => {
+    try {
+      const draft = localStorage.getItem('apollo_voc_kit_draft');
+      const saved = localStorage.getItem('apollo_voc_kit');
+      
+      // Try to recover from either source
+      const recoveryData = saved || draft;
+      if (recoveryData) {
+        const parsed = JSON.parse(recoveryData);
+        
+        // Force state synchronization
+        setVoCKit(parsed);
+        if (parsed.extractedPainPoints) {
+          setExtractedPainPoints(parsed.extractedPainPoints);
+        }
+        if (parsed.hasGeneratedAnalysis) {
+          setHasGeneratedAnalysis(true);
+        }
+        
+        // Re-save to ensure consistency
+        localStorage.setItem('apollo_voc_kit', JSON.stringify(parsed));
+        localStorage.removeItem('apollo_voc_kit_draft');
+        
+        setMessage('Data recovered successfully from localStorage!');
+        setTimeout(() => setMessage(''), 3000);
+        
+        console.log('✅ Data recovery successful:', {
+          hasAnalysis: parsed.hasGeneratedAnalysis,
+          painPointsCount: parsed.extractedPainPoints?.length || 0
+        });
+      } else {
+        setMessage('No recovery data found in localStorage.');
+        setTimeout(() => setMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('❌ Recovery failed:', error);
+      setMessage('Recovery failed - localStorage data may be corrupted.');
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
 
 
   return (
@@ -518,6 +640,51 @@ const VoCKitPage: React.FC = () => {
                 <span>🎯 {vocKit.analysisMetadata.totalPainPoints} pain points categories detected</span>
                 <span>📞 {vocKit.analysisMetadata.callsAnalyzed} calls analyzed</span>
                 <span>📅 {new Date(vocKit.analysisMetadata.analysisDate).toLocaleDateString()}</span>
+              </div>
+            )}
+
+            {/* Debug and recovery buttons - show if there are persistence issues or in development */}
+            {(process.env.NODE_ENV === 'development' || (!hasGeneratedAnalysis && (localStorage.getItem('apollo_voc_kit') || localStorage.getItem('apollo_voc_kit_draft')))) && (
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  onClick={debugLocalStorage}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#f3f4f6',
+                    color: '#6b7280',
+                    border: '0.0625rem solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.375rem'
+                  }}
+                >
+                  🔍 Debug Storage
+                </button>
+                
+                {!hasGeneratedAnalysis && (localStorage.getItem('apollo_voc_kit') || localStorage.getItem('apollo_voc_kit_draft')) && (
+                  <button
+                    onClick={recoverFromStorage}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#fef3c7',
+                      color: '#92400e',
+                      border: '0.0625rem solid #fcd34d',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem'
+                    }}
+                  >
+                    🔄 Recover Data
+                  </button>
+                )}
               </div>
             )}
           </div>

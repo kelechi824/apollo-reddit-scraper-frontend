@@ -583,17 +583,36 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
   useEffect(() => {
     const checkVocKit = () => {
       try {
-        const vocData = localStorage.getItem('apollo_voc_kit');
+        // Check draft first, then fallback to saved version (same as VoCKitPage)
+        const draft = localStorage.getItem('apollo_voc_kit_draft');
+        const saved = localStorage.getItem('apollo_voc_kit');
+        const vocData = draft || saved;
+        
+        console.log('🔍 CompetitorContentActionModal VoC Kit Check:', {
+          hasDraft: !!draft,
+          hasSaved: !!saved,
+          usingData: vocData ? 'found' : 'none'
+        });
+        
         if (vocData) {
           const parsed = JSON.parse(vocData);
-          const painPoints = parsed?.extractedPainPoints || [];
-          setVocKitReady(painPoints.length > 0);
-          setPainPointsCount(painPoints.length);
+          const hasAnalysis = parsed.hasGeneratedAnalysis && parsed.extractedPainPoints?.length > 0;
+          
+          console.log('📊 VoC Kit Data Analysis:', {
+            hasGeneratedAnalysis: parsed.hasGeneratedAnalysis,
+            painPointsCount: parsed.extractedPainPoints?.length || 0,
+            finalVocKitReady: hasAnalysis
+          });
+          
+          setVocKitReady(hasAnalysis);
+          setPainPointsCount(parsed.extractedPainPoints?.length || 0);
         } else {
+          console.log('❌ No VoC Kit data found');
           setVocKitReady(false);
           setPainPointsCount(0);
         }
-      } catch {
+      } catch (error) {
+        console.error('❌ Error checking VoC Kit:', error);
         setVocKitReady(false);
         setPainPointsCount(0);
       }
@@ -614,8 +633,8 @@ const CompetitorContentActionModal: React.FC<CompetitorContentActionModalProps> 
     }
 
     const handleVocUpdate = () => checkVocKit();
-    window.addEventListener('apollo_voc_updated', handleVocUpdate);
-    return () => window.removeEventListener('apollo_voc_updated', handleVocUpdate);
+    window.addEventListener('apollo-voc-kit-updated', handleVocUpdate);
+    return () => window.removeEventListener('apollo-voc-kit-updated', handleVocUpdate);
   }, [isOpen]);
 
   /**
@@ -2858,16 +2877,21 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
     setCtaGenerationStage(isRegeneration ? 'Preparing new CTA variations...' : 'Analyzing voice of customer insights...');
 
     // Store timeout references so we can clear them in finally block
-    let stage1: NodeJS.Timeout | undefined, stage2: NodeJS.Timeout | undefined, stage3: NodeJS.Timeout | undefined;
+    let stage1: NodeJS.Timeout | undefined, stage2: NodeJS.Timeout | undefined, stage3: NodeJS.Timeout | undefined, stage4: NodeJS.Timeout | undefined, stage5: NodeJS.Timeout | undefined;
 
     try {
       // Get VoC Kit data to send with request
       let vocKitData = null;
       try {
-        const storedVocKit = localStorage.getItem('apollo_voc_kit');
+        // Check draft first, then fallback to saved version (same as VoCKitPage)
+        const draft = localStorage.getItem('apollo_voc_kit_draft');
+        const saved = localStorage.getItem('apollo_voc_kit');
+        const storedVocKit = draft || saved;
+        
         if (storedVocKit) {
           vocKitData = JSON.parse(storedVocKit);
           console.log('🔍 VoC Kit data loaded for CTA generation:', {
+            source: draft ? 'draft' : 'saved',
             hasGeneratedAnalysis: vocKitData.hasGeneratedAnalysis,
             extractedPainPointsCount: vocKitData.extractedPainPoints?.length || 0
           });
@@ -2878,10 +2902,13 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
 
       const endpoint = buildApiUrl('/api/cta-generation/generate-from-text');
 
-      // Simulate stage updates for better UX (copied from BlogContentActionModal)
-      stage1 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 10000);
-      stage2 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 20000);
+      // Simulate stage updates for better UX while processing
+      // Why this matters: Longer timeouts reflect the actual processing time and keep users informed
+      stage1 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Analyzing current CTAs...' : 'Finding pain points...'), 5000);
+      stage2 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Finding new angles...' : 'Connecting pain points to CTAs...'), 15000);
       stage3 = setTimeout(() => setCtaGenerationStage(isRegeneration ? 'Creating unique CTAs...' : 'Generating CTAs...'), 30000);
+      stage4 = setTimeout(() => setCtaGenerationStage('Almost done - finalizing CTAs...'), 60000);
+      stage5 = setTimeout(() => setCtaGenerationStage('Processing complex content - please wait...'), 90000);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -2917,15 +2944,33 @@ CRITICAL: YOU MUST RETURN ONLY VALID JSON - NO OTHER TEXT ALLOWED
         throw new Error(result.error || 'CTA generation failed');
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [CompetitorModal] CTA generation failed:', error);
-      setCtaError(error instanceof Error ? error.message : 'Failed to generate CTAs');
+      
+      // Provide user-friendly error messages based on error type
+      let userErrorMessage = 'Failed to generate CTAs';
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        userErrorMessage = 'Network connection failed. Please check your internet connection and try again.';
+      } else if (error.message.includes('JSON')) {
+        userErrorMessage = 'Invalid response from server. Please try again.';
+      } else if (error.message.includes('timeout') || error.message.includes('Request timeout')) {
+        userErrorMessage = 'CTA generation is taking longer than expected. This can happen with complex content. Please try again - the system has been optimized to handle longer operations.';
+      } else if (error.message.includes('Request timed out')) {
+        userErrorMessage = 'The request timed out due to complex content analysis. Try breaking your content into smaller sections or try again as the system may be under heavy load.';
+      } else if (error.message) {
+        userErrorMessage = error.message;
+      }
+      
+      setCtaError(userErrorMessage);
       setShowCtaSkeletons(false);
     } finally {
       // Clear any pending stage timeouts
       if (stage1) clearTimeout(stage1);
       if (stage2) clearTimeout(stage2);
       if (stage3) clearTimeout(stage3);
+      if (stage4) clearTimeout(stage4);
+      if (stage5) clearTimeout(stage5);
       
       setIsGeneratingCTAs(false);
       setCtaGenerationStage('');
