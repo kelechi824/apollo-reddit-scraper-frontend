@@ -354,6 +354,9 @@ const BlogCreatorPage: React.FC = () => {
 
   // Job persistence for page reload recovery
   const [runningJobs, setRunningJobs] = useState<Map<string, string>>(new Map()); // keywordId -> jobId mapping
+  
+  // Global request throttling to prevent resource exhaustion
+  const [activePollingRequests, setActivePollingRequests] = useState<Set<string>>(new Set());
 
   // Auto-save state and refs
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saving' | 'saved' | ''>('');
@@ -534,13 +537,15 @@ const BlogCreatorPage: React.FC = () => {
    * resumeRunningJobs
    * Why this matters: After page reload, resume polling for any jobs that were running
    * when the user left the page, ensuring content generation continues seamlessly.
+   * Includes throttling to prevent resource exhaustion.
    */
   useEffect(() => {
     if (runningJobs.size === 0 || keywords.length === 0) return;
 
-    console.log(`🔄 [BlogCreator] Resuming polling for ${runningJobs.size} running jobs`);
+    console.log(`🔄 [BlogCreator] Resuming polling for ${runningJobs.size} running jobs with throttling`);
     
-    // Resume polling for each running job
+    // Resume polling for each running job with staggered delays
+    let delayIndex = 0;
     runningJobs.forEach(async (jobId, keywordId) => {
       const keyword = keywords.find(k => k.id === keywordId);
       if (!keyword) {
@@ -564,10 +569,14 @@ const BlogCreatorPage: React.FC = () => {
         return;
       }
 
-      console.log(`🔄 [BlogCreator] Resuming job ${jobId} for keyword ${keywordId} (${keyword.keyword})`);
+      console.log(`🔄 [BlogCreator] Resuming job ${jobId} for keyword ${keywordId} (${keyword.keyword}) with ${delayIndex * 1000}ms delay`);
       
-      // Resume polling for this job
-      resumeJobPolling(jobId, keywordId);
+      // Stagger resume requests to prevent resource exhaustion
+      setTimeout(() => {
+        resumeJobPolling(jobId, keywordId);
+      }, delayIndex * 1000); // 1 second between each resume
+      
+      delayIndex++;
     });
   }, [runningJobs, keywords]); // Depend on both runningJobs and keywords being loaded
 
@@ -575,25 +584,48 @@ const BlogCreatorPage: React.FC = () => {
    * resumeJobPolling
    * Why this matters: Resumes polling for a specific job after page reload,
    * using the same polling logic as executeKeyword but without starting a new job.
+   * Includes resource throttling to prevent ERR_INSUFFICIENT_RESOURCES.
    */
   const resumeJobPolling = async (jobId: string, keywordId: string) => {
     const keyword = keywords.find(k => k.id === keywordId);
     if (!keyword) return;
 
+    // Check if we're already polling this job to prevent duplicates
+    if (activePollingRequests.has(jobId)) {
+      console.log(`⚠️ [BlogCreator] Job ${jobId} already being polled, skipping duplicate`);
+      return;
+    }
+
+    // Add to active polling requests
+    setActivePollingRequests(prev => {
+      const newSet = new Set(prev);
+      newSet.add(jobId);
+      return newSet;
+    });
+
     try {
-      // Poll for job completion using the same logic as executeKeyword
+      // Poll for job completion with resource management
       let attempts = 0;
       let transientErrorStreak = 0;
       const maxTransientErrorStreak = 8;
       const maxAttempts = 900; // 15 minutes max polling
-      const pollInterval = 1000; // Poll every 1 second
+      let pollInterval = 2000; // Start with 2 seconds to reduce resource usage
       
       while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        // Exponential backoff for resource management
+        const backoffDelay = Math.min(pollInterval * Math.pow(1.1, Math.floor(attempts / 10)), 5000);
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
         
         try {
-          const statusResp = await fetch(API_ENDPOINTS.blogCreatorJobStatus(jobId));
+          // Add timeout and abort controller for better resource management
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
           
+          const statusResp = await fetch(API_ENDPOINTS.blogCreatorJobStatus(jobId), {
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
           transientErrorStreak = 0; // reset on success
           const jobData = await statusResp.json();
           
@@ -683,12 +715,20 @@ const BlogCreatorPage: React.FC = () => {
           const status = pollErr?.response?.status;
           const message = pollErr?.message || '';
           const isNetworkFlap = message.includes('Network Error') || message.includes('net::ERR_NETWORK_CHANGED');
+          const isResourceError = message.includes('ERR_INSUFFICIENT_RESOURCES') || message.includes('Failed to fetch');
           const isTransientStatus = status === 404 || status === 425 || status === 429 || status === 502 || status === 503 || status === 504;
           const withinWarmup = attempts < 10 && status === 404;
           
-          if (isNetworkFlap || isTransientStatus || withinWarmup) {
+          if (isNetworkFlap || isTransientStatus || withinWarmup || isResourceError) {
             transientErrorStreak++;
             console.warn(`[resume-poll] transient issue (attempt ${attempts}, streak ${transientErrorStreak}) — ${status || ''} ${message || ''}`);
+            
+            // For resource errors, increase backoff significantly
+            if (isResourceError) {
+              pollInterval = Math.min(pollInterval * 2, 10000); // Double interval up to 10 seconds
+              console.warn(`[resume-poll] Resource error detected, increasing poll interval to ${pollInterval}ms`);
+            }
+            
             if (transientErrorStreak <= maxTransientErrorStreak) {
               attempts++;
               continue;
@@ -722,6 +762,13 @@ const BlogCreatorPage: React.FC = () => {
         const newMap = new Map(prev);
         newMap.delete(keywordId);
         return newMap;
+      });
+    } finally {
+      // Always clean up active polling request
+      setActivePollingRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(jobId);
+        return newSet;
       });
     }
   };
@@ -1852,26 +1899,34 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
         return newMap;
       });
       
-      // Poll for job completion
+      // Poll for job completion with resource management
       // Why this matters: With Firecrawl, deep research, gap analysis, and content generation,
       // the full pipeline can take 5-8 minutes or more depending on content complexity
       let attempts = 0;
       let transientErrorStreak = 0;
       const maxTransientErrorStreak = 8;
       const maxAttempts = 900; // 15 minutes max polling (increased for 5-minute Claude timeout)
-      const pollInterval = 1000; // Poll every 1 second
+      let pollInterval = 2000; // Start with 2 seconds to reduce resource usage
       
       while (attempts < maxAttempts) {
         if (controller.signal.aborted) {
           throw new Error('Operation cancelled');
         }
         
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        // Exponential backoff for resource management
+        const backoffDelay = Math.min(pollInterval * Math.pow(1.1, Math.floor(attempts / 10)), 5000);
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
         
         try {
+          // Add timeout for better resource management
+          const timeoutController = new AbortController();
+          const timeoutId = setTimeout(() => timeoutController.abort(), 10000); // 10 second timeout
+          
           const statusResp = await fetch(API_ENDPOINTS.blogCreatorJobStatus(jobId), {
             signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
           
           transientErrorStreak = 0; // reset on success
           const jobData = await statusResp.json();
@@ -1972,12 +2027,20 @@ For [target audience] looking to [specific goal], Apollo provides the [tools/dat
           const status = pollErr?.response?.status;
           const message = pollErr?.message || '';
           const isNetworkFlap = message.includes('Network Error') || message.includes('net::ERR_NETWORK_CHANGED');
+          const isResourceError = message.includes('ERR_INSUFFICIENT_RESOURCES') || message.includes('Failed to fetch');
           const isTransientStatus = status === 404 || status === 425 || status === 429 || status === 502 || status === 503 || status === 504;
           const withinWarmup = attempts < 10 && status === 404;
           
-          if (isNetworkFlap || isTransientStatus || withinWarmup) {
+          if (isNetworkFlap || isTransientStatus || withinWarmup || isResourceError) {
             transientErrorStreak++;
             console.warn(`[poll] transient issue (attempt ${attempts}, streak ${transientErrorStreak}) — ${status || ''} ${message || ''}`);
+            
+            // For resource errors, increase backoff significantly
+            if (isResourceError) {
+              pollInterval = Math.min(pollInterval * 2, 10000); // Double interval up to 10 seconds
+              console.warn(`[poll] Resource error detected, increasing poll interval to ${pollInterval}ms`);
+            }
+            
             if (transientErrorStreak <= maxTransientErrorStreak) {
               attempts++;
               continue;
