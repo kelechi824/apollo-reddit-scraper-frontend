@@ -103,6 +103,7 @@ const EmailNewsletterPage: React.FC = () => {
   const [isActionModalOpen, setIsActionModalOpen] = useState<boolean>(false);
   const [activeModalRowId, setActiveModalRowId] = useState<string | null>(null);
   
+  
   // Sorting
   const [sortField, setSortField] = useState<keyof NewsletterRow | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -400,12 +401,14 @@ const EmailNewsletterPage: React.FC = () => {
     ));
   };
 
+
   /**
    * Save newsletter rows to localStorage whenever they change
    */
   useEffect(() => {
     saveNewslettersToStorage(newsletterRows);
   }, [newsletterRows]);
+
 
   /**
    * Handle click outside dropdown to close
@@ -443,6 +446,11 @@ const EmailNewsletterPage: React.FC = () => {
             50% { opacity: 0.5; }
             100% { opacity: 1; }
           }
+          
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
         `}
       </style>
       <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', padding: '2rem' }}>
@@ -460,7 +468,7 @@ const EmailNewsletterPage: React.FC = () => {
             fontSize: '0.875rem',
             color: '#6b7280'
           }}>
-            Create targeted email sequences for sales teams using Apollo's proprietary email engagement data
+            Create targeted email sequences for sales teams using Apollo's proprietary email engagement data. MCP connection managed automatically at server level.
           </p>
         </div>
 
@@ -653,8 +661,10 @@ const EmailNewsletterPage: React.FC = () => {
                 {newsletterRows.length.toLocaleString()} sequence{newsletterRows.length !== 1 ? 's' : ''} generated
               </span>
             )}
+
           </div>
         </div>
+
 
         {/* Bulk controls */}
         {newsletterRows.length > 0 && (
