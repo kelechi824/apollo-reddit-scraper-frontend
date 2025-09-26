@@ -70,7 +70,11 @@ export const API_ENDPOINTS = {
     regenerate: buildApiUrl('/api/email-newsletter/regenerate'),
     jobTitles: buildApiUrl('/api/email-newsletter/job-titles'),
     ctaOptions: buildApiUrl('/api/email-newsletter/cta-options'),
-    validate: buildApiUrl('/api/email-newsletter/validate')
+    validate: buildApiUrl('/api/email-newsletter/validate'),
+    mcpStatus: buildApiUrl('/api/email-newsletter/mcp-status'),
+    mcpReset: buildApiUrl('/api/email-newsletter/mcp-reset'),
+    mcpConnect: buildApiUrl('/api/email-newsletter/mcp-connect'),
+    mcpTest: buildApiUrl('/api/email-newsletter/mcp-test')
   },
   
   // Add other endpoints as needed
